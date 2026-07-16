@@ -1,0 +1,12 @@
+CREATE DATABASE keycloak_db;
+CREATE DATABASE user_db;
+CREATE DATABASE restaurant_db;
+CREATE DATABASE catalog_db;
+CREATE DATABASE order_db;
+CREATE DATABASE promotion_db;
+CREATE DATABASE payment_db;
+CREATE DATABASE driver_db;
+CREATE DATABASE delivery_db;
+CREATE DATABASE tracking_db;
+CREATE DATABASE notification_db;
+CREATE DATABASE review_db;

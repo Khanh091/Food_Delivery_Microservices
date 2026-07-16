@@ -1,83 +1,46 @@
 ﻿services:
-  user-db:
+  postgres:
     image: postgres:17
-    container_name: food-delivery-user-db
-    restart: unless-stopped
+    container_name: food-delivery-postgres
     environment:
-      POSTGRES_DB: ${USER_DB_NAME}
-      POSTGRES_USER: ${USER_DB_USER}
-      POSTGRES_PASSWORD: ${USER_DB_PASSWORD}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "${USER_DB_PORT}:5432"
+      - "5433:5432"
     volumes:
-      - user-db-data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d
     networks:
       - food-delivery-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${USER_DB_USER} -d ${USER_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  restaurant-db:
-    image: postgres:17
-    container_name: food-delivery-restaurant-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${RESTAURANT_DB_NAME}
-      POSTGRES_USER: ${RESTAURANT_DB_USER}
-      POSTGRES_PASSWORD: ${RESTAURANT_DB_PASSWORD}
-    ports:
-      - "${RESTAURANT_DB_PORT}:5432"
-    volumes:
-      - restaurant-db-data:/var/lib/postgresql/data
-    networks:
-      - food-delivery-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${RESTAURANT_DB_USER} -d ${RESTAURANT_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  order-db:
-    image: postgres:17
-    container_name: food-delivery-order-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${ORDER_DB_NAME}
-      POSTGRES_USER: ${ORDER_DB_USER}
-      POSTGRES_PASSWORD: ${ORDER_DB_PASSWORD}
-    ports:
-      - "${ORDER_DB_PORT}:5432"
-    volumes:
-      - order-db-data:/var/lib/postgresql/data
-    networks:
-      - food-delivery-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${ORDER_DB_USER} -d ${ORDER_DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    image: quay.io/keycloak/keycloak:26.6.4
     container_name: food-delivery-keycloak
-    restart: unless-stopped
-    command: start-dev
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: postgres
+      KC_DB_PASSWORD: postgres
+
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    command:
+      - start-dev
+      - --import-realm
     ports:
       - "${KEYCLOAK_PORT}:8080"
     volumes:
       - ./infrastructure/keycloak/realms:/opt/keycloak/data/import
+    depends_on:
+      - postgres
     networks:
       - food-delivery-network
 
 volumes:
-  user-db-data:
-  restaurant-db-data:
-  order-db-data:
+  postgres_data:
 
 networks:
   food-delivery-network:
