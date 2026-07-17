@@ -24,7 +24,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByPhoneNumber(String phoneNumber);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select user from User user where user.id = :id")
+    @Query("select u from User u where u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") UUID id);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)

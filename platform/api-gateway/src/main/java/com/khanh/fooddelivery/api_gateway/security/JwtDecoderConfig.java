@@ -12,7 +12,7 @@ import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 
 @Configuration
 public class JwtDecoderConfig {
-
+    
     @Bean
     public ReactiveJwtDecoder reactiveJwtDecoder(
             @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
