@@ -1,10 +1,10 @@
-package com.khanh.fooddelivery.location_service;
+package com.khanh.fooddelivery.tracking_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class LocationServiceApplicationTests {
+class TrackingServiceApplicationTests {
 
 	@Test
 	void contextLoads() {

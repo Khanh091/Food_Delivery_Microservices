@@ -1,13 +1,13 @@
-package com.khanh.fooddelivery.location_service;
+package com.khanh.fooddelivery.tracking_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class LocationServiceApplication {
+public class TrackingServiceApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(LocationServiceApplication.class, args);
+		SpringApplication.run(TrackingServiceApplication.class, args);
 	}
 
 }
