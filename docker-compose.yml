@@ -1,47 +1,154 @@
-﻿services:
+services:
   postgres:
     image: postgres:17
     container_name: food-delivery-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d
+      - ./infrastructure/postgres/init:/docker-entrypoint-initdb.d:ro
     networks:
       - food-delivery-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.6.4
     container_name: food-delivery-keycloak
+    restart: unless-stopped
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
-      KC_DB_USERNAME: postgres
-      KC_DB_PASSWORD: postgres
-
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
+      KC_HOSTNAME: http://host.docker.internal:${KEYCLOAK_PORT:-8180}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     command:
       - start-dev
       - --import-realm
     ports:
-      - "${KEYCLOAK_PORT}:8080"
+      - "${KEYCLOAK_PORT:-8180}:8080"
     volumes:
-      - ./infrastructure/keycloak/realms:/opt/keycloak/data/import
+      - ./infrastructure/keycloak/realms:/opt/keycloak/data/import:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - food-delivery-network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          bash -c '{ printf "HEAD /health/ready HTTP/1.0\r\n\r\n" >&0;
+          grep -q " 200 "; } 0<>/dev/tcp/127.0.0.1/9000'
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
 
-volumes:
-  postgres_data:
+  discovery-service:
+    build:
+      context: ./platform/discovery-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-discovery
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8761
+      EUREKA_INSTANCE_HOSTNAME: discovery-service
+    ports:
+      - "${DISCOVERY_PORT:-8761}:8761"
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
+
+  api-gateway:
+    build:
+      context: ./platform/api-gateway
+      dockerfile: Dockerfile
+    container_name: food-delivery-api-gateway
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8081
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: api-gateway
+      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+    ports:
+      - "${API_GATEWAY_PORT:-8081}:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8081/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-user-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8101
+      DB_URL: jdbc:postgresql://postgres:5432/user_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: user-service
+      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+    ports:
+      - "${USER_SERVICE_PORT:-8101}:8101"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8101/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
 
 networks:
   food-delivery-network:
+    name: food-delivery-network
     driver: bridge
+
+volumes:
+  postgres_data:

@@ -1,5 +1,5 @@
 server:
-  port: 8101
+  port: ${SERVER_PORT:8101}
 
 spring:
   application:
@@ -38,7 +38,8 @@ eureka:
       defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
 
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
     instance-id: ${spring.application.name}:${server.port}
 
 security:
