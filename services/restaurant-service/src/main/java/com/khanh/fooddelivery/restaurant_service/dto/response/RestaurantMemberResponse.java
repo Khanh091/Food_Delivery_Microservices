@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.restaurant_service.dto.response;
 
-import com.khanh.fooddelivery.restaurant_service.enums.*;
+import com.khanh.fooddelivery.restaurant_service.enums.RestaurantMemberRole;
+import com.khanh.fooddelivery.restaurant_service.enums.RestaurantMemberStatus;
 import java.time.Instant;
 import java.util.UUID;
 

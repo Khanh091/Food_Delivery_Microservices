@@ -1,10 +1,15 @@
 package com.khanh.fooddelivery.restaurant_service.mapper;
 
-import com.khanh.fooddelivery.restaurant_service.dto.request.*;
-import com.khanh.fooddelivery.restaurant_service.dto.response.*;
-import com.khanh.fooddelivery.restaurant_service.entity.*;
+import com.khanh.fooddelivery.restaurant_service.dto.request.RestaurantUpdateRequest;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantResponse;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantSummaryResponse;
+import com.khanh.fooddelivery.restaurant_service.entity.Restaurant;
 import java.util.List;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 @Mapper(
         componentModel = "spring",

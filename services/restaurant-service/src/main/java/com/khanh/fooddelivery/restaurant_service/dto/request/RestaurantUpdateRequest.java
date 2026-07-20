@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.restaurant_service.dto.request;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
 
 public record RestaurantUpdateRequest(
         @Size(max = 255) String name,

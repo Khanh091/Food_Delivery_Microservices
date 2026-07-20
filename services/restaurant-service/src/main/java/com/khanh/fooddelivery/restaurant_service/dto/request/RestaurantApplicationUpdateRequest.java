@@ -1,7 +1,10 @@
 package com.khanh.fooddelivery.restaurant_service.dto.request;
 
 import com.khanh.fooddelivery.restaurant_service.enums.BusinessType;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 public record RestaurantApplicationUpdateRequest(
         @Size(max = 255) String businessName,

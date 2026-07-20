@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.restaurant_service.dto.response;
 
-import com.khanh.fooddelivery.restaurant_service.enums.*;
+import com.khanh.fooddelivery.restaurant_service.enums.RestaurantStatus;
+import com.khanh.fooddelivery.restaurant_service.enums.RestaurantVerificationStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;

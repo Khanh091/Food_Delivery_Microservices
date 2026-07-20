@@ -1,9 +1,13 @@
 package com.khanh.fooddelivery.restaurant_service.service;
 
 import com.khanh.fooddelivery.restaurant_service.dto.request.RestaurantUpdateRequest;
-import com.khanh.fooddelivery.restaurant_service.dto.response.*;
-import java.util.*;
-import org.springframework.data.domain.*;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantResponse;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantStatusHistoryResponse;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantSummaryResponse;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 public interface RestaurantService {
