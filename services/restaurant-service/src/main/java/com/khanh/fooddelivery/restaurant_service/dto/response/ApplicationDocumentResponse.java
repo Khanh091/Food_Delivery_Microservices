@@ -1,0 +1,2 @@
+package com.khanh.fooddelivery.restaurant_service.dto.response; import com.khanh.fooddelivery.restaurant_service.enums.*; import java.time.*; import java.util.UUID;
+public record ApplicationDocumentResponse(UUID id,UUID applicationId,ApplicationDocumentType documentType,String documentNumber,String storageKey,String fileUrl,String fileName,String mimeType,Long fileSize,DocumentVerificationStatus verificationStatus,String rejectionReason,LocalDate issuedAt,LocalDate expiresAt,Instant verifiedAt,UUID verifiedByUserId,Instant createdAt,Instant updatedAt,long version){}

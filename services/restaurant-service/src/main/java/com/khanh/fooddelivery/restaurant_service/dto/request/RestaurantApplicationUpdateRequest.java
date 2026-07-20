@@ -1,0 +1,3 @@
+package com.khanh.fooddelivery.restaurant_service.dto.request;
+import com.khanh.fooddelivery.restaurant_service.enums.BusinessType; import jakarta.validation.constraints.*;
+public record RestaurantApplicationUpdateRequest(@Size(max=255) String businessName,BusinessType businessType,@Size(max=50) String taxCode,@Size(max=150) String representativeName,@Size(max=20) String representativePhone,@Email @Size(max=255) String representativeEmail,@Size(max=5000) String description,@Size(max=150) String city,@Size(max=150) String district,@Size(max=500) String businessAddress,@Positive Integer expectedBranchCount,@PositiveOrZero Integer estimatedDailyOrders,@Size(max=100) String mainCuisine){}
