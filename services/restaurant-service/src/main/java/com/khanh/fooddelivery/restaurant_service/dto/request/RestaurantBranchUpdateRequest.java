@@ -1,7 +1,11 @@
 package com.khanh.fooddelivery.restaurant_service.dto.request;
 
 import com.khanh.fooddelivery.restaurant_service.enums.RestaurantBranchStatus;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record RestaurantBranchUpdateRequest(
