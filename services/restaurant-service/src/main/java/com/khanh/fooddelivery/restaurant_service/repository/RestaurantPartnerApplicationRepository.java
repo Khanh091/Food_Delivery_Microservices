@@ -1,0 +1,3 @@
+package com.khanh.fooddelivery.restaurant_service.repository;
+import com.khanh.fooddelivery.restaurant_service.entity.RestaurantPartnerApplication; import org.springframework.data.domain.*; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*;
+public interface RestaurantPartnerApplicationRepository extends JpaRepository<RestaurantPartnerApplication,UUID>{List<RestaurantPartnerApplication> findAllByApplicantUserIdOrderByCreatedAtDesc(UUID userId);Optional<RestaurantPartnerApplication> findByIdAndApplicantUserId(UUID id,UUID userId);Page<RestaurantPartnerApplication> findAllByOrderByCreatedAtDesc(Pageable pageable);}
