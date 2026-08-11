@@ -6,5 +6,5 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ItemPriceHistoryRepository extends JpaRepository<ItemPriceHistory, UUID> {
-    List<ItemPriceHistory> findAllByBranchItemId(UUID branchItemId);
+    List<ItemPriceHistory> findAllByBranchItemIdOrderByCreatedAtDesc(UUID branchItemId);
 }

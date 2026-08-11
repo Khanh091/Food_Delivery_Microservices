@@ -6,6 +6,8 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BranchItemRepository extends JpaRepository<BranchItem, UUID> {
+    boolean existsByBranchIdAndItemId(UUID branchId, UUID itemId);
+
     List<BranchItem> findAllByBranchId(UUID branchId);
 
     List<BranchItem> findAllByItemId(UUID itemId);

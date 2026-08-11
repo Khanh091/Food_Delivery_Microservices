@@ -27,7 +27,11 @@ public enum ErrorCode {
     ITEM_ALREADY_IN_CATEGORY(
             "CATALOG_014", HttpStatus.CONFLICT, "Catalog item is already in the category"),
     MENU_CATEGORY_ITEM_NOT_FOUND(
-            "CATALOG_015", HttpStatus.NOT_FOUND, "Menu category item not found");
+            "CATALOG_015", HttpStatus.NOT_FOUND, "Menu category item not found"),
+    BRANCH_ITEM_NOT_FOUND("CATALOG_016", HttpStatus.NOT_FOUND, "Branch item not found"),
+    BRANCH_ITEM_ALREADY_EXISTS("CATALOG_017", HttpStatus.CONFLICT, "Branch item already exists"),
+    INVALID_SOLD_OUT_TIME(
+            "CATALOG_018", HttpStatus.BAD_REQUEST, "Sold out time must be in the future");
     private final String code;
     private final HttpStatus httpStatus;
     private final String defaultMessage;

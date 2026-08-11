@@ -9,7 +9,7 @@ RUN chmod +x mvnw
 
 COPY src src
 
-RUN ./mvnw -q -DskipTests package
+RUN ./mvnw -q -Dmaven.test.skip=true package
 
 FROM eclipse-temurin:21-jre
 
