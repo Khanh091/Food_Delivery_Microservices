@@ -195,6 +195,44 @@ services:
       retries: 12
       start_period: 60s
 
+  catalog-service:
+    build:
+      context: ./services/catalog-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-catalog-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8103
+      DB_URL: jdbc:postgresql://postgres:5432/catalog_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: catalog-service
+      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
+    ports:
+      - "${CATALOG_SERVICE_PORT:-8103}:8103"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      restaurant-service:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8103/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
 networks:
   food-delivery-network:
     name: food-delivery-network
