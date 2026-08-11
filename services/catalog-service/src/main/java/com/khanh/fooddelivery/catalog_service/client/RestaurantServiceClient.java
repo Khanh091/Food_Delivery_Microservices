@@ -27,8 +27,5 @@ public interface RestaurantServiceClient {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record PublicBranchAvailabilityResponse(
-            UUID restaurantId,
-            UUID branchId,
-            boolean restaurantVisible,
-            boolean branchVisible) {}
+            UUID restaurantId, UUID branchId, boolean restaurantVisible, boolean branchVisible) {}
 }

@@ -119,7 +119,8 @@ class PublicCatalogServiceImplTests {
 
         assertEquals(1, response.menus().size());
         assertEquals(1, response.menus().getFirst().categories().size());
-        PublicCatalogItemResponse publicItem = response.menus().getFirst().categories().getFirst().items().getFirst();
+        PublicCatalogItemResponse publicItem =
+                response.menus().getFirst().categories().getFirst().items().getFirst();
         assertEquals(itemId, publicItem.id());
         assertEquals(new BigDecimal("50000"), publicItem.sellingPrice());
         assertEquals(1, publicItem.optionGroups().size());
@@ -144,7 +145,8 @@ class PublicCatalogServiceImplTests {
     void unavailableBranchItemRemainsVisibleWithEffectiveAvailabilityFalse() {
         CatalogItem item = item();
         BranchItem branchItem = branchItem(item, false, Instant.now().plusSeconds(3600));
-        when(itemRepository.findByIdAndRestaurantIdAndStatus(itemId, restaurantId, CatalogStatus.ACTIVE))
+        when(itemRepository.findByIdAndRestaurantIdAndStatus(
+                        itemId, restaurantId, CatalogStatus.ACTIVE))
                 .thenReturn(Optional.of(item));
         when(branchItemRepository.findByBranchIdAndItemId(branchId, itemId))
                 .thenReturn(Optional.of(branchItem));
@@ -161,7 +163,8 @@ class PublicCatalogServiceImplTests {
 
     @Test
     void itemWithoutBranchItemIsNotExposedAsPublicDetail() {
-        when(itemRepository.findByIdAndRestaurantIdAndStatus(itemId, restaurantId, CatalogStatus.ACTIVE))
+        when(itemRepository.findByIdAndRestaurantIdAndStatus(
+                        itemId, restaurantId, CatalogStatus.ACTIVE))
                 .thenReturn(Optional.of(item()));
         when(branchItemRepository.findByBranchIdAndItemId(branchId, itemId))
                 .thenReturn(Optional.empty());
@@ -185,8 +188,7 @@ class PublicCatalogServiceImplTests {
 
         AppException error =
                 assertThrows(
-                        AppException.class,
-                        () -> service.getBranchCatalog(restaurantId, branchId));
+                        AppException.class, () -> service.getBranchCatalog(restaurantId, branchId));
 
         assertEquals(ErrorCode.BRANCH_NOT_FOUND, error.getErrorCode());
     }

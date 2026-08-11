@@ -59,7 +59,8 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
         requirePublicBranch(restaurantId, branchId);
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         List<Menu> visibleMenus =
-                menus.findAllByRestaurantIdAndBranchIdAndStatusOrderByCreatedAtAsc(
+                menus
+                        .findAllByRestaurantIdAndBranchIdAndStatusOrderByCreatedAtAsc(
                                 restaurantId, branchId, CatalogStatus.ACTIVE)
                         .stream()
                         .filter(menu -> isAvailableOn(menu, today))
@@ -85,10 +86,13 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
                         ids(mappings, mapping -> mapping.getItem().getId()));
         Map<UUID, List<MenuCategoryItem>> mappingsByCategory =
                 mappings.stream()
-                        .filter(mapping -> itemData.itemsById().containsKey(mapping.getItem().getId()))
+                        .filter(
+                                mapping ->
+                                        itemData.itemsById().containsKey(mapping.getItem().getId()))
                         .collect(Collectors.groupingBy(mapping -> mapping.getCategory().getId()));
         Map<UUID, List<MenuCategory>> categoriesByMenu =
-                visibleCategories.stream().collect(Collectors.groupingBy(category -> category.getMenu().getId()));
+                visibleCategories.stream()
+                        .collect(Collectors.groupingBy(category -> category.getMenu().getId()));
 
         List<PublicMenuResponse> publicMenus =
                 visibleMenus.stream()
@@ -105,10 +109,16 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
                                                                 category ->
                                                                         toCategoryResponse(
                                                                                 category,
-                                                                                mappingsByCategory.getOrDefault(
-                                                                                        category.getId(), List.of()),
+                                                                                mappingsByCategory
+                                                                                        .getOrDefault(
+                                                                                                category
+                                                                                                        .getId(),
+                                                                                                List
+                                                                                                        .of()),
                                                                                 itemData))
-                                                        .filter(category -> !category.items().isEmpty())
+                                                        .filter(
+                                                                category ->
+                                                                        !category.items().isEmpty())
                                                         .toList()))
                         .filter(menu -> !menu.categories().isEmpty())
                         .toList();
@@ -147,26 +157,35 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
             return PublicItemData.empty();
         }
         Map<UUID, BranchItem> branchItemsByItemId =
-                branchItems.findAllByBranchIdAndItemIdIn(branchId, List.copyOf(itemsById.keySet())).stream()
-                        .collect(Collectors.toMap(branchItem -> branchItem.getItem().getId(), Function.identity()));
+                branchItems
+                        .findAllByBranchIdAndItemIdIn(branchId, List.copyOf(itemsById.keySet()))
+                        .stream()
+                        .collect(
+                                Collectors.toMap(
+                                        branchItem -> branchItem.getItem().getId(),
+                                        Function.identity()));
         itemsById.keySet().retainAll(branchItemsByItemId.keySet());
         if (itemsById.isEmpty()) {
             return PublicItemData.empty();
         }
         List<UUID> visibleItemIds = List.copyOf(itemsById.keySet());
         Map<UUID, List<ItemImage>> imagesByItem =
-                groupById(images.findAllByItemIdInOrderByIsPrimaryDescSortOrderAscCreatedAtAsc(visibleItemIds),
+                groupById(
+                        images.findAllByItemIdInOrderByIsPrimaryDescSortOrderAscCreatedAtAsc(
+                                visibleItemIds),
                         image -> image.getItem().getId());
         List<OptionGroup> activeGroups =
-                optionGroups.findAllByItemIdInAndStatusOrderBySortOrderAsc(visibleItemIds, CatalogStatus.ACTIVE);
+                optionGroups.findAllByItemIdInAndStatusOrderBySortOrderAsc(
+                        visibleItemIds, CatalogStatus.ACTIVE);
         Map<UUID, List<OptionGroup>> groupsByItem =
                 groupById(activeGroups, group -> group.getItem().getId());
         Map<UUID, List<OptionValue>> valuesByGroup =
                 activeGroups.isEmpty()
                         ? Map.of()
                         : groupById(
-                                optionValues.findAllByOptionGroupIdInAndIsAvailableTrueOrderBySortOrderAsc(
-                                        ids(activeGroups, OptionGroup::getId)),
+                                optionValues
+                                        .findAllByOptionGroupIdInAndIsAvailableTrueOrderBySortOrderAsc(
+                                                ids(activeGroups, OptionGroup::getId)),
                                 value -> value.getOptionGroup().getId());
         return new PublicItemData(
                 itemsById, branchItemsByItemId, imagesByItem, groupsByItem, valuesByGroup);
@@ -186,8 +205,10 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
                                         toItemResponse(
                                                 itemData.itemsById().get(itemId),
                                                 itemData.branchItemsByItemId().get(itemId),
-                                                itemData.imagesByItem().getOrDefault(itemId, List.of()),
-                                                itemData.groupsByItem().getOrDefault(itemId, List.of()),
+                                                itemData.imagesByItem()
+                                                        .getOrDefault(itemId, List.of()),
+                                                itemData.groupsByItem()
+                                                        .getOrDefault(itemId, List.of()),
                                                 itemData.valuesByGroup()))
                         .toList());
     }
@@ -202,8 +223,9 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
                 groups.isEmpty()
                         ? Map.of()
                         : groupById(
-                                valuesRepository.findAllByOptionGroupIdInAndIsAvailableTrueOrderBySortOrderAsc(
-                                        ids(groups, OptionGroup::getId)),
+                                valuesRepository
+                                        .findAllByOptionGroupIdInAndIsAvailableTrueOrderBySortOrderAsc(
+                                                ids(groups, OptionGroup::getId)),
                                 value -> value.getOptionGroup().getId());
         return toItemResponse(item, branchItem, itemImages, groups, valuesByGroup);
     }
@@ -250,8 +272,10 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
                                                                         new PublicOptionValueResponse(
                                                                                 value.getId(),
                                                                                 value.getName(),
-                                                                                value.getAdditionalPrice(),
-                                                                                value.getSortOrder()))
+                                                                                value
+                                                                                        .getAdditionalPrice(),
+                                                                                value
+                                                                                        .getSortOrder()))
                                                         .toList()))
                         .toList();
         return new PublicCatalogItemResponse(
@@ -304,8 +328,7 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
         return entities.stream().map(idExtractor).distinct().toList();
     }
 
-    private <T> Map<UUID, List<T>> groupById(
-            List<T> entities, Function<T, UUID> idExtractor) {
+    private <T> Map<UUID, List<T>> groupById(List<T> entities, Function<T, UUID> idExtractor) {
         return entities.stream().collect(Collectors.groupingBy(idExtractor));
     }
 
