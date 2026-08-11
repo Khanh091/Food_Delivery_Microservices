@@ -35,7 +35,11 @@ public enum ErrorCode {
     OPTION_GROUP_NOT_FOUND("CATALOG_019", HttpStatus.NOT_FOUND, "Option group not found"),
     OPTION_VALUE_NOT_FOUND("CATALOG_020", HttpStatus.NOT_FOUND, "Option value not found"),
     INVALID_OPTION_SELECTION(
-            "CATALOG_021", HttpStatus.BAD_REQUEST, "Invalid option selection rules");
+            "CATALOG_021", HttpStatus.BAD_REQUEST, "Invalid option selection rules"),
+    ITEM_IMAGE_NOT_FOUND("CATALOG_022", HttpStatus.NOT_FOUND, "Item image not found"),
+    INVALID_IMAGE_FILE("CATALOG_023", HttpStatus.BAD_REQUEST, "Invalid image file"),
+    IMAGE_UPLOAD_FAILED("CATALOG_024", HttpStatus.BAD_GATEWAY, "Image upload failed"),
+    IMAGE_DELETE_FAILED("CATALOG_025", HttpStatus.BAD_GATEWAY, "Image delete failed");
     private final String code;
     private final HttpStatus httpStatus;
     private final String defaultMessage;
