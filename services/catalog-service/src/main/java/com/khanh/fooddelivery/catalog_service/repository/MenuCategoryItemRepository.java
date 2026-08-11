@@ -12,4 +12,6 @@ public interface MenuCategoryItemRepository extends JpaRepository<MenuCategoryIt
     Optional<MenuCategoryItem> findByCategoryIdAndItemId(UUID categoryId, UUID itemId);
 
     List<MenuCategoryItem> findAllByCategoryIdOrderBySortOrderAsc(UUID categoryId);
+
+    List<MenuCategoryItem> findAllByCategoryIdInOrderBySortOrderAsc(List<UUID> categoryIds);
 }

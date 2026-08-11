@@ -18,6 +18,17 @@ public interface RestaurantServiceClient {
             @PathVariable UUID restaurantId,
             @RequestParam(required = false) UUID branchId);
 
+    @GetMapping("/internal/v1/restaurants/{restaurantId}/branches/{branchId}/public-availability")
+    ApiResponse<PublicBranchAvailabilityResponse> getPublicBranchAvailability(
+            @PathVariable UUID restaurantId, @PathVariable UUID branchId);
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     record CatalogAuthorizationResponse(UUID restaurantId, UUID branchId, boolean authorized) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record PublicBranchAvailabilityResponse(
+            UUID restaurantId,
+            UUID branchId,
+            boolean restaurantVisible,
+            boolean branchVisible) {}
 }

@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.catalog_service.repository;
 
 import com.khanh.fooddelivery.catalog_service.entity.OptionGroup;
+import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -10,4 +11,7 @@ public interface OptionGroupRepository extends JpaRepository<OptionGroup, UUID> 
     List<OptionGroup> findAllByItemIdOrderBySortOrderAsc(UUID itemId);
 
     Optional<OptionGroup> findByIdAndItemId(UUID id, UUID itemId);
+
+    List<OptionGroup> findAllByItemIdInAndStatusOrderBySortOrderAsc(
+            List<UUID> itemIds, CatalogStatus status);
 }

@@ -11,4 +11,8 @@ public interface BranchItemRepository extends JpaRepository<BranchItem, UUID> {
     List<BranchItem> findAllByBranchId(UUID branchId);
 
     List<BranchItem> findAllByItemId(UUID itemId);
+
+    List<BranchItem> findAllByBranchIdAndItemIdIn(UUID branchId, List<UUID> itemIds);
+
+    java.util.Optional<BranchItem> findByBranchIdAndItemId(UUID branchId, UUID itemId);
 }

@@ -10,4 +10,7 @@ public interface OptionValueRepository extends JpaRepository<OptionValue, UUID> 
     List<OptionValue> findAllByOptionGroupIdOrderBySortOrderAsc(UUID optionGroupId);
 
     Optional<OptionValue> findByIdAndOptionGroupId(UUID id, UUID optionGroupId);
+
+    List<OptionValue> findAllByOptionGroupIdInAndIsAvailableTrueOrderBySortOrderAsc(
+            List<UUID> optionGroupIds);
 }

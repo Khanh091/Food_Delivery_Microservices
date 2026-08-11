@@ -74,6 +74,9 @@ public class GatewaySecurityConfig {
                         )
                         .permitAll()
 
+                        .pathMatchers(HttpMethod.GET, "/api/v1/public/catalog/**")
+                        .permitAll()
+
                         .pathMatchers("/api/v1/carts/**")
                         .hasAnyRole("CUSTOMER", "ADMIN")
 

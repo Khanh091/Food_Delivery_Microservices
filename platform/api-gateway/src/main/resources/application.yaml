@@ -32,7 +32,7 @@ spring:
         - id: catalog-service
           uri: lb://catalog-service
           predicates:
-            - Path=/api/v1/catalog/**
+            - Path=/api/v1/catalog/**,/api/v1/public/catalog/**
 
         - id: search-service
           uri: lb://search-service

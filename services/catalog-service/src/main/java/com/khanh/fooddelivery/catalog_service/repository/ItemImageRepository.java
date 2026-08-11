@@ -12,6 +12,9 @@ import org.springframework.data.repository.query.Param;
 public interface ItemImageRepository extends JpaRepository<ItemImage, UUID> {
     List<ItemImage> findAllByItemIdOrderByIsPrimaryDescSortOrderAscCreatedAtAsc(UUID itemId);
 
+    List<ItemImage> findAllByItemIdInOrderByIsPrimaryDescSortOrderAscCreatedAtAsc(
+            List<UUID> itemIds);
+
     Optional<ItemImage> findByIdAndItemId(UUID id, UUID itemId);
 
     Optional<ItemImage> findFirstByItemIdAndIsPrimaryTrue(UUID itemId);
