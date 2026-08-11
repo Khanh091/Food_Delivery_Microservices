@@ -65,8 +65,13 @@ public class GatewaySecurityConfig {
                         .pathMatchers(
                                 HttpMethod.GET,
                                 "/api/v1/search/**",
-                                "/api/v1/restaurants/**",
                                 "/api/v1/catalog/**"
+                        )
+                        .permitAll()
+
+                        .pathMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/restaurant-branches/*/operating-status"
                         )
                         .permitAll()
 

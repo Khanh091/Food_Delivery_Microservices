@@ -30,7 +30,16 @@ public class SecurityConfig {
                                                 "/actuator/health",
                                                 "/actuator/info")
                                         .permitAll()
+                                        .requestMatchers(
+                                                HttpMethod.GET,
+                                                "/api/v1/restaurant-branches/*/operating-status")
+                                        .permitAll()
                                         .requestMatchers("/api/v1/restaurant-applications/**")
+                                        .authenticated()
+                                        .requestMatchers(
+                                                HttpMethod.POST,
+                                                "/api/v1/restaurants/*/suspend",
+                                                "/api/v1/restaurants/*/restore")
                                         .authenticated()
                                         .requestMatchers(
                                                 "/api/v1/restaurants/**",
