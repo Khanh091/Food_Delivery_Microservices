@@ -31,7 +31,11 @@ public enum ErrorCode {
     BRANCH_ITEM_NOT_FOUND("CATALOG_016", HttpStatus.NOT_FOUND, "Branch item not found"),
     BRANCH_ITEM_ALREADY_EXISTS("CATALOG_017", HttpStatus.CONFLICT, "Branch item already exists"),
     INVALID_SOLD_OUT_TIME(
-            "CATALOG_018", HttpStatus.BAD_REQUEST, "Sold out time must be in the future");
+            "CATALOG_018", HttpStatus.BAD_REQUEST, "Sold out time must be in the future"),
+    OPTION_GROUP_NOT_FOUND("CATALOG_019", HttpStatus.NOT_FOUND, "Option group not found"),
+    OPTION_VALUE_NOT_FOUND("CATALOG_020", HttpStatus.NOT_FOUND, "Option value not found"),
+    INVALID_OPTION_SELECTION(
+            "CATALOG_021", HttpStatus.BAD_REQUEST, "Invalid option selection rules");
     private final String code;
     private final HttpStatus httpStatus;
     private final String defaultMessage;
