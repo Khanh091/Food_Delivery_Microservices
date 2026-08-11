@@ -28,7 +28,7 @@ public class CloudinaryStorageService implements StorageService {
                             .upload(
                                     file.getBytes(),
                                     ObjectUtils.asMap(
-                                            "folder",
+                                            "asset_folder",
                                             folder,
                                             "public_id",
                                             resourceName,
