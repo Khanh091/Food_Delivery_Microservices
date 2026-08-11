@@ -6,7 +6,6 @@ import com.khanh.fooddelivery.restaurant_service.exception.ErrorCode;
 import feign.FeignException;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
@@ -20,8 +19,7 @@ public class CurrentUserProviderImpl implements CurrentUserProvider {
         if (claim != null && !claim.isBlank()) return parse(claim);
         try {
             UserServiceClient.ApiResponse<UserServiceClient.CurrentUserResponse> body =
-                    userServiceClient.getCurrentUser(
-                            HttpHeaders.AUTHORIZATION + " " + jwt.getTokenValue());
+                    userServiceClient.getCurrentUser("Bearer " + jwt.getTokenValue());
             if (body == null || body.data() == null || body.data().id() == null)
                 throw new AppException(
                         ErrorCode.UNAUTHENTICATED, "Unable to resolve internal user id");

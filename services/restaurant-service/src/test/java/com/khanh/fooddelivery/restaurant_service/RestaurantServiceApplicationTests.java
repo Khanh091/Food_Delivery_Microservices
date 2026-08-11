@@ -94,6 +94,11 @@ class RestaurantServiceApplicationTests {
                 .andExpect(status().isOk());
 
         mockMvc.perform(
+                        get("/api/v1/restaurants/{id}", UUID.randomUUID())
+                                .with(jwt().authorities(support)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(
                         patch("/api/v1/restaurants/{id}", UUID.randomUUID())
                                 .with(jwt().authorities(support)))
                 .andExpect(status().isForbidden());
