@@ -160,7 +160,6 @@ services:
       EUREKA_INSTANCE_HOSTNAME: restaurant-service
       KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
-      USER_SERVICE_URL: http://user-service:8101
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-CLOUDINARY}
       STORAGE_MAX_FILE_SIZE: ${STORAGE_MAX_FILE_SIZE:-10485760}
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
