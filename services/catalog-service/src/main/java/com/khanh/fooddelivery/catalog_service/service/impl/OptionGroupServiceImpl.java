@@ -10,6 +10,9 @@ import com.khanh.fooddelivery.catalog_service.enums.OptionSelectionType;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.OptionGroupMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
@@ -28,6 +31,7 @@ public class OptionGroupServiceImpl implements OptionGroupService {
     private final OptionGroupRepository groupRepository;
     private final OptionGroupMapper groupMapper;
     private final CatalogAuthorizationService authorizationService;
+    private final OutboxEventService outboxEventService;
 
     @Override
     public OptionGroupResponse create(UUID itemId, OptionGroupCreateRequest request) {
@@ -38,7 +42,9 @@ public class OptionGroupServiceImpl implements OptionGroupService {
         group.setStatus(CatalogStatus.ACTIVE);
         if (group.getSortOrder() == null) group.setSortOrder(0);
         validateSelection(group);
-        return groupMapper.toResponse(groupRepository.save(group));
+        OptionGroup savedGroup = groupRepository.save(group);
+        enqueue(savedGroup, "CREATED");
+        return groupMapper.toResponse(savedGroup);
     }
 
     @Override
@@ -63,7 +69,9 @@ public class OptionGroupServiceImpl implements OptionGroupService {
         authorize(group.getItem());
         groupMapper.update(request, group);
         validateSelection(group);
-        return groupMapper.toResponse(groupRepository.save(group));
+        OptionGroup savedGroup = groupRepository.save(group);
+        enqueue(savedGroup, "UPDATED");
+        return groupMapper.toResponse(savedGroup);
     }
 
     @Override
@@ -79,8 +87,13 @@ public class OptionGroupServiceImpl implements OptionGroupService {
     private OptionGroupResponse changeStatus(UUID itemId, UUID groupId, CatalogStatus status) {
         OptionGroup group = requiredGroup(itemId, groupId);
         authorize(group.getItem());
+        if (group.getStatus() == status) {
+            return groupMapper.toResponse(group);
+        }
         group.setStatus(status);
-        return groupMapper.toResponse(groupRepository.save(group));
+        OptionGroup savedGroup = groupRepository.save(group);
+        enqueue(savedGroup, status.name());
+        return groupMapper.toResponse(savedGroup);
     }
 
     private CatalogItem requiredItem(UUID itemId) {
@@ -112,5 +125,13 @@ public class OptionGroupServiceImpl implements OptionGroupService {
         } else if (Boolean.TRUE.equals(group.getRequired()) && group.getMinimumSelections() < 1)
             throw new AppException(ErrorCode.INVALID_OPTION_SELECTION);
         else if (!Boolean.TRUE.equals(group.getRequired())) group.setMinimumSelections(0);
+    }
+
+    private void enqueue(OptionGroup group, String action) {
+        outboxEventService.enqueue(
+                CatalogEventType.OPTION_GROUP_CHANGED,
+                "OPTION_GROUP",
+                group.getId(),
+                CatalogEventData.optionGroup(group, action));
     }
 }

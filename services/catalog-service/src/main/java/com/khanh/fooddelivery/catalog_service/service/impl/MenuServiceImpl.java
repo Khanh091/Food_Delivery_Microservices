@@ -8,6 +8,9 @@ import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.MenuMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.MenuRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import com.khanh.fooddelivery.catalog_service.service.MenuService;
@@ -25,6 +28,7 @@ public class MenuServiceImpl implements MenuService {
     private final MenuRepository menuRepository;
     private final MenuMapper menuMapper;
     private final CatalogAuthorizationService authorizationService;
+    private final OutboxEventService outboxEventService;
 
     @Override
     public MenuResponse create(MenuCreateRequest request) {
@@ -32,7 +36,9 @@ public class MenuServiceImpl implements MenuService {
         authorizationService.requireBranchCatalogAccess(request.restaurantId(), request.branchId());
         Menu menu = menuMapper.toEntity(request);
         menu.setStatus(CatalogStatus.ACTIVE);
-        return menuMapper.toResponse(menuRepository.save(menu));
+        Menu savedMenu = menuRepository.save(menu);
+        enqueue(savedMenu, "CREATED");
+        return menuMapper.toResponse(savedMenu);
     }
 
     @Override
@@ -62,7 +68,9 @@ public class MenuServiceImpl implements MenuService {
                         ? menu.getAvailableUntil()
                         : request.availableUntil());
         menuMapper.update(request, menu);
-        return menuMapper.toResponse(menuRepository.save(menu));
+        Menu savedMenu = menuRepository.save(menu);
+        enqueue(savedMenu, "UPDATED");
+        return menuMapper.toResponse(savedMenu);
     }
 
     @Override
@@ -80,13 +88,19 @@ public class MenuServiceImpl implements MenuService {
         Menu menu = required(menuId);
         authorize(menu);
         menuRepository.delete(menu);
+        enqueue(menu, "DELETED");
     }
 
     private MenuResponse changeStatus(UUID menuId, CatalogStatus status) {
         Menu menu = required(menuId);
         authorize(menu);
+        if (menu.getStatus() == status) {
+            return menuMapper.toResponse(menu);
+        }
         menu.setStatus(status);
-        return menuMapper.toResponse(menuRepository.save(menu));
+        Menu savedMenu = menuRepository.save(menu);
+        enqueue(savedMenu, status.name());
+        return menuMapper.toResponse(savedMenu);
     }
 
     private Menu required(UUID menuId) {
@@ -105,5 +119,13 @@ public class MenuServiceImpl implements MenuService {
                 && availableFrom.isAfter(availableUntil)) {
             throw new AppException(ErrorCode.INVALID_MENU_DATE_RANGE);
         }
+    }
+
+    private void enqueue(Menu menu, String action) {
+        outboxEventService.enqueue(
+                CatalogEventType.MENU_CHANGED,
+                "MENU",
+                menu.getId(),
+                CatalogEventData.menu(menu, action));
     }
 }

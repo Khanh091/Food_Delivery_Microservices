@@ -9,6 +9,9 @@ import com.khanh.fooddelivery.catalog_service.entity.OptionValue;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.OptionValueMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionValueRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
@@ -27,6 +30,7 @@ public class OptionValueServiceImpl implements OptionValueService {
     private final OptionValueRepository valueRepository;
     private final OptionValueMapper valueMapper;
     private final CatalogAuthorizationService authorizationService;
+    private final OutboxEventService outboxEventService;
 
     @Override
     public OptionValueResponse create(UUID itemId, UUID groupId, OptionValueCreateRequest request) {
@@ -36,7 +40,9 @@ public class OptionValueServiceImpl implements OptionValueService {
         value.setOptionGroup(group);
         value.setIsAvailable(true);
         if (value.getSortOrder() == null) value.setSortOrder(0);
-        return valueMapper.toResponse(valueRepository.save(value));
+        OptionValue savedValue = valueRepository.save(value);
+        enqueue(savedValue, "CREATED");
+        return valueMapper.toResponse(savedValue);
     }
 
     @Override
@@ -62,7 +68,9 @@ public class OptionValueServiceImpl implements OptionValueService {
         OptionValue value = requiredValue(itemId, groupId, valueId);
         authorize(value.getOptionGroup().getItem());
         valueMapper.update(request, value);
-        return valueMapper.toResponse(valueRepository.save(value));
+        OptionValue savedValue = valueRepository.save(value);
+        enqueue(savedValue, "UPDATED");
+        return valueMapper.toResponse(savedValue);
     }
 
     @Override
@@ -79,8 +87,13 @@ public class OptionValueServiceImpl implements OptionValueService {
             UUID itemId, UUID groupId, UUID valueId, boolean available) {
         OptionValue value = requiredValue(itemId, groupId, valueId);
         authorize(value.getOptionGroup().getItem());
+        if (Boolean.valueOf(available).equals(value.getIsAvailable())) {
+            return valueMapper.toResponse(value);
+        }
         value.setIsAvailable(available);
-        return valueMapper.toResponse(valueRepository.save(value));
+        OptionValue savedValue = valueRepository.save(value);
+        enqueue(savedValue, available ? "AVAILABLE" : "UNAVAILABLE");
+        return valueMapper.toResponse(savedValue);
     }
 
     private OptionGroup requiredGroup(UUID itemId, UUID groupId) {
@@ -98,5 +111,13 @@ public class OptionValueServiceImpl implements OptionValueService {
 
     private void authorize(CatalogItem item) {
         authorizationService.requireRestaurantCatalogAccess(item.getRestaurantId());
+    }
+
+    private void enqueue(OptionValue value, String action) {
+        outboxEventService.enqueue(
+                CatalogEventType.OPTION_VALUE_CHANGED,
+                "OPTION_VALUE",
+                value.getId(),
+                CatalogEventData.optionValue(value, action));
     }
 }

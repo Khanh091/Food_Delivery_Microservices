@@ -10,6 +10,9 @@ import com.khanh.fooddelivery.catalog_service.entity.MenuCategoryItem;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.MenuCategoryItemMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryRepository;
@@ -30,6 +33,7 @@ public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
     private final MenuCategoryItemRepository categoryItemRepository;
     private final MenuCategoryItemMapper categoryItemMapper;
     private final CatalogAuthorizationService authorizationService;
+    private final OutboxEventService outboxEventService;
 
     @Override
     public MenuCategoryItemResponse add(
@@ -47,7 +51,9 @@ public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
         categoryItem.setCategory(category);
         categoryItem.setItem(item);
         categoryItem.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
-        return categoryItemMapper.toResponse(categoryItemRepository.save(categoryItem));
+        MenuCategoryItem savedCategoryItem = categoryItemRepository.save(categoryItem);
+        enqueue(savedCategoryItem, "ATTACHED");
+        return categoryItemMapper.toResponse(savedCategoryItem);
     }
 
     @Override
@@ -69,14 +75,18 @@ public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
         authorize(category.getMenu());
         MenuCategoryItem categoryItem = requiredCategoryItem(categoryId, itemId);
         categoryItemMapper.update(request, categoryItem);
-        return categoryItemMapper.toResponse(categoryItemRepository.save(categoryItem));
+        MenuCategoryItem savedCategoryItem = categoryItemRepository.save(categoryItem);
+        enqueue(savedCategoryItem, "SORT_ORDER_UPDATED");
+        return categoryItemMapper.toResponse(savedCategoryItem);
     }
 
     @Override
     public void remove(UUID menuId, UUID categoryId, UUID itemId) {
         MenuCategory category = requiredCategory(menuId, categoryId);
         authorize(category.getMenu());
-        categoryItemRepository.delete(requiredCategoryItem(categoryId, itemId));
+        MenuCategoryItem categoryItem = requiredCategoryItem(categoryId, itemId);
+        categoryItemRepository.delete(categoryItem);
+        enqueue(categoryItem, "REMOVED");
     }
 
     private MenuCategory requiredCategory(UUID menuId, UUID categoryId) {
@@ -105,5 +115,13 @@ public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
 
     private void authorize(Menu menu) {
         authorizationService.requireBranchCatalogAccess(menu.getRestaurantId(), menu.getBranchId());
+    }
+
+    private void enqueue(MenuCategoryItem categoryItem, String action) {
+        outboxEventService.enqueue(
+                CatalogEventType.MENU_CATEGORY_ITEM_CHANGED,
+                "MENU_CATEGORY_ITEM",
+                categoryItem.getId(),
+                CatalogEventData.menuCategoryItem(categoryItem, action));
     }
 }

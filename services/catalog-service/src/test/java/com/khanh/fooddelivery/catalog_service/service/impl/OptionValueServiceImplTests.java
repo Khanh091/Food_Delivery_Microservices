@@ -14,6 +14,7 @@ import com.khanh.fooddelivery.catalog_service.entity.OptionValue;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.OptionValueMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionValueRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
@@ -35,13 +36,18 @@ class OptionValueServiceImplTests {
     @Mock private OptionValueRepository valueRepository;
     @Mock private OptionValueMapper valueMapper;
     @Mock private CatalogAuthorizationService authorizationService;
+    @Mock private OutboxEventService outboxEventService;
     private OptionValueServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service =
                 new OptionValueServiceImpl(
-                        groupRepository, valueRepository, valueMapper, authorizationService);
+                        groupRepository,
+                        valueRepository,
+                        valueMapper,
+                        authorizationService,
+                        outboxEventService);
     }
 
     @Test

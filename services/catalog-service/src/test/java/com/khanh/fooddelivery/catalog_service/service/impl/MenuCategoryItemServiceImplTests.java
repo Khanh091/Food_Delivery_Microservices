@@ -17,6 +17,7 @@ import com.khanh.fooddelivery.catalog_service.entity.MenuCategoryItem;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.MenuCategoryItemMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryRepository;
@@ -44,6 +45,7 @@ class MenuCategoryItemServiceImplTests {
     @Mock private MenuCategoryItemRepository categoryItemRepository;
     @Mock private MenuCategoryItemMapper categoryItemMapper;
     @Mock private CatalogAuthorizationService authorizationService;
+    @Mock private OutboxEventService outboxEventService;
 
     private MenuCategoryItemServiceImpl service;
 
@@ -55,7 +57,8 @@ class MenuCategoryItemServiceImplTests {
                         itemRepository,
                         categoryItemRepository,
                         categoryItemMapper,
-                        authorizationService);
+                        authorizationService,
+                        outboxEventService);
     }
 
     @Test
@@ -146,6 +149,9 @@ class MenuCategoryItemServiceImplTests {
     @Test
     void updateSortOrderUpdatesExistingMappingOnly() {
         MenuCategoryItem mapping = new MenuCategoryItem();
+        mapping.setId(UUID.randomUUID());
+        mapping.setCategory(category());
+        mapping.setItem(item(restaurantId));
         when(categoryRepository.findByIdAndMenuId(categoryId, menuId))
                 .thenReturn(Optional.of(category()));
         when(categoryItemRepository.findByCategoryIdAndItemId(categoryId, itemId))
@@ -166,6 +172,9 @@ class MenuCategoryItemServiceImplTests {
     @Test
     void removeDeletesOnlyMapping() {
         MenuCategoryItem mapping = new MenuCategoryItem();
+        mapping.setId(UUID.randomUUID());
+        mapping.setCategory(category());
+        mapping.setItem(item(restaurantId));
         when(categoryRepository.findByIdAndMenuId(categoryId, menuId))
                 .thenReturn(Optional.of(category()));
         when(categoryItemRepository.findByCategoryIdAndItemId(categoryId, itemId))

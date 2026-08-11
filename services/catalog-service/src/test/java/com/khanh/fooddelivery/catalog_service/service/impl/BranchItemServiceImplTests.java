@@ -18,6 +18,7 @@ import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.BranchItemMapper;
 import com.khanh.fooddelivery.catalog_service.mapper.ItemPriceHistoryMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.BranchItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.ItemPriceHistoryRepository;
@@ -48,6 +49,7 @@ class BranchItemServiceImplTests {
     @Mock private ItemPriceHistoryMapper priceHistoryMapper;
     @Mock private CatalogAuthorizationService authorizationService;
     @Mock private SecurityAuditorAware auditorAware;
+    @Mock private OutboxEventService outboxEventService;
 
     private BranchItemServiceImpl service;
 
@@ -61,7 +63,8 @@ class BranchItemServiceImplTests {
                         branchItemMapper,
                         priceHistoryMapper,
                         authorizationService,
-                        auditorAware);
+                        auditorAware,
+                        outboxEventService);
     }
 
     @Test

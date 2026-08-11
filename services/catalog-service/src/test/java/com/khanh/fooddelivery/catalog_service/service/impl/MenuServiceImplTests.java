@@ -16,6 +16,7 @@ import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.MenuMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.MenuRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import java.time.LocalDate;
@@ -35,11 +36,14 @@ class MenuServiceImplTests {
     @Mock private MenuRepository menuRepository;
     @Mock private MenuMapper menuMapper;
     @Mock private CatalogAuthorizationService authorizationService;
+    @Mock private OutboxEventService outboxEventService;
     private MenuServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new MenuServiceImpl(menuRepository, menuMapper, authorizationService);
+        service =
+                new MenuServiceImpl(
+                        menuRepository, menuMapper, authorizationService, outboxEventService);
     }
 
     @Test

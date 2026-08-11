@@ -13,6 +13,9 @@ import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.BranchItemMapper;
 import com.khanh.fooddelivery.catalog_service.mapper.ItemPriceHistoryMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.BranchItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.ItemPriceHistoryRepository;
@@ -37,6 +40,7 @@ public class BranchItemServiceImpl implements BranchItemService {
     private final ItemPriceHistoryMapper priceHistoryMapper;
     private final CatalogAuthorizationService authorizationService;
     private final SecurityAuditorAware auditorAware;
+    private final OutboxEventService outboxEventService;
 
     @Override
     public BranchItemResponse create(BranchItemCreateRequest request) {
@@ -50,7 +54,9 @@ public class BranchItemServiceImpl implements BranchItemService {
         branchItem.setItem(item);
         branchItem.setIsAvailable(true);
         branchItem.setSoldOutUntil(null);
-        return branchItemMapper.toResponse(branchItemRepository.save(branchItem));
+        BranchItem savedBranchItem = branchItemRepository.save(branchItem);
+        enqueue(CatalogEventType.BRANCH_ITEM_UPSERTED, savedBranchItem, "CREATED");
+        return branchItemMapper.toResponse(savedBranchItem);
     }
 
     @Override
@@ -81,7 +87,11 @@ public class BranchItemServiceImpl implements BranchItemService {
         BranchItem branchItem = requiredBranchItem(branchItemId);
         authorize(branchItem);
 
-        if (branchItem.getSellingPrice().compareTo(request.sellingPrice()) != 0) {
+        boolean priceChanged = branchItem.getSellingPrice().compareTo(request.sellingPrice()) != 0;
+        boolean originalPriceChanged =
+                request.originalPrice() != null
+                        && !request.originalPrice().equals(branchItem.getOriginalPrice());
+        if (priceChanged) {
             ItemPriceHistory history = new ItemPriceHistory();
             history.setBranchItem(branchItem);
             history.setOldPrice(branchItem.getSellingPrice());
@@ -94,24 +104,51 @@ public class BranchItemServiceImpl implements BranchItemService {
         if (request.originalPrice() != null) {
             branchItem.setOriginalPrice(request.originalPrice());
         }
-        return branchItemMapper.toResponse(branchItemRepository.save(branchItem));
+        BranchItem savedBranchItem = branchItemRepository.save(branchItem);
+        if (priceChanged) {
+            enqueue(CatalogEventType.BRANCH_ITEM_PRICE_CHANGED, savedBranchItem, "PRICE_UPDATED");
+        } else if (originalPriceChanged) {
+            enqueue(
+                    CatalogEventType.BRANCH_ITEM_UPSERTED,
+                    savedBranchItem,
+                    "ORIGINAL_PRICE_UPDATED");
+        }
+        return branchItemMapper.toResponse(savedBranchItem);
     }
 
     @Override
     public BranchItemResponse markAvailable(UUID branchItemId) {
         BranchItem branchItem = requiredBranchItem(branchItemId);
         authorize(branchItem);
+        boolean changed =
+                !Boolean.TRUE.equals(branchItem.getIsAvailable())
+                        || branchItem.getSoldOutUntil() != null;
         branchItem.setIsAvailable(true);
         branchItem.setSoldOutUntil(null);
-        return branchItemMapper.toResponse(branchItemRepository.save(branchItem));
+        BranchItem savedBranchItem = branchItemRepository.save(branchItem);
+        if (changed) {
+            enqueue(
+                    CatalogEventType.BRANCH_ITEM_AVAILABILITY_CHANGED,
+                    savedBranchItem,
+                    "AVAILABLE");
+        }
+        return branchItemMapper.toResponse(savedBranchItem);
     }
 
     @Override
     public BranchItemResponse markUnavailable(UUID branchItemId) {
         BranchItem branchItem = requiredBranchItem(branchItemId);
         authorize(branchItem);
+        boolean changed = !Boolean.FALSE.equals(branchItem.getIsAvailable());
         branchItem.setIsAvailable(false);
-        return branchItemMapper.toResponse(branchItemRepository.save(branchItem));
+        BranchItem savedBranchItem = branchItemRepository.save(branchItem);
+        if (changed) {
+            enqueue(
+                    CatalogEventType.BRANCH_ITEM_AVAILABILITY_CHANGED,
+                    savedBranchItem,
+                    "UNAVAILABLE");
+        }
+        return branchItemMapper.toResponse(savedBranchItem);
     }
 
     @Override
@@ -121,9 +158,16 @@ public class BranchItemServiceImpl implements BranchItemService {
         }
         BranchItem branchItem = requiredBranchItem(branchItemId);
         authorize(branchItem);
+        boolean changed =
+                !Boolean.FALSE.equals(branchItem.getIsAvailable())
+                        || !request.soldOutUntil().equals(branchItem.getSoldOutUntil());
         branchItem.setIsAvailable(false);
         branchItem.setSoldOutUntil(request.soldOutUntil());
-        return branchItemMapper.toResponse(branchItemRepository.save(branchItem));
+        BranchItem savedBranchItem = branchItemRepository.save(branchItem);
+        if (changed) {
+            enqueue(CatalogEventType.BRANCH_ITEM_AVAILABILITY_CHANGED, savedBranchItem, "SOLD_OUT");
+        }
+        return branchItemMapper.toResponse(savedBranchItem);
     }
 
     @Override
@@ -131,8 +175,13 @@ public class BranchItemServiceImpl implements BranchItemService {
             UUID branchItemId, BranchItemQuantityUpdateRequest request) {
         BranchItem branchItem = requiredBranchItem(branchItemId);
         authorize(branchItem);
+        boolean changed = !request.availableQuantity().equals(branchItem.getAvailableQuantity());
         branchItem.setAvailableQuantity(request.availableQuantity());
-        return branchItemMapper.toResponse(branchItemRepository.save(branchItem));
+        BranchItem savedBranchItem = branchItemRepository.save(branchItem);
+        if (changed) {
+            enqueue(CatalogEventType.BRANCH_ITEM_UPSERTED, savedBranchItem, "QUANTITY_UPDATED");
+        }
+        return branchItemMapper.toResponse(savedBranchItem);
     }
 
     @Override
@@ -159,5 +208,13 @@ public class BranchItemServiceImpl implements BranchItemService {
     private void authorize(BranchItem branchItem) {
         authorizationService.requireBranchCatalogAccess(
                 branchItem.getItem().getRestaurantId(), branchItem.getBranchId());
+    }
+
+    private void enqueue(CatalogEventType eventType, BranchItem branchItem, String action) {
+        outboxEventService.enqueue(
+                eventType,
+                "BRANCH_ITEM",
+                branchItem.getId(),
+                CatalogEventData.branchItem(branchItem, action));
     }
 }

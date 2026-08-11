@@ -17,6 +17,7 @@ import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.CatalogItemMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import java.math.BigDecimal;
@@ -36,12 +37,15 @@ class CatalogItemServiceImplTests {
     @Mock private CatalogItemRepository itemRepository;
     @Mock private CatalogItemMapper itemMapper;
     @Mock private CatalogAuthorizationService authorizationService;
+    @Mock private OutboxEventService outboxEventService;
 
     private CatalogItemServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new CatalogItemServiceImpl(itemRepository, itemMapper, authorizationService);
+        service =
+                new CatalogItemServiceImpl(
+                        itemRepository, itemMapper, authorizationService, outboxEventService);
     }
 
     @Test
@@ -54,6 +58,12 @@ class CatalogItemServiceImplTests {
         service.create(createRequest(null, null));
 
         verify(authorizationService).requireRestaurantCatalogAccess(restaurantId);
+        verify(outboxEventService)
+                .enqueue(
+                        any(),
+                        org.mockito.ArgumentMatchers.eq("CATALOG_ITEM"),
+                        org.mockito.ArgumentMatchers.eq(itemId),
+                        any());
         assertEquals(CatalogStatus.ACTIVE, item.getStatus());
         assertEquals("VND", item.getCurrency());
         assertEquals(Boolean.FALSE, item.getIsVegetarian());

@@ -15,6 +15,7 @@ import com.khanh.fooddelivery.catalog_service.enums.OptionSelectionType;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.OptionGroupMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
@@ -34,13 +35,18 @@ class OptionGroupServiceImplTests {
     @Mock private OptionGroupRepository groupRepository;
     @Mock private OptionGroupMapper groupMapper;
     @Mock private CatalogAuthorizationService authorizationService;
+    @Mock private OutboxEventService outboxEventService;
     private OptionGroupServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service =
                 new OptionGroupServiceImpl(
-                        itemRepository, groupRepository, groupMapper, authorizationService);
+                        itemRepository,
+                        groupRepository,
+                        groupMapper,
+                        authorizationService,
+                        outboxEventService);
     }
 
     @Test

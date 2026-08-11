@@ -26,6 +26,18 @@ spring:
           restaurant-service:
             connectTimeout: 3000
             readTimeout: 5000
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    admin:
+      fail-fast: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 0
+      properties:
+        request.timeout.ms: ${KAFKA_REQUEST_TIMEOUT_MS:5000}
+        delivery.timeout.ms: ${KAFKA_DELIVERY_TIMEOUT_MS:10000}
   security:
     oauth2:
       resourceserver:
@@ -37,6 +49,19 @@ spring:
       max-request-size: ${STORAGE_MAX_FILE_SIZE:10485760}
 
 app:
+  outbox:
+    topic: ${CATALOG_EVENTS_TOPIC:catalog.events}
+    topic-partitions: ${CATALOG_EVENTS_TOPIC_PARTITIONS:3}
+    topic-replication-factor: ${CATALOG_EVENTS_TOPIC_REPLICATION_FACTOR:1}
+    publisher:
+      enabled: ${OUTBOX_PUBLISHER_ENABLED:true}
+      fixed-delay-ms: ${OUTBOX_PUBLISHER_DELAY_MS:1000}
+      batch-size: ${OUTBOX_PUBLISHER_BATCH_SIZE:50}
+      max-retries: ${OUTBOX_PUBLISHER_MAX_RETRIES:10}
+      send-timeout-ms: ${OUTBOX_PUBLISHER_SEND_TIMEOUT_MS:15000}
+      processing-lease-ms: ${OUTBOX_PUBLISHER_PROCESSING_LEASE_MS:30000}
+      initial-retry-delay-ms: ${OUTBOX_PUBLISHER_INITIAL_RETRY_DELAY_MS:5000}
+      max-retry-delay-ms: ${OUTBOX_PUBLISHER_MAX_RETRY_DELAY_MS:60000}
   storage:
     max-file-size: ${STORAGE_MAX_FILE_SIZE:10485760}
     allowed-content-types: image/jpeg,image/png,image/webp
@@ -63,6 +88,9 @@ eureka:
     instance-id: ${spring.application.name}:${server.port}
 
 management:
+  health:
+    kafka:
+      enabled: false
   endpoints:
     web:
       exposure:
