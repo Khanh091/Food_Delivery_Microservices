@@ -6,5 +6,5 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CatalogItemRepository extends JpaRepository<CatalogItem, UUID> {
-    List<CatalogItem> findAllByRestaurantId(UUID restaurantId);
+    List<CatalogItem> findAllByRestaurantIdOrderByCreatedAtAsc(UUID restaurantId);
 }

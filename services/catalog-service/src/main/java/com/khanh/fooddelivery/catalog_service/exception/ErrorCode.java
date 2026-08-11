@@ -18,7 +18,16 @@ public enum ErrorCode {
     MENU_NOT_FOUND("CATALOG_009", HttpStatus.NOT_FOUND, "Menu not found"),
     MENU_CATEGORY_NOT_FOUND("CATALOG_010", HttpStatus.NOT_FOUND, "Menu category not found"),
     INVALID_MENU_DATE_RANGE(
-            "CATALOG_011", HttpStatus.BAD_REQUEST, "Invalid menu availability date range");
+            "CATALOG_011", HttpStatus.BAD_REQUEST, "Invalid menu availability date range"),
+    CATALOG_ITEM_NOT_FOUND("CATALOG_012", HttpStatus.NOT_FOUND, "Catalog item not found"),
+    ITEM_CATEGORY_MISMATCH(
+            "CATALOG_013",
+            HttpStatus.BAD_REQUEST,
+            "Catalog item does not belong to the category restaurant"),
+    ITEM_ALREADY_IN_CATEGORY(
+            "CATALOG_014", HttpStatus.CONFLICT, "Catalog item is already in the category"),
+    MENU_CATEGORY_ITEM_NOT_FOUND(
+            "CATALOG_015", HttpStatus.NOT_FOUND, "Menu category item not found");
     private final String code;
     private final HttpStatus httpStatus;
     private final String defaultMessage;
