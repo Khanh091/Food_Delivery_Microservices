@@ -34,6 +34,8 @@ public class SecurityConfig {
                                                 HttpMethod.GET,
                                                 "/api/v1/restaurant-branches/*/operating-status")
                                         .permitAll()
+                                        .requestMatchers("/internal/v1/**")
+                                        .authenticated()
                                         .requestMatchers("/api/v1/restaurant-applications/**")
                                         .authenticated()
                                         .requestMatchers(

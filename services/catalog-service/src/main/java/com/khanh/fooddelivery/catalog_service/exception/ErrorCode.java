@@ -10,7 +10,11 @@ public enum ErrorCode {
     UNAUTHENTICATED("CATALOG_003", HttpStatus.UNAUTHORIZED, "Authentication is required"),
     DATA_CONFLICT("CATALOG_004", HttpStatus.CONFLICT, "Data conflict"),
     INTERNAL_SERVER_ERROR(
-            "CATALOG_005", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+            "CATALOG_005", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
+    RESTAURANT_NOT_FOUND("CATALOG_006", HttpStatus.NOT_FOUND, "Restaurant not found"),
+    BRANCH_NOT_FOUND("CATALOG_007", HttpStatus.NOT_FOUND, "Restaurant branch not found"),
+    RESTAURANT_SERVICE_UNAVAILABLE(
+            "CATALOG_008", HttpStatus.SERVICE_UNAVAILABLE, "Restaurant service is unavailable");
     private final String code;
     private final HttpStatus httpStatus;
     private final String defaultMessage;

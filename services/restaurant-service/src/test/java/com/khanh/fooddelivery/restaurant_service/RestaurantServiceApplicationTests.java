@@ -80,6 +80,15 @@ class RestaurantServiceApplicationTests {
     }
 
     @Test
+    void anonymousInternalCatalogAuthorizationIsUnauthorized() throws Exception {
+        mockMvc.perform(
+                        get(
+                                "/internal/v1/restaurants/{restaurantId}/catalog-authorization",
+                                UUID.randomUUID()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void supportCanReachSuspendAndRestoreOnly() throws Exception {
         SimpleGrantedAuthority support = new SimpleGrantedAuthority("ROLE_SUPPORT");
 
