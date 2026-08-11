@@ -6,5 +6,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MenuCategoryRepository extends JpaRepository<MenuCategory, UUID> {
-    List<MenuCategory> findAllByMenuId(UUID menuId);
+    List<MenuCategory> findAllByMenuIdOrderBySortOrderAsc(UUID menuId);
+
+    java.util.Optional<MenuCategory> findByIdAndMenuId(UUID id, UUID menuId);
 }

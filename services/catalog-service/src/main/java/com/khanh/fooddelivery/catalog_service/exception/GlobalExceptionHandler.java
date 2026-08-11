@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -23,6 +25,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ErrorResponse> denied(AccessDeniedException e, HttpServletRequest r) {
         return out(ErrorCode.ACCESS_DENIED, ErrorCode.ACCESS_DENIED.getDefaultMessage(), r);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ResponseEntity<ErrorResponse> validation(
+            MethodArgumentNotValidException e, HttpServletRequest r) {
+        String message =
+                e.getBindingResult().getFieldErrors().stream()
+                        .map(FieldError::getField)
+                        .distinct()
+                        .sorted()
+                        .reduce((left, right) -> left + ", " + right)
+                        .map(fields -> "Invalid value for: " + fields)
+                        .orElse(ErrorCode.INVALID_REQUEST.getDefaultMessage());
+        return out(ErrorCode.INVALID_REQUEST, message, r);
     }
 
     @ExceptionHandler(Exception.class)

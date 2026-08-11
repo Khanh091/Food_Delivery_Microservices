@@ -14,7 +14,11 @@ public enum ErrorCode {
     RESTAURANT_NOT_FOUND("CATALOG_006", HttpStatus.NOT_FOUND, "Restaurant not found"),
     BRANCH_NOT_FOUND("CATALOG_007", HttpStatus.NOT_FOUND, "Restaurant branch not found"),
     RESTAURANT_SERVICE_UNAVAILABLE(
-            "CATALOG_008", HttpStatus.SERVICE_UNAVAILABLE, "Restaurant service is unavailable");
+            "CATALOG_008", HttpStatus.SERVICE_UNAVAILABLE, "Restaurant service is unavailable"),
+    MENU_NOT_FOUND("CATALOG_009", HttpStatus.NOT_FOUND, "Menu not found"),
+    MENU_CATEGORY_NOT_FOUND("CATALOG_010", HttpStatus.NOT_FOUND, "Menu category not found"),
+    INVALID_MENU_DATE_RANGE(
+            "CATALOG_011", HttpStatus.BAD_REQUEST, "Invalid menu availability date range");
     private final String code;
     private final HttpStatus httpStatus;
     private final String defaultMessage;

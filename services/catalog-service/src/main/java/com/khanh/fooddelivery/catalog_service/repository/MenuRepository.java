@@ -9,4 +9,7 @@ public interface MenuRepository extends JpaRepository<Menu, UUID> {
     List<Menu> findAllByRestaurantId(UUID restaurantId);
 
     List<Menu> findAllByBranchId(UUID branchId);
+
+    List<Menu> findAllByRestaurantIdAndBranchIdOrderByCreatedAtAsc(
+            UUID restaurantId, UUID branchId);
 }
