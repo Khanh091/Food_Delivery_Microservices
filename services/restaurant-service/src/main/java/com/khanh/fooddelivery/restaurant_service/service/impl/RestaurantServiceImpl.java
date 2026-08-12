@@ -14,6 +14,9 @@ import com.khanh.fooddelivery.restaurant_service.mapper.RestaurantMapper;
 import com.khanh.fooddelivery.restaurant_service.mapper.RestaurantStatusHistoryMapper;
 import com.khanh.fooddelivery.restaurant_service.repository.RestaurantRepository;
 import com.khanh.fooddelivery.restaurant_service.repository.RestaurantStatusHistoryRepository;
+import com.khanh.fooddelivery.restaurant_service.outbox.OutboxEventService;
+import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventData;
+import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventType;
 import com.khanh.fooddelivery.restaurant_service.security.CurrentUserProvider;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantAuthorizationService;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantService;
@@ -40,6 +43,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     private final RestaurantStatusHistoryMapper historyMapper;
     private final RestaurantAuthorizationService authorization;
     private final CurrentUserProvider currentUser;
+    private final OutboxEventService outbox;
 
     @Transactional(readOnly = true)
     public List<RestaurantSummaryResponse> mine(Jwt jwt) {
@@ -60,6 +64,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     public RestaurantResponse update(Jwt jwt, UUID id, RestaurantUpdateRequest r) {
         Restaurant e = managed(jwt, id);
         mapper.update(r, e);
+        enqueueUpsert(e, "UPDATE");
         return mapper.toResponse(e);
     }
 
@@ -87,14 +92,14 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     public RestaurantResponse suspend(Jwt jwt, UUID id, String reason) {
-        Restaurant e = required(id);
+        Restaurant e = requiredForUpdate(id);
         if (e.getStatus() != RestaurantStatus.ACTIVE && e.getStatus() != RestaurantStatus.INACTIVE)
             invalid(e);
         return change(e, RestaurantStatus.SUSPENDED, reason, currentUser.getCurrentUserId(jwt));
     }
 
     public RestaurantResponse restore(Jwt jwt, UUID id, RestaurantStatus target, String reason) {
-        Restaurant e = required(id);
+        Restaurant e = requiredForUpdate(id);
         if (e.getStatus() != RestaurantStatus.SUSPENDED) invalid(e);
         if (target != RestaurantStatus.ACTIVE && target != RestaurantStatus.INACTIVE)
             throw new AppException(
@@ -116,7 +121,7 @@ public class RestaurantServiceImpl implements RestaurantService {
     }
 
     private Restaurant managed(Jwt jwt, UUID id) {
-        Restaurant e = required(id);
+        Restaurant e = requiredForUpdate(id);
         authorization.requireRestaurantAccess(id, currentUser.getCurrentUserId(jwt), MANAGE);
         return e;
     }
@@ -124,6 +129,12 @@ public class RestaurantServiceImpl implements RestaurantService {
     private Restaurant required(UUID id) {
         return repository
                 .findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOT_FOUND));
+    }
+
+    private Restaurant requiredForUpdate(UUID id) {
+        return repository
+                .findByIdForUpdate(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESTAURANT_NOT_FOUND));
     }
 
@@ -138,7 +149,20 @@ public class RestaurantServiceImpl implements RestaurantService {
         h.setReason(reason);
         h.setChangedByUserId(actor);
         histories.save(h);
+        outbox.enqueue(
+                RestaurantEventType.RESTAURANT_STATUS_CHANGED,
+                "RESTAURANT",
+                e.getId(),
+                RestaurantEventData.restaurant(e, "STATUS_CHANGED"));
         return mapper.toResponse(e);
+    }
+
+    private void enqueueUpsert(Restaurant restaurant, String action) {
+        outbox.enqueue(
+                RestaurantEventType.RESTAURANT_UPSERTED,
+                "RESTAURANT",
+                restaurant.getId(),
+                RestaurantEventData.restaurant(restaurant, action));
     }
 
     private void invalid(Restaurant e) {

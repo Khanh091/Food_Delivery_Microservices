@@ -27,6 +27,9 @@ import com.khanh.fooddelivery.restaurant_service.repository.BranchSpecialHourRep
 import com.khanh.fooddelivery.restaurant_service.repository.RestaurantBranchRepository;
 import com.khanh.fooddelivery.restaurant_service.repository.RestaurantRepository;
 import com.khanh.fooddelivery.restaurant_service.security.CurrentUserProvider;
+import com.khanh.fooddelivery.restaurant_service.outbox.OutboxEventService;
+import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventData;
+import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventType;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantAuthorizationService;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantBranchService;
 import java.util.HashSet;
@@ -54,6 +57,7 @@ public class RestaurantBranchServiceImpl implements RestaurantBranchService {
     private final BranchSpecialHourMapper specialMapper;
     private final RestaurantAuthorizationService authorization;
     private final CurrentUserProvider currentUser;
+    private final OutboxEventService outbox;
 
     public RestaurantBranchResponse create(
             Jwt jwt, UUID restaurantId, RestaurantBranchCreateRequest r) {
@@ -65,7 +69,9 @@ public class RestaurantBranchServiceImpl implements RestaurantBranchService {
         b.setRestaurant(restaurant);
         b.setStatus(RestaurantBranchStatus.PENDING);
         b.setAcceptingOrders(false);
-        return branchMapper.toResponse(branches.save(b));
+        RestaurantBranch saved = branches.save(b);
+        enqueueUpsert(saved, "CREATE");
+        return branchMapper.toResponse(saved);
     }
 
     @Transactional(readOnly = true)
@@ -83,23 +89,41 @@ public class RestaurantBranchServiceImpl implements RestaurantBranchService {
     }
 
     public RestaurantBranchResponse update(Jwt jwt, UUID id, RestaurantBranchUpdateRequest r) {
-        RestaurantBranch b = branch(id);
+        RestaurantBranch b = branchForUpdate(id);
         accessBranch(jwt, id);
+        RestaurantBranchStatus previousStatus = b.getStatus();
         branchMapper.update(r, b);
         if (b.getStatus() != RestaurantBranchStatus.ACTIVE) b.setAcceptingOrders(false);
+        if (b.getStatus() != previousStatus) {
+            outbox.enqueue(
+                    RestaurantEventType.RESTAURANT_BRANCH_STATUS_CHANGED,
+                    "RESTAURANT_BRANCH",
+                    b.getId(),
+                    RestaurantEventData.branch(b, "STATUS_CHANGED"));
+        } else {
+            enqueueUpsert(b, "UPDATE");
+        }
         return branchMapper.toResponse(b);
     }
 
     public void close(Jwt jwt, UUID id) {
-        RestaurantBranch b = branch(id);
+        RestaurantBranch b = branchForUpdate(id);
         accessBranch(jwt, id);
+        if (b.getStatus() == RestaurantBranchStatus.CLOSED) {
+            return;
+        }
         b.setStatus(RestaurantBranchStatus.CLOSED);
         b.setAcceptingOrders(false);
+        outbox.enqueue(
+                RestaurantEventType.RESTAURANT_BRANCH_STATUS_CHANGED,
+                "RESTAURANT_BRANCH",
+                b.getId(),
+                RestaurantEventData.branch(b, "STATUS_CHANGED"));
     }
 
     public RestaurantBranchResponse acceptingOrders(
             Jwt jwt, UUID id, AcceptingOrdersUpdateRequest r) {
-        RestaurantBranch b = branch(id);
+        RestaurantBranch b = branchForUpdate(id);
         accessBranch(jwt, id);
         if (Boolean.TRUE.equals(r.acceptingOrders())
                 && (b.getStatus() != RestaurantBranchStatus.ACTIVE
@@ -107,6 +131,7 @@ public class RestaurantBranchServiceImpl implements RestaurantBranchService {
             throw new AppException(
                     ErrorCode.BRANCH_NOT_ACTIVE, "Restaurant and branch must both be ACTIVE");
         b.setAcceptingOrders(r.acceptingOrders());
+        enqueueUpsert(b, "ACCEPTING_ORDERS_CHANGED");
         return branchMapper.toResponse(b);
     }
 
@@ -221,6 +246,19 @@ public class RestaurantBranchServiceImpl implements RestaurantBranchService {
     private RestaurantBranch branch(UUID id) {
         return branches.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+    }
+
+    private RestaurantBranch branchForUpdate(UUID id) {
+        return branches.findByIdForUpdate(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+    }
+
+    private void enqueueUpsert(RestaurantBranch branch, String action) {
+        outbox.enqueue(
+                RestaurantEventType.RESTAURANT_BRANCH_UPSERTED,
+                "RESTAURANT_BRANCH",
+                branch.getId(),
+                RestaurantEventData.branch(branch, action));
     }
 
     private void accessRestaurant(Jwt jwt, UUID id) {

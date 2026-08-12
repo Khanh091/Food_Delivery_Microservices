@@ -20,6 +20,9 @@ import com.khanh.fooddelivery.restaurant_service.repository.RestaurantRepository
 import com.khanh.fooddelivery.restaurant_service.repository.RestaurantStatusHistoryRepository;
 import com.khanh.fooddelivery.restaurant_service.service.BranchOperatingStatusService;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantService;
+import com.khanh.fooddelivery.restaurant_service.service.RestaurantSearchReindexService;
+import com.khanh.fooddelivery.restaurant_service.outbox.OutboxEventService;
+import com.khanh.fooddelivery.restaurant_service.outbox.OutboxEventRepository;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -57,6 +61,10 @@ class RestaurantServiceApplicationTests {
     @MockBean JwtDecoder jwtDecoder;
     @MockBean RestaurantService restaurantService;
     @MockBean BranchOperatingStatusService branchOperatingStatusService;
+    @MockBean OutboxEventService outboxEventService;
+    @MockBean RestaurantSearchReindexService restaurantSearchReindexService;
+    @MockBean JdbcTemplate jdbcTemplate;
+    @MockBean OutboxEventRepository outboxEventRepository;
 
     @MockBean(name = "jpaMappingContext")
     JpaMetamodelMappingContext jpaMappingContext;

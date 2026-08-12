@@ -28,6 +28,9 @@ import com.khanh.fooddelivery.restaurant_service.repository.RestaurantPartnerApp
 import com.khanh.fooddelivery.restaurant_service.repository.RestaurantRepository;
 import com.khanh.fooddelivery.restaurant_service.repository.RestaurantStatusHistoryRepository;
 import com.khanh.fooddelivery.restaurant_service.security.CurrentUserProvider;
+import com.khanh.fooddelivery.restaurant_service.outbox.OutboxEventService;
+import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventData;
+import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventType;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantApplicationService;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -59,6 +62,7 @@ public class RestaurantApplicationServiceImpl implements RestaurantApplicationSe
     private final RestaurantApplicationMapper applicationMapper;
     private final RestaurantMapper restaurantMapper;
     private final CurrentUserProvider currentUser;
+    private final OutboxEventService outbox;
 
     public RestaurantApplicationResponse create(Jwt jwt, RestaurantApplicationCreateRequest r) {
         RestaurantPartnerApplication e = applicationMapper.toEntity(r);
@@ -164,6 +168,11 @@ public class RestaurantApplicationServiceImpl implements RestaurantApplicationSe
         restaurant.setVerificationStatus(RestaurantVerificationStatus.VERIFIED);
         restaurant.setAverageRating(BigDecimal.ZERO);
         restaurant = restaurants.save(restaurant);
+        outbox.enqueue(
+                RestaurantEventType.RESTAURANT_UPSERTED,
+                "RESTAURANT",
+                restaurant.getId(),
+                RestaurantEventData.restaurant(restaurant, "CREATE"));
         RestaurantMember owner = new RestaurantMember();
         owner.setRestaurant(restaurant);
         owner.setUserId(a.getApplicantUserId());

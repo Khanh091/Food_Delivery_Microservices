@@ -28,6 +28,11 @@ spring:
           user-service:
             connectTimeout: 3000
             readTimeout: 5000
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
   servlet:
     multipart:
       max-file-size: ${STORAGE_MAX_FILE_SIZE:10485760}
@@ -41,6 +46,21 @@ security:
   jwt:
     audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
 app:
+  outbox:
+    topic: ${RESTAURANT_EVENTS_TOPIC:restaurant.events}
+    topic-partitions: ${RESTAURANT_EVENTS_TOPIC_PARTITIONS:3}
+    topic-replication-factor: ${RESTAURANT_EVENTS_TOPIC_REPLICATION_FACTOR:1}
+    publisher:
+      enabled: ${OUTBOX_PUBLISHER_ENABLED:true}
+      fixed-delay-ms: ${OUTBOX_PUBLISHER_FIXED_DELAY_MS:1000}
+      batch-size: ${OUTBOX_PUBLISHER_BATCH_SIZE:50}
+      max-retries: ${OUTBOX_PUBLISHER_MAX_RETRIES:10}
+      send-timeout-ms: ${OUTBOX_PUBLISHER_SEND_TIMEOUT_MS:5000}
+      processing-lease-ms: ${OUTBOX_PUBLISHER_PROCESSING_LEASE_MS:30000}
+      initial-retry-delay-ms: ${OUTBOX_PUBLISHER_INITIAL_RETRY_DELAY_MS:5000}
+      max-retry-delay-ms: ${OUTBOX_PUBLISHER_MAX_RETRY_DELAY_MS:60000}
+  search-reindex:
+    batch-size: ${SEARCH_REINDEX_BATCH_SIZE:100}
   storage:
     provider: ${STORAGE_PROVIDER:CLOUDINARY}
     max-file-size: ${STORAGE_MAX_FILE_SIZE:10485760}
