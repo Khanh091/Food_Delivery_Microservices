@@ -95,7 +95,7 @@ class CatalogItemServiceImplTests {
     void updatePreservesRestaurantAndStatus() {
         CatalogItem item = item();
         item.setStatus(CatalogStatus.INACTIVE);
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(item));
         when(itemRepository.save(item)).thenReturn(item);
         when(itemMapper.toResponse(item)).thenReturn(response(item));
 
@@ -116,7 +116,7 @@ class CatalogItemServiceImplTests {
     @Test
     void deactivateAuthorizesBeforeUpdatingStatus() {
         CatalogItem item = item();
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(item));
         when(itemRepository.save(item)).thenReturn(item);
         when(itemMapper.toResponse(item)).thenReturn(response(item));
 

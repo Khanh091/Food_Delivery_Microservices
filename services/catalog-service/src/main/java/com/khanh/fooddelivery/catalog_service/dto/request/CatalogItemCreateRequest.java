@@ -10,11 +10,18 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record CatalogItemCreateRequest(
-        @NotNull UUID restaurantId,
-        @NotBlank @Size(max = 255) String name,
-        @Size(max = 5000) String description,
-        @NotNull CatalogItemType itemType,
-        @NotNull @DecimalMin("0.00") BigDecimal basePrice,
-        @Size(min = 3, max = 3) String currency,
-        @Min(0) Integer preparationTimeMinutes,
+        @NotNull
+        UUID restaurantId,
+        @NotBlank @Size(max = 255)
+        String name,
+        @Size(max = 5000)
+        String description,
+        @NotNull
+        CatalogItemType itemType,
+        @NotNull @DecimalMin("0.00")
+        BigDecimal basePrice,
+        @Size(min = 3, max = 3)
+        String currency,
+        @Min(0)
+        Integer preparationTimeMinutes,
         Boolean isVegetarian) {}

@@ -122,7 +122,7 @@ class BranchItemServiceImplTests {
     void changingPriceCreatesHistoryInSameServiceOperation() {
         BranchItem branchItem = branchItem();
         UUID userId = UUID.randomUUID();
-        when(branchItemRepository.findById(branchItemId)).thenReturn(Optional.of(branchItem));
+        when(branchItemRepository.findByIdForUpdate(branchItemId)).thenReturn(Optional.of(branchItem));
         when(auditorAware.getCurrentAuditor()).thenReturn(Optional.of(userId));
         when(branchItemRepository.save(branchItem)).thenReturn(branchItem);
 
@@ -146,7 +146,7 @@ class BranchItemServiceImplTests {
     @Test
     void samePriceDoesNotCreateHistory() {
         BranchItem branchItem = branchItem();
-        when(branchItemRepository.findById(branchItemId)).thenReturn(Optional.of(branchItem));
+        when(branchItemRepository.findByIdForUpdate(branchItemId)).thenReturn(Optional.of(branchItem));
         when(branchItemRepository.save(branchItem)).thenReturn(branchItem);
 
         service.updatePrice(
@@ -162,7 +162,7 @@ class BranchItemServiceImplTests {
     void availableClearsSoldOutUntilAndUnavailableOnlyChangesAvailability() {
         BranchItem branchItem = branchItem();
         branchItem.setSoldOutUntil(Instant.now().plusSeconds(3600));
-        when(branchItemRepository.findById(branchItemId)).thenReturn(Optional.of(branchItem));
+        when(branchItemRepository.findByIdForUpdate(branchItemId)).thenReturn(Optional.of(branchItem));
         when(branchItemRepository.save(branchItem)).thenReturn(branchItem);
 
         service.markUnavailable(branchItemId);
@@ -191,7 +191,7 @@ class BranchItemServiceImplTests {
     void soldOutFutureTimeMakesItemUnavailable() {
         BranchItem branchItem = branchItem();
         Instant soldOutUntil = Instant.now().plusSeconds(3600);
-        when(branchItemRepository.findById(branchItemId)).thenReturn(Optional.of(branchItem));
+        when(branchItemRepository.findByIdForUpdate(branchItemId)).thenReturn(Optional.of(branchItem));
         when(branchItemRepository.save(branchItem)).thenReturn(branchItem);
 
         service.markSoldOut(branchItemId, new BranchItemSoldOutRequest(soldOutUntil));
@@ -204,7 +204,7 @@ class BranchItemServiceImplTests {
     void updatingQuantityDoesNotImplicitlyChangeAvailability() {
         BranchItem branchItem = branchItem();
         branchItem.setIsAvailable(true);
-        when(branchItemRepository.findById(branchItemId)).thenReturn(Optional.of(branchItem));
+        when(branchItemRepository.findByIdForUpdate(branchItemId)).thenReturn(Optional.of(branchItem));
         when(branchItemRepository.save(branchItem)).thenReturn(branchItem);
 
         service.updateQuantity(branchItemId, new BranchItemQuantityUpdateRequest(0));
