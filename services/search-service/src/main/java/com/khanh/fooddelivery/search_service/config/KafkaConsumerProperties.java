@@ -11,6 +11,9 @@ public class KafkaConsumerProperties {
     private String dltTopic = "catalog.events.dlt";
     private int dltTopicPartitions = 3;
     private short dltTopicReplicationFactor = 1;
+    private String restaurantDltTopic = "restaurant.events.dlt";
+    private int restaurantDltTopicPartitions = 3;
+    private short restaurantDltTopicReplicationFactor = 1;
     private Retry retry = new Retry();
 
     @Getter

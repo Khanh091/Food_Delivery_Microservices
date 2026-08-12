@@ -31,11 +31,16 @@ app:
     elasticsearch-uri: ${ELASTICSEARCH_URI:http://localhost:9200}
     index-name: ${SEARCH_CATALOG_INDEX:catalog_items_v1}
     catalog-events-topic: ${CATALOG_EVENTS_TOPIC:catalog.events}
+    restaurant-index-name: ${SEARCH_RESTAURANT_INDEX:restaurants_v1}
+    restaurant-events-topic: ${RESTAURANT_EVENTS_TOPIC:restaurant.events}
   kafka:
     consumer:
       dlt-topic: ${CATALOG_EVENTS_DLT_TOPIC:catalog.events.dlt}
       dlt-topic-partitions: ${CATALOG_EVENTS_DLT_TOPIC_PARTITIONS:3}
       dlt-topic-replication-factor: ${CATALOG_EVENTS_DLT_TOPIC_REPLICATION_FACTOR:1}
+      restaurant-dlt-topic: ${RESTAURANT_EVENTS_DLT_TOPIC:restaurant.events.dlt}
+      restaurant-dlt-topic-partitions: ${RESTAURANT_EVENTS_DLT_TOPIC_PARTITIONS:3}
+      restaurant-dlt-topic-replication-factor: ${RESTAURANT_EVENTS_DLT_TOPIC_REPLICATION_FACTOR:1}
       retry:
         max-attempts: ${SEARCH_KAFKA_RETRY_MAX_ATTEMPTS:3}
         backoff-ms: ${SEARCH_KAFKA_RETRY_BACKOFF_MS:1000}

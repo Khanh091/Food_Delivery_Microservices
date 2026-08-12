@@ -45,10 +45,31 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
+    ConcurrentKafkaListenerContainerFactory<Object, Object> restaurantKafkaListenerContainerFactory(
+            ConcurrentKafkaListenerContainerFactoryConfigurer configurer,
+            ConsumerFactory<Object, Object> consumerFactory,
+            KafkaTemplate<Object, Object> kafkaTemplate) {
+        ConcurrentKafkaListenerContainerFactory<Object, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        configurer.configure(factory, consumerFactory);
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(
+                kafkaTemplate, (record, exception) -> new TopicPartition(properties.getRestaurantDltTopic(), record.partition()));
+        factory.setCommonErrorHandler(new DefaultErrorHandler(recoverer,
+                new FixedBackOff(properties.getRetry().getBackoffMs(), properties.getRetry().getMaxAttempts())));
+        return factory;
+    }
+
+    @Bean
     NewTopic catalogEventsDeadLetterTopic() {
         return TopicBuilder.name(properties.getDltTopic())
                 .partitions(properties.getDltTopicPartitions())
                 .replicas(properties.getDltTopicReplicationFactor())
                 .build();
+    }
+
+    @Bean
+    NewTopic restaurantEventsDeadLetterTopic() {
+        return TopicBuilder.name(properties.getRestaurantDltTopic())
+                .partitions(properties.getRestaurantDltTopicPartitions())
+                .replicas(properties.getRestaurantDltTopicReplicationFactor()).build();
     }
 }

@@ -7,6 +7,8 @@ public class SearchProperties {
     private String elasticsearchUri;
     private String indexName;
     private String catalogEventsTopic;
+    private String restaurantIndexName;
+    private String restaurantEventsTopic;
 
     public String getElasticsearchUri() {
         return elasticsearchUri;
@@ -31,4 +33,8 @@ public class SearchProperties {
     public void setCatalogEventsTopic(String catalogEventsTopic) {
         this.catalogEventsTopic = catalogEventsTopic;
     }
+    public String getRestaurantIndexName() { return restaurantIndexName; }
+    public void setRestaurantIndexName(String restaurantIndexName) { this.restaurantIndexName = restaurantIndexName; }
+    public String getRestaurantEventsTopic() { return restaurantEventsTopic; }
+    public void setRestaurantEventsTopic(String restaurantEventsTopic) { this.restaurantEventsTopic = restaurantEventsTopic; }
 }
