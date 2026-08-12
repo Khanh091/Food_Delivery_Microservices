@@ -34,6 +34,7 @@ public class CatalogEventConsumer {
     @KafkaListener(topics = "${app.search.catalog-events-topic}")
     public void consume(String payload) {
         DomainEventEnvelope event = deserialize(payload);
+        validateEnvelope(event);
         if (event.eventVersion() != SUPPORTED_EVENT_VERSION) {
             throw new UnsupportedCatalogEventVersionException(event);
         }
@@ -54,8 +55,26 @@ public class CatalogEventConsumer {
         try {
             return objectMapper.readValue(payload, DomainEventEnvelope.class);
         } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Invalid catalog event envelope", exception);
+            throw new InvalidCatalogEventEnvelopeException("Invalid catalog event envelope", exception);
         }
+    }
+
+    private void validateEnvelope(DomainEventEnvelope event) {
+        if (event.eventId() == null
+                || isBlank(event.eventType())
+                || event.eventVersion() < 1
+                || isBlank(event.aggregateType())
+                || event.aggregateId() == null
+                || event.aggregateVersion() < 1
+                || event.occurredAt() == null
+                || event.data() == null
+                || !event.data().isObject()) {
+            throw new InvalidCatalogEventEnvelopeException("Catalog event envelope has missing required fields");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private CatalogEventType parseEventType(DomainEventEnvelope event) {

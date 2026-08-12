@@ -91,6 +91,23 @@ public class ElasticsearchSearchProjectionRepository implements SearchProjection
     }
 
     @Override
+    public void recreateIndex() {
+        try {
+            restClient.delete().uri("/{index}", properties.getIndexName()).retrieve().toBodilessEntity();
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() != 404) {
+                throw exception;
+            }
+        }
+        restClient
+                .put()
+                .uri("/{index}", properties.getIndexName())
+                .body(indexDefinition())
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
     public void applyCatalogItem(CatalogItemSearchProjection projection) {
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("itemId", projection.itemId().toString());

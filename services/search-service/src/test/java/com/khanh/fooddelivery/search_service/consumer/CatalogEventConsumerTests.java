@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.khanh.fooddelivery.search_service.projection.CatalogProjectionService;
 import java.time.Instant;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -53,7 +54,20 @@ class CatalogEventConsumerTests {
         CatalogEventConsumer consumer = new CatalogEventConsumer(objectMapper, projectionService);
 
         assertThatThrownBy(() -> consumer.consume("not-json"))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(InvalidCatalogEventEnvelopeException.class);
+        verifyNoInteractions(projectionService);
+    }
+
+    @Test
+    void envelopeMissingRequiredFieldsIsNotSilentlyIndexed() throws Exception {
+        CatalogProjectionService projectionService = Mockito.mock(CatalogProjectionService.class);
+        CatalogEventConsumer consumer = new CatalogEventConsumer(objectMapper, projectionService);
+        Map<String, Object> malformed = new LinkedHashMap<>();
+        malformed.put("eventType", "CATALOG_ITEM_UPSERTED");
+        malformed.put("eventVersion", 2);
+
+        assertThatThrownBy(() -> consumer.consume(objectMapper.writeValueAsString(malformed)))
+                .isInstanceOf(InvalidCatalogEventEnvelopeException.class);
         verifyNoInteractions(projectionService);
     }
 

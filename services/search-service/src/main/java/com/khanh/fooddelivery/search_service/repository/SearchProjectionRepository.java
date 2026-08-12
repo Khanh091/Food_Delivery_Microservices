@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 public interface SearchProjectionRepository {
     void createIndexIfAbsent();
 
+    void recreateIndex();
+
     void applyCatalogItem(CatalogItemSearchProjection projection);
 
     void applyBranchItem(java.util.UUID itemId, BranchSearchProjection projection);
