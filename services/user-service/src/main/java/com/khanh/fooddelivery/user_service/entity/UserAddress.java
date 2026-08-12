@@ -1,8 +1,11 @@
 package com.khanh.fooddelivery.user_service.entity;
 
 import com.khanh.fooddelivery.user_service.common.entity.BaseAuditEntity;
+import com.khanh.fooddelivery.user_service.enums.AddressLabelType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -36,6 +39,13 @@ public class UserAddress extends BaseAuditEntity {
     @Column(name = "label", length = 100)
     private String label;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "label_type", nullable = false, length = 20)
+    private AddressLabelType labelType;
+
+    @Column(name = "custom_label", length = 100)
+    private String customLabel;
+
     @Column(name = "recipient_name", nullable = false, length = 255)
     private String recipientName;
 
@@ -62,6 +72,15 @@ public class UserAddress extends BaseAuditEntity {
 
     @Column(name = "delivery_note", length = 500)
     private String deliveryNote;
+
+    @Column(name = "building_name", length = 255)
+    private String buildingName;
+
+    @Column(name = "floor", length = 100)
+    private String floor;
+
+    @Column(name = "entrance", length = 255)
+    private String entrance;
 
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault = false;

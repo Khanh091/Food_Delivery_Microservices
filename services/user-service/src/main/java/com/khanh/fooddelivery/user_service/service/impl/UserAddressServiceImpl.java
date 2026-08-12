@@ -6,6 +6,7 @@ import com.khanh.fooddelivery.user_service.dto.response.CurrentUserResponse;
 import com.khanh.fooddelivery.user_service.dto.response.UserAddressResponse;
 import com.khanh.fooddelivery.user_service.entity.User;
 import com.khanh.fooddelivery.user_service.entity.UserAddress;
+import com.khanh.fooddelivery.user_service.enums.AddressLabelType;
 import com.khanh.fooddelivery.user_service.exception.AppException;
 import com.khanh.fooddelivery.user_service.exception.ErrorCode;
 import com.khanh.fooddelivery.user_service.mapper.UserAddressMapper;
@@ -78,6 +79,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         validateRequiredUpdates(request);
         addressMapper.updateEntity(request, address);
         normalizeUpdateRequest(request, address);
+        normalizeAndValidateLabel(address);
         UserAddress saved = addressRepository.saveAndFlush(address);
         return addressMapper.toResponse(saved);
     }
@@ -93,7 +95,7 @@ public class UserAddressServiceImpl implements UserAddressService {
 
         if (wasDefault) {
             addressRepository
-                    .findFirstByUserIdOrderByCreatedAtDesc(user.getId())
+                    .findFirstByUserIdOrderByCreatedAtAsc(user.getId())
                     .ifPresent(replacement -> {
                         replacement.setIsDefault(true);
                         addressRepository.save(replacement);
@@ -182,22 +184,27 @@ public class UserAddressServiceImpl implements UserAddressService {
             UserAddressCreateRequest request,
             UserAddress address
     ) {
-        address.setLabel(trimToNull(request.label()));
+        address.setLabelType(request.labelType());
+        address.setCustomLabel(trimToNull(request.customLabel()));
         address.setRecipientName(request.recipientName().trim());
         address.setRecipientPhone(request.recipientPhone().trim());
         address.setAddressLine(request.addressLine().trim());
         address.setWard(trimToNull(request.ward()));
         address.setDistrict(trimToNull(request.district()));
         address.setCity(request.city().trim());
+        address.setBuildingName(trimToNull(request.buildingName()));
+        address.setFloor(trimToNull(request.floor()));
+        address.setEntrance(trimToNull(request.entrance()));
         address.setDeliveryNote(trimToNull(request.deliveryNote()));
+        normalizeAndValidateLabel(address);
     }
 
     private void normalizeUpdateRequest(
             UserAddressUpdateRequest request,
             UserAddress address
     ) {
-        if (request.label() != null) {
-            address.setLabel(trimToNull(request.label()));
+        if (request.customLabel() != null) {
+            address.setCustomLabel(trimToNull(request.customLabel()));
         }
         if (request.recipientName() != null) {
             address.setRecipientName(request.recipientName().trim());
@@ -219,6 +226,30 @@ public class UserAddressServiceImpl implements UserAddressService {
         }
         if (request.deliveryNote() != null) {
             address.setDeliveryNote(trimToNull(request.deliveryNote()));
+        }
+        if (request.buildingName() != null) {
+            address.setBuildingName(trimToNull(request.buildingName()));
+        }
+        if (request.floor() != null) {
+            address.setFloor(trimToNull(request.floor()));
+        }
+        if (request.entrance() != null) {
+            address.setEntrance(trimToNull(request.entrance()));
+        }
+    }
+
+    private void normalizeAndValidateLabel(UserAddress address) {
+        if (address.getLabelType() != AddressLabelType.OTHER) {
+            address.setCustomLabel(null);
+            return;
+        }
+
+        if (address.getCustomLabel() == null ||
+                address.getCustomLabel().isBlank()) {
+            throw new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "customLabel must not be blank when labelType is OTHER"
+            );
         }
     }
 

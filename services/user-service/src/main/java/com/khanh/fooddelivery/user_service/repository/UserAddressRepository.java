@@ -21,7 +21,7 @@ public interface UserAddressRepository
 
     Optional<UserAddress> findByUserIdAndIsDefaultTrue(UUID userId);
 
-    Optional<UserAddress> findFirstByUserIdOrderByCreatedAtDesc(UUID userId);
+    Optional<UserAddress> findFirstByUserIdOrderByCreatedAtAsc(UUID userId);
 
     boolean existsByUserId(UUID userId);
 }

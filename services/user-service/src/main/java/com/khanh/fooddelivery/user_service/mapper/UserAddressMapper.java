@@ -4,6 +4,7 @@ import com.khanh.fooddelivery.user_service.dto.request.UserAddressCreateRequest;
 import com.khanh.fooddelivery.user_service.dto.request.UserAddressUpdateRequest;
 import com.khanh.fooddelivery.user_service.dto.response.UserAddressResponse;
 import com.khanh.fooddelivery.user_service.entity.UserAddress;
+import com.khanh.fooddelivery.user_service.enums.AddressLabelType;
 import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -16,11 +17,13 @@ import java.util.List;
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
 public interface UserAddressMapper {
 
+    @Mapping(target = "displayLabel", expression = "java(displayLabel(entity))")
     UserAddressResponse toResponse(UserAddress entity);
 
     List<UserAddressResponse> toResponseList(List<UserAddress> entities);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "label", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
@@ -34,6 +37,7 @@ public interface UserAddressMapper {
                     NullValuePropertyMappingStrategy.IGNORE
     )
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "label", ignore = true)
     @Mapping(target = "user", ignore = true)
     @Mapping(target = "isDefault", ignore = true)
     @Mapping(target = "version", ignore = true)
@@ -45,4 +49,12 @@ public interface UserAddressMapper {
             UserAddressUpdateRequest request,
             @MappingTarget UserAddress entity
     );
+
+    default String displayLabel(UserAddress address) {
+        return address.getLabelType() == AddressLabelType.OTHER
+                ? address.getCustomLabel()
+                : address.getLabelType() == AddressLabelType.HOME
+                        ? "Nh\u00e0"
+                        : "C\u00f4ng ty";
+    }
 }
