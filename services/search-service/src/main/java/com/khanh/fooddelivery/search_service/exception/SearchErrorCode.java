@@ -7,7 +7,9 @@ public enum SearchErrorCode {
     REBUILD_IN_PROGRESS(HttpStatus.CONFLICT, "SEARCH_002", "Catalog search rebuild is already in progress"),
     INDEX_RECREATE_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "SEARCH_003", "Unable to recreate search index"),
     CATALOG_REINDEX_TRIGGER_FAILED(
-            HttpStatus.BAD_GATEWAY, "SEARCH_004", "Unable to trigger catalog snapshot reindex");
+            HttpStatus.BAD_GATEWAY, "SEARCH_004", "Unable to trigger catalog snapshot reindex"),
+    RESTAURANT_REINDEX_TRIGGER_FAILED(
+            HttpStatus.BAD_GATEWAY, "SEARCH_005", "Unable to trigger restaurant snapshot reindex");
 
     private final HttpStatus status;
     private final String code;
