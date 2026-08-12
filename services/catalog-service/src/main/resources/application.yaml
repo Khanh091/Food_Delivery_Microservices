@@ -62,6 +62,8 @@ app:
       processing-lease-ms: ${OUTBOX_PUBLISHER_PROCESSING_LEASE_MS:30000}
       initial-retry-delay-ms: ${OUTBOX_PUBLISHER_INITIAL_RETRY_DELAY_MS:5000}
       max-retry-delay-ms: ${OUTBOX_PUBLISHER_MAX_RETRY_DELAY_MS:60000}
+  search-reindex:
+    batch-size: ${CATALOG_SEARCH_REINDEX_BATCH_SIZE:100}
   storage:
     max-file-size: ${STORAGE_MAX_FILE_SIZE:10485760}
     allowed-content-types: image/jpeg,image/png,image/webp

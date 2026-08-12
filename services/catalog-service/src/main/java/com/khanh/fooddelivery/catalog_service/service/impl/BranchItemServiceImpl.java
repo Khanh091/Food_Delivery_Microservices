@@ -84,7 +84,7 @@ public class BranchItemServiceImpl implements BranchItemService {
 
     @Override
     public BranchItemResponse updatePrice(UUID branchItemId, BranchItemPriceUpdateRequest request) {
-        BranchItem branchItem = requiredBranchItem(branchItemId);
+        BranchItem branchItem = requiredBranchItemForUpdate(branchItemId);
         authorize(branchItem);
 
         boolean priceChanged = branchItem.getSellingPrice().compareTo(request.sellingPrice()) != 0;
@@ -118,7 +118,7 @@ public class BranchItemServiceImpl implements BranchItemService {
 
     @Override
     public BranchItemResponse markAvailable(UUID branchItemId) {
-        BranchItem branchItem = requiredBranchItem(branchItemId);
+        BranchItem branchItem = requiredBranchItemForUpdate(branchItemId);
         authorize(branchItem);
         boolean changed =
                 !Boolean.TRUE.equals(branchItem.getIsAvailable())
@@ -137,7 +137,7 @@ public class BranchItemServiceImpl implements BranchItemService {
 
     @Override
     public BranchItemResponse markUnavailable(UUID branchItemId) {
-        BranchItem branchItem = requiredBranchItem(branchItemId);
+        BranchItem branchItem = requiredBranchItemForUpdate(branchItemId);
         authorize(branchItem);
         boolean changed = !Boolean.FALSE.equals(branchItem.getIsAvailable());
         branchItem.setIsAvailable(false);
@@ -156,7 +156,7 @@ public class BranchItemServiceImpl implements BranchItemService {
         if (!request.soldOutUntil().isAfter(Instant.now())) {
             throw new AppException(ErrorCode.INVALID_SOLD_OUT_TIME);
         }
-        BranchItem branchItem = requiredBranchItem(branchItemId);
+        BranchItem branchItem = requiredBranchItemForUpdate(branchItemId);
         authorize(branchItem);
         boolean changed =
                 !Boolean.FALSE.equals(branchItem.getIsAvailable())
@@ -173,7 +173,7 @@ public class BranchItemServiceImpl implements BranchItemService {
     @Override
     public BranchItemResponse updateQuantity(
             UUID branchItemId, BranchItemQuantityUpdateRequest request) {
-        BranchItem branchItem = requiredBranchItem(branchItemId);
+        BranchItem branchItem = requiredBranchItemForUpdate(branchItemId);
         authorize(branchItem);
         boolean changed = !request.availableQuantity().equals(branchItem.getAvailableQuantity());
         branchItem.setAvailableQuantity(request.availableQuantity());
@@ -202,6 +202,12 @@ public class BranchItemServiceImpl implements BranchItemService {
     private BranchItem requiredBranchItem(UUID branchItemId) {
         return branchItemRepository
                 .findById(branchItemId)
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_ITEM_NOT_FOUND));
+    }
+
+    private BranchItem requiredBranchItemForUpdate(UUID branchItemId) {
+        return branchItemRepository
+                .findByIdForUpdate(branchItemId)
                 .orElseThrow(() -> new AppException(ErrorCode.BRANCH_ITEM_NOT_FOUND));
     }
 

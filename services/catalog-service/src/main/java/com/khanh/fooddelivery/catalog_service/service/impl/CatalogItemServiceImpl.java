@@ -63,7 +63,7 @@ public class CatalogItemServiceImpl implements CatalogItemService {
 
     @Override
     public CatalogItemResponse update(UUID itemId, CatalogItemUpdateRequest request) {
-        CatalogItem item = requiredItem(itemId);
+        CatalogItem item = requiredItemForUpdate(itemId);
         authorize(item);
         itemMapper.update(request, item);
         if (request.currency() != null) {
@@ -85,7 +85,7 @@ public class CatalogItemServiceImpl implements CatalogItemService {
     }
 
     private CatalogItemResponse changeStatus(UUID itemId, CatalogStatus status) {
-        CatalogItem item = requiredItem(itemId);
+        CatalogItem item = requiredItemForUpdate(itemId);
         authorize(item);
         if (item.getStatus() == status) {
             return itemMapper.toResponse(item);
@@ -99,6 +99,12 @@ public class CatalogItemServiceImpl implements CatalogItemService {
     private CatalogItem requiredItem(UUID itemId) {
         return itemRepository
                 .findById(itemId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATALOG_ITEM_NOT_FOUND));
+    }
+
+    private CatalogItem requiredItemForUpdate(UUID itemId) {
+        return itemRepository
+                .findByIdForUpdate(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATALOG_ITEM_NOT_FOUND));
     }
 
