@@ -28,6 +28,8 @@ public class SecurityConfig {
                                 authorization
                                         .requestMatchers("/actuator/health", "/actuator/info")
                                         .permitAll()
+                                        .requestMatchers(HttpMethod.GET, "/api/v1/search")
+                                        .permitAll()
                                         .requestMatchers(HttpMethod.GET, "/api/v1/search/**")
                                         .permitAll()
                                         .anyRequest()

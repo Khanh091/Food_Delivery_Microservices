@@ -1,0 +1,126 @@
+package com.khanh.fooddelivery.search_service.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.khanh.fooddelivery.search_service.dto.GlobalSearchResult;
+import com.khanh.fooddelivery.search_service.dto.SearchPageResponse;
+import com.khanh.fooddelivery.search_service.repository.GlobalElasticsearchSearchRepository;
+import java.math.BigDecimal;
+import java.text.Normalizer;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.springframework.stereotype.Service;
+
+@Service
+public class ElasticsearchGlobalSearchService implements GlobalSearchService {
+    private static final int ITEMS_PER_BRANCH = 3;
+    private final GlobalElasticsearchSearchRepository repository;
+
+    public ElasticsearchGlobalSearchService(GlobalElasticsearchSearchRepository repository) {
+        this.repository = repository;
+    }
+
+    @Override
+    public SearchPageResponse<GlobalSearchResult> search(String query, int page, int size) {
+        Map<Key, Candidate> candidates = new LinkedHashMap<>();
+        Map<UUID, JsonNode> restaurants = new HashMap<>();
+        addRestaurantMatches(repository.searchRestaurants(query), query, candidates, restaurants);
+        JsonNode itemHits = repository.searchItems(query);
+        addItemMatches(itemHits, candidates);
+
+        List<UUID> missing = candidates.keySet().stream().map(Key::restaurantId)
+                .filter(id -> !restaurants.containsKey(id)).distinct().toList();
+        JsonNode metadataHits = repository.restaurantsByIds(missing);
+        if (metadataHits != null) addRestaurantMetadata(metadataHits, restaurants);
+
+        List<GlobalSearchResult> all = candidates.values().stream()
+                .filter(candidate -> result(candidate, restaurants.get(candidate.key.restaurantId())) != null)
+                .sorted(Comparator.comparingDouble(Candidate::score).reversed()
+                        .thenComparing(c -> c.key.restaurantId().toString())
+                        .thenComparing(c -> c.key.branchId().toString()))
+                .map(candidate -> result(candidate, restaurants.get(candidate.key.restaurantId())))
+                .toList();
+        int from = Math.min(Math.multiplyExact(page, size), all.size());
+        int to = Math.min(from + size, all.size());
+        long total = all.size();
+        return new SearchPageResponse<>(all.subList(from, to), page, size, total,
+                total == 0 ? 0 : (int) Math.ceil((double) total / size));
+    }
+
+    private void addRestaurantMatches(JsonNode response, String query, Map<Key, Candidate> candidates, Map<UUID, JsonNode> restaurants) {
+        for (JsonNode hit : response.path("hits").path("hits")) {
+            JsonNode source = hit.path("_source");
+            UUID restaurantId = uuid(source, "restaurantId");
+            restaurants.put(restaurantId, source);
+            double score = hit.path("_score").asDouble();
+            if (restaurantTextMatches(source, query)) {
+                for (JsonNode branch : source.path("branches")) addRestaurantCandidate(candidates, restaurantId, branch, score);
+            } else {
+                for (JsonNode branchHit : hit.path("inner_hits").path("branches").path("hits").path("hits")) {
+                    addRestaurantCandidate(candidates, restaurantId, branchHit.path("_source"), score);
+                }
+            }
+        }
+    }
+
+    private void addRestaurantCandidate(Map<Key, Candidate> candidates, UUID restaurantId, JsonNode branch, double score) {
+        if (!"ACTIVE".equals(branch.path("status").asText())) return;
+        Candidate candidate = candidates.computeIfAbsent(new Key(restaurantId, uuid(branch, "branchId")), Candidate::new);
+        candidate.restaurantScore = Math.max(candidate.restaurantScore, score);
+    }
+
+    private void addItemMatches(JsonNode response, Map<Key, Candidate> candidates) {
+        for (JsonNode hit : response.path("hits").path("hits")) {
+            JsonNode item = hit.path("_source");
+            UUID restaurantId = uuid(item, "restaurantId");
+            double score = hit.path("_score").asDouble();
+            for (JsonNode branchHit : hit.path("inner_hits").path("branches").path("hits").path("hits")) {
+                JsonNode branch = branchHit.path("_source");
+                if (!branch.path("isAvailable").asBoolean()) continue;
+                Candidate candidate = candidates.computeIfAbsent(new Key(restaurantId, uuid(branch, "branchId")), Candidate::new);
+                candidate.itemScore = Math.max(candidate.itemScore, score);
+                if (candidate.items.size() < ITEMS_PER_BRANCH) candidate.items.add(new GlobalSearchResult.MatchingItem(
+                        uuid(item, "itemId"), item.path("name").asText(), decimal(branch, "sellingPrice"),
+                        nullableDecimal(branch, "originalPrice"), item.path("currency").asText()));
+            }
+        }
+    }
+
+    private void addRestaurantMetadata(JsonNode response, Map<UUID, JsonNode> restaurants) {
+        for (JsonNode hit : response.path("hits").path("hits")) {
+            JsonNode source = hit.path("_source"); restaurants.put(uuid(source, "restaurantId"), source);
+        }
+    }
+
+    private GlobalSearchResult result(Candidate candidate, JsonNode restaurant) {
+        if (restaurant == null || !"ACTIVE".equals(restaurant.path("status").asText())) return null;
+        JsonNode branch = null;
+        for (JsonNode current : restaurant.path("branches")) if (candidate.key.branchId().toString().equals(current.path("branchId").asText())) { branch = current; break; }
+        if (branch == null || !"ACTIVE".equals(branch.path("status").asText())) return null;
+        return new GlobalSearchResult(candidate.key.restaurantId(), candidate.key.branchId(), restaurant.path("name").asText(),
+                branch.path("name").asText(), nullable(restaurant, "logoUrl"), nullable(restaurant, "coverImageUrl"),
+                nullable(branch, "addressLine"), nullable(branch, "ward"), nullable(branch, "district"), nullable(branch, "city"),
+                decimal(branch, "latitude"), decimal(branch, "longitude"), branch.path("acceptingOrders").asBoolean(), List.copyOf(candidate.items));
+    }
+
+    private boolean restaurantTextMatches(JsonNode source, String query) {
+        String q = fold(query);
+        return fold(source.path("name").asText()).contains(q) || fold(nullable(source, "description")).contains(q);
+    }
+    private String fold(String value) { return value == null ? "" : Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(); }
+    private UUID uuid(JsonNode node, String field) { return UUID.fromString(node.path(field).asText()); }
+    private String nullable(JsonNode node, String field) { JsonNode value=node.get(field); return value==null||value.isNull()?null:value.asText(); }
+    private BigDecimal decimal(JsonNode node, String field) { return node.path(field).decimalValue(); }
+    private BigDecimal nullableDecimal(JsonNode node, String field) { JsonNode value=node.get(field); return value==null||value.isNull()?null:value.decimalValue(); }
+
+    private record Key(UUID restaurantId, UUID branchId) {}
+    private static class Candidate {
+        private final Key key; private double restaurantScore; private double itemScore; private final List<GlobalSearchResult.MatchingItem> items = new ArrayList<>();
+        Candidate(Key key) { this.key=key; }
+        double score() { return restaurantScore + itemScore + (items.size() * 0.01); }
+    }
+}
