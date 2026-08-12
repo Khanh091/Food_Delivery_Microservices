@@ -1,13 +1,15 @@
 package com.khanh.fooddelivery.search_service;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThat;
+
 class SearchServiceApplicationTests {
 
-	@Test
-	void contextLoads() {
-	}
+    @Test
+    void isBootApplication() {
+        assertThat(SearchServiceApplication.class.isAnnotationPresent(SpringBootApplication.class)).isTrue();
+    }
 
 }

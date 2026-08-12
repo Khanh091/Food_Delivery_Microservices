@@ -48,6 +48,27 @@ services:
       retries: 12
       start_period: 30s
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.3
+    container_name: food-delivery-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://localhost:9200/_cluster/health >/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 45s
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.6.4
     container_name: food-delivery-keycloak
@@ -279,6 +300,45 @@ services:
       retries: 12
       start_period: 60s
 
+  search-service:
+    build:
+      context: ./services/search-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-search-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8104
+      ELASTICSEARCH_URI: http://elasticsearch:9200
+      SEARCH_CATALOG_INDEX: ${SEARCH_CATALOG_INDEX:-catalog_items_v1}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CATALOG_EVENTS_TOPIC: ${CATALOG_EVENTS_TOPIC:-catalog.events}
+      SEARCH_CATALOG_CONSUMER_GROUP: ${SEARCH_CATALOG_CONSUMER_GROUP:-search-service-catalog-indexer}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: search-service
+      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+    ports:
+      - "${SEARCH_SERVICE_PORT:-8104}:8104"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8104/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
 networks:
   food-delivery-network:
     name: food-delivery-network
@@ -286,3 +346,4 @@ networks:
 
 volumes:
   postgres_data:
+  elasticsearch_data:

@@ -1,3 +1,51 @@
 spring:
   application:
     name: search-service
+  elasticsearch:
+    uris: ${ELASTICSEARCH_URI:http://localhost:9200}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      group-id: ${SEARCH_CATALOG_CONSUMER_GROUP:search-service-catalog-indexer}
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: record
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/food-delivery}
+
+server:
+  port: ${SERVER_PORT:8104}
+
+security:
+  jwt:
+    audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
+
+app:
+  search:
+    elasticsearch-uri: ${ELASTICSEARCH_URI:http://localhost:9200}
+    index-name: ${SEARCH_CATALOG_INDEX:catalog_items_v1}
+    catalog-events-topic: ${CATALOG_EVENTS_TOPIC:catalog.events}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  health:
+    kafka:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info
