@@ -1,0 +1,2515 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8102
+  description: Generated server url
+paths:
+  /api/v1/restaurant-branches/{id}/business-hours:
+    get:
+      tags:
+      - restaurant-branch-controller
+      operationId: hours
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListBranchBusinessHourResponse"
+    put:
+      tags:
+      - restaurant-branch-controller
+      operationId: setHours
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchBusinessHoursUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListBranchBusinessHourResponse"
+  /internal/v1/restaurants/search-reindex:
+    post:
+      tags:
+      - internal-restaurant-search-reindex-controller
+      operationId: searchReindex
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RestaurantSearchReindexResponse"
+  /api/v1/restaurants/{restaurantId}/members:
+    get:
+      tags:
+      - restaurant-member-controller
+      operationId: list
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: p
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/Pageable"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePageRestaurantMemberResponse"
+    post:
+      tags:
+      - restaurant-member-controller
+      operationId: create
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantMemberCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantMemberResponse"
+  /api/v1/restaurants/{restaurantId}/branches:
+    get:
+      tags:
+      - restaurant-branch-controller
+      operationId: list_1
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListRestaurantBranchResponse"
+    post:
+      tags:
+      - restaurant-branch-controller
+      operationId: create_1
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantBranchCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBranchResponse"
+  /api/v1/restaurants/{restaurantId}/bank-accounts:
+    get:
+      tags:
+      - restaurant-bank-account-controller
+      operationId: list_2
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListRestaurantBankAccountResponse"
+    post:
+      tags:
+      - restaurant-bank-account-controller
+      operationId: create_2
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantBankAccountCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBankAccountResponse"
+  /api/v1/restaurants/{restaurantId}/bank-accounts/{accountId}/default:
+    post:
+      tags:
+      - restaurant-bank-account-controller
+      operationId: setDefault
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBankAccountResponse"
+  /api/v1/restaurants/{id}/suspend:
+    post:
+      tags:
+      - restaurant-controller
+      operationId: suspend
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reason
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+  /api/v1/restaurants/{id}/restore:
+    post:
+      tags:
+      - restaurant-controller
+      operationId: restore
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: targetStatus
+        in: query
+        required: false
+        schema:
+          type: string
+          default: ACTIVE
+          enum:
+          - PENDING
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - CLOSED
+      - name: reason
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+  /api/v1/restaurants/{id}/deactivate:
+    post:
+      tags:
+      - restaurant-controller
+      operationId: deactivate
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+  /api/v1/restaurants/{id}/close:
+    post:
+      tags:
+      - restaurant-controller
+      operationId: close
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: reason
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+  /api/v1/restaurants/{id}/activate:
+    post:
+      tags:
+      - restaurant-controller
+      operationId: activate
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+  /api/v1/restaurant-branches/{id}/special-hours:
+    get:
+      tags:
+      - restaurant-branch-controller
+      operationId: specials
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListBranchSpecialHourResponse"
+    post:
+      tags:
+      - restaurant-branch-controller
+      operationId: addSpecial
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchSpecialHourCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchSpecialHourResponse"
+  /api/v1/restaurant-applications:
+    get:
+      tags:
+      - restaurant-application-controller
+      operationId: all
+      parameters:
+      - name: p
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/Pageable"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePageRestaurantApplicationSummaryResponse"
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: create_3
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantApplicationCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+  /api/v1/restaurant-applications/{id}/submit:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: submit
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+  /api/v1/restaurant-applications/{id}/start-review:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: review
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+  /api/v1/restaurant-applications/{id}/request-information:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: info
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationInformationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+  /api/v1/restaurant-applications/{id}/reject:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: reject
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationRejectionRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+  /api/v1/restaurant-applications/{id}/documents:
+    get:
+      tags:
+      - restaurant-application-controller
+      operationId: documents
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListApplicationDocumentResponse"
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: addDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                metadata:
+                  $ref: "#/components/schemas/ApplicationDocumentUploadRequest"
+              required:
+              - file
+              - metadata
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseApplicationDocumentResponse"
+  /api/v1/restaurant-applications/{id}/documents/{documentId}/verify:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: verify
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseApplicationDocumentResponse"
+  /api/v1/restaurant-applications/{id}/documents/{documentId}/reject:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: rejectDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationDocumentVerificationRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseApplicationDocumentResponse"
+  /api/v1/restaurant-applications/{id}/cancel:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: cancel
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+  /api/v1/restaurant-applications/{id}/approve:
+    post:
+      tags:
+      - restaurant-application-controller
+      operationId: approve
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+  /api/v1/restaurants/{restaurantId}/members/{memberId}:
+    delete:
+      tags:
+      - restaurant-member-controller
+      operationId: remove
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - restaurant-member-controller
+      operationId: update
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantMemberUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantMemberResponse"
+  /api/v1/restaurants/{restaurantId}/bank-accounts/{accountId}:
+    delete:
+      tags:
+      - restaurant-bank-account-controller
+      operationId: delete
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - restaurant-bank-account-controller
+      operationId: update_1
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantBankAccountUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBankAccountResponse"
+  /api/v1/restaurants/{id}:
+    get:
+      tags:
+      - restaurant-controller
+      operationId: get
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+    patch:
+      tags:
+      - restaurant-controller
+      operationId: update_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantResponse"
+  /api/v1/restaurant-branches/{id}:
+    get:
+      tags:
+      - restaurant-branch-controller
+      operationId: get_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBranchResponse"
+    delete:
+      tags:
+      - restaurant-branch-controller
+      operationId: close_1
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - restaurant-branch-controller
+      operationId: update_3
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantBranchUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBranchResponse"
+  /api/v1/restaurant-branches/{id}/special-hours/{sid}:
+    delete:
+      tags:
+      - restaurant-branch-controller
+      operationId: deleteSpecial
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - restaurant-branch-controller
+      operationId: updateSpecial
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sid
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchSpecialHourUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchSpecialHourResponse"
+  /api/v1/restaurant-branches/{id}/accepting-orders:
+    patch:
+      tags:
+      - restaurant-branch-controller
+      operationId: accepting
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptingOrdersUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBranchResponse"
+  /api/v1/restaurant-applications/{id}:
+    get:
+      tags:
+      - restaurant-application-controller
+      operationId: get_2
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+    patch:
+      tags:
+      - restaurant-application-controller
+      operationId: update_4
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RestaurantApplicationUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantApplicationResponse"
+  /internal/v1/restaurants/{restaurantId}/catalog-authorization:
+    get:
+      tags:
+      - internal-restaurant-authorization-controller
+      operationId: authorizeCatalogAccess
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogAuthorizationResponse"
+  /internal/v1/restaurants/{restaurantId}/branches/{branchId}/public-availability:
+    get:
+      tags:
+      - internal-restaurant-public-availability-controller
+      operationId: getPublicAvailability
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseRestaurantBranchPublicAvailabilityResponse"
+  /api/v1/restaurants/{id}/status-history:
+    get:
+      tags:
+      - restaurant-controller
+      operationId: history
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: p
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/Pageable"
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePageRestaurantStatusHistoryResponse"
+  /api/v1/restaurants/me:
+    get:
+      tags:
+      - restaurant-controller
+      operationId: mine
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListRestaurantSummaryResponse"
+  /api/v1/restaurant-branches/{id}/operating-status:
+    get:
+      tags:
+      - restaurant-branch-controller
+      operationId: status
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchOperatingStatusResponse"
+  /api/v1/restaurant-applications/me:
+    get:
+      tags:
+      - restaurant-application-controller
+      operationId: mine_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListRestaurantApplicationSummaryResponse"
+  /api/v1/restaurant-applications/{id}/documents/{documentId}:
+    delete:
+      tags:
+      - restaurant-application-controller
+      operationId: deleteDocument
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: documentId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+components:
+  schemas:
+    BranchBusinessHourRequest:
+      type: object
+      properties:
+        dayOfWeek:
+          type: integer
+          format: int32
+          maximum: 7
+          minimum: 1
+        openTime:
+          type: string
+          example: 14:30:00
+        closeTime:
+          type: string
+          example: 14:30:00
+        isClosed:
+          type: boolean
+      required:
+      - dayOfWeek
+      - isClosed
+    BranchBusinessHoursUpdateRequest:
+      type: object
+      properties:
+        hours:
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchBusinessHourRequest"
+          maxItems: 7
+          minItems: 0
+      required:
+      - hours
+    ApiResponseListBranchBusinessHourResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchBusinessHourResponse"
+        timestamp:
+          type: string
+          format: date-time
+    BranchBusinessHourResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        dayOfWeek:
+          type: integer
+          format: int32
+        openTime:
+          type: string
+          example: 14:30:00
+        closeTime:
+          type: string
+          example: 14:30:00
+        closed:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+    RestaurantSearchReindexResponse:
+      type: object
+      properties:
+        restaurantsQueued:
+          type: integer
+          format: int64
+        branchesQueued:
+          type: integer
+          format: int64
+    RestaurantMemberCreateRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - OWNER
+          - MANAGER
+          - CATALOG_MANAGER
+          - ORDER_OPERATOR
+          - ACCOUNTANT
+          - STAFF
+      required:
+      - role
+      - userId
+    ApiResponseRestaurantMemberResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/RestaurantMemberResponse"
+        timestamp:
+          type: string
+          format: date-time
+    RestaurantMemberResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+          - OWNER
+          - MANAGER
+          - CATALOG_MANAGER
+          - ORDER_OPERATOR
+          - ACCOUNTANT
+          - STAFF
+        status:
+          type: string
+          enum:
+          - INVITED
+          - ACTIVE
+          - SUSPENDED
+          - REMOVED
+          - REJECTED
+        invitedByUserId:
+          type: string
+          format: uuid
+        joinedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+    RestaurantBranchCreateRequest:
+      type: object
+      properties:
+        branchCode:
+          type: string
+          maxLength: 30
+          minLength: 0
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        phoneNumber:
+          type: string
+          maxLength: 20
+          minLength: 0
+        email:
+          type: string
+          maxLength: 255
+          minLength: 0
+        addressLine:
+          type: string
+          maxLength: 500
+          minLength: 0
+        ward:
+          type: string
+          maxLength: 150
+          minLength: 0
+        district:
+          type: string
+          maxLength: 150
+          minLength: 0
+        city:
+          type: string
+          maxLength: 150
+          minLength: 0
+        latitude:
+          type: number
+          maximum: 90
+          minimum: -90
+        longitude:
+          type: number
+          maximum: 180
+          minimum: -180
+        minimumOrderAmount:
+          type: number
+          minimum: 0
+        defaultPreparationMinutes:
+          type: integer
+          format: int32
+      required:
+      - defaultPreparationMinutes
+      - latitude
+      - longitude
+      - minimumOrderAmount
+    ApiResponseRestaurantBranchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/RestaurantBranchResponse"
+        timestamp:
+          type: string
+          format: date-time
+    RestaurantBranchResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        branchCode:
+          type: string
+        name:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+        addressLine:
+          type: string
+        ward:
+          type: string
+        district:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - CLOSED
+        acceptingOrders:
+          type: boolean
+        minimumOrderAmount:
+          type: number
+        defaultPreparationMinutes:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+    RestaurantBankAccountCreateRequest:
+      type: object
+      properties:
+        bankCode:
+          type: string
+          maxLength: 30
+          minLength: 0
+        bankName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        accountNumber:
+          type: string
+          maxLength: 100
+          minLength: 0
+        accountHolderName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        isDefault:
+          type: boolean
+    ApiResponseRestaurantBankAccountResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/RestaurantBankAccountResponse"
+        timestamp:
+          type: string
+          format: date-time
+    RestaurantBankAccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        bankCode:
+          type: string
+        bankName:
+          type: string
+        maskedAccountNumber:
+          type: string
+        accountHolderName:
+          type: string
+        defaultAccount:
+          type: boolean
+        verificationStatus:
+          type: string
+          enum:
+          - PENDING
+          - VERIFIED
+          - REJECTED
+          - DISABLED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+    ApiResponseRestaurantResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/RestaurantResponse"
+        timestamp:
+          type: string
+          format: date-time
+    RestaurantResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ownerUserId:
+          type: string
+          format: uuid
+        partnerApplicationId:
+          type: string
+          format: uuid
+        restaurantCode:
+          type: string
+        name:
+          type: string
+        legalName:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+        coverImageUrl:
+          type: string
+        phoneNumber:
+          type: string
+        email:
+          type: string
+        taxCode:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - CLOSED
+        verificationStatus:
+          type: string
+          enum:
+          - PENDING
+          - UNDER_REVIEW
+          - VERIFIED
+          - REJECTED
+          - SUSPENDED
+        averageRating:
+          type: number
+        totalReviews:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+    BranchSpecialHourCreateRequest:
+      type: object
+      properties:
+        specialDate:
+          type: string
+          format: date
+        openTime:
+          type: string
+          example: 14:30:00
+        closeTime:
+          type: string
+          example: 14:30:00
+        isClosed:
+          type: boolean
+        reason:
+          type: string
+          maxLength: 255
+          minLength: 0
+      required:
+      - isClosed
+      - specialDate
+    ApiResponseBranchSpecialHourResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/BranchSpecialHourResponse"
+        timestamp:
+          type: string
+          format: date-time
+    BranchSpecialHourResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        specialDate:
+          type: string
+          format: date
+        openTime:
+          type: string
+          example: 14:30:00
+        closeTime:
+          type: string
+          example: 14:30:00
+        closed:
+          type: boolean
+        reason:
+          type: string
+        version:
+          type: integer
+          format: int64
+    RestaurantApplicationCreateRequest:
+      type: object
+      properties:
+        businessName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        businessType:
+          type: string
+          enum:
+          - HOUSEHOLD_BUSINESS
+          - COMPANY
+          - INDIVIDUAL
+          - FRANCHISE
+          - OTHER
+        taxCode:
+          type: string
+          maxLength: 50
+          minLength: 0
+        representativeName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        representativePhone:
+          type: string
+          maxLength: 20
+          minLength: 0
+        representativeEmail:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        city:
+          type: string
+          maxLength: 150
+          minLength: 0
+        district:
+          type: string
+          maxLength: 150
+          minLength: 0
+        businessAddress:
+          type: string
+          maxLength: 500
+          minLength: 0
+        expectedBranchCount:
+          type: integer
+          format: int32
+        estimatedDailyOrders:
+          type: integer
+          format: int32
+        mainCuisine:
+          type: string
+          maxLength: 100
+          minLength: 0
+      required:
+      - expectedBranchCount
+    ApiResponseRestaurantApplicationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/RestaurantApplicationResponse"
+        timestamp:
+          type: string
+          format: date-time
+    RestaurantApplicationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicantUserId:
+          type: string
+          format: uuid
+        businessName:
+          type: string
+        businessType:
+          type: string
+          enum:
+          - HOUSEHOLD_BUSINESS
+          - COMPANY
+          - INDIVIDUAL
+          - FRANCHISE
+          - OTHER
+        taxCode:
+          type: string
+        representativeName:
+          type: string
+        representativePhone:
+          type: string
+        representativeEmail:
+          type: string
+        description:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        businessAddress:
+          type: string
+        expectedBranchCount:
+          type: integer
+          format: int32
+        estimatedDailyOrders:
+          type: integer
+          format: int32
+        mainCuisine:
+          type: string
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - SUBMITTED
+          - UNDER_REVIEW
+          - NEEDS_MORE_INFORMATION
+          - APPROVED
+          - REJECTED
+          - CANCELLED
+        submittedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+        reviewedByUserId:
+          type: string
+          format: uuid
+        rejectionReason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+    ApplicationInformationRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+    ApplicationRejectionRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 0
+    ApplicationDocumentUploadRequest:
+      type: object
+      properties:
+        documentType:
+          type: string
+          enum:
+          - BUSINESS_LICENSE
+          - FOOD_SAFETY_CERTIFICATE
+          - OWNER_ID_CARD
+          - TAX_DOCUMENT
+          - BANK_DOCUMENT
+          - OTHER
+        documentNumber:
+          type: string
+          maxLength: 100
+          minLength: 0
+        issuedAt:
+          type: string
+          format: date
+        expiresAt:
+          type: string
+          format: date
+      required:
+      - documentType
+    ApiResponseApplicationDocumentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/ApplicationDocumentResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApplicationDocumentResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        applicationId:
+          type: string
+          format: uuid
+        documentType:
+          type: string
+          enum:
+          - BUSINESS_LICENSE
+          - FOOD_SAFETY_CERTIFICATE
+          - OWNER_ID_CARD
+          - TAX_DOCUMENT
+          - BANK_DOCUMENT
+          - OTHER
+        documentNumber:
+          type: string
+        fileName:
+          type: string
+        fileUrl:
+          type: string
+        mimeType:
+          type: string
+        fileSize:
+          type: integer
+          format: int64
+        verificationStatus:
+          type: string
+          enum:
+          - PENDING
+          - UNDER_REVIEW
+          - VERIFIED
+          - REJECTED
+          - EXPIRED
+        issuedAt:
+          type: string
+          format: date
+        expiresAt:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ApplicationDocumentVerificationRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+    RestaurantMemberUpdateRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+          - OWNER
+          - MANAGER
+          - CATALOG_MANAGER
+          - ORDER_OPERATOR
+          - ACCOUNTANT
+          - STAFF
+        status:
+          type: string
+          enum:
+          - INVITED
+          - ACTIVE
+          - SUSPENDED
+          - REMOVED
+          - REJECTED
+    RestaurantBankAccountUpdateRequest:
+      type: object
+      properties:
+        bankName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        accountHolderName:
+          type: string
+          maxLength: 150
+          minLength: 0
+    RestaurantUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        legalName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        logoUrl:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        coverImageUrl:
+          type: string
+          maxLength: 1000
+          minLength: 0
+        phoneNumber:
+          type: string
+          maxLength: 20
+          minLength: 0
+        email:
+          type: string
+          maxLength: 255
+          minLength: 0
+        taxCode:
+          type: string
+          maxLength: 50
+          minLength: 0
+    RestaurantBranchUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        phoneNumber:
+          type: string
+          maxLength: 20
+          minLength: 0
+        email:
+          type: string
+          maxLength: 255
+          minLength: 0
+        addressLine:
+          type: string
+          maxLength: 500
+          minLength: 0
+        ward:
+          type: string
+          maxLength: 150
+          minLength: 0
+        district:
+          type: string
+          maxLength: 150
+          minLength: 0
+        city:
+          type: string
+          maxLength: 150
+          minLength: 0
+        latitude:
+          type: number
+          maximum: 90
+          minimum: -90
+        longitude:
+          type: number
+          maximum: 180
+          minimum: -180
+        minimumOrderAmount:
+          type: number
+          minimum: 0
+        defaultPreparationMinutes:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - CLOSED
+    BranchSpecialHourUpdateRequest:
+      type: object
+      properties:
+        specialDate:
+          type: string
+          format: date
+        openTime:
+          type: string
+          example: 14:30:00
+        closeTime:
+          type: string
+          example: 14:30:00
+        isClosed:
+          type: boolean
+        reason:
+          type: string
+          maxLength: 255
+          minLength: 0
+    AcceptingOrdersUpdateRequest:
+      type: object
+      properties:
+        acceptingOrders:
+          type: boolean
+      required:
+      - acceptingOrders
+    RestaurantApplicationUpdateRequest:
+      type: object
+      properties:
+        businessName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        businessType:
+          type: string
+          enum:
+          - HOUSEHOLD_BUSINESS
+          - COMPANY
+          - INDIVIDUAL
+          - FRANCHISE
+          - OTHER
+        taxCode:
+          type: string
+          maxLength: 50
+          minLength: 0
+        representativeName:
+          type: string
+          maxLength: 150
+          minLength: 0
+        representativePhone:
+          type: string
+          maxLength: 20
+          minLength: 0
+        representativeEmail:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        city:
+          type: string
+          maxLength: 150
+          minLength: 0
+        district:
+          type: string
+          maxLength: 150
+          minLength: 0
+        businessAddress:
+          type: string
+          maxLength: 500
+          minLength: 0
+        expectedBranchCount:
+          type: integer
+          format: int32
+        estimatedDailyOrders:
+          type: integer
+          format: int32
+        mainCuisine:
+          type: string
+          maxLength: 100
+          minLength: 0
+    ApiResponseCatalogAuthorizationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/CatalogAuthorizationResponse"
+        timestamp:
+          type: string
+          format: date-time
+    CatalogAuthorizationResponse:
+      type: object
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        authorized:
+          type: boolean
+    ApiResponseRestaurantBranchPublicAvailabilityResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/RestaurantBranchPublicAvailabilityResponse"
+        timestamp:
+          type: string
+          format: date-time
+    RestaurantBranchPublicAvailabilityResponse:
+      type: object
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        restaurantVisible:
+          type: boolean
+        branchVisible:
+          type: boolean
+    Pageable:
+      type: object
+      properties:
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+        size:
+          type: integer
+          format: int32
+          minimum: 1
+        sort:
+          type: array
+          items:
+            type: string
+    ApiResponsePageRestaurantMemberResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/PageRestaurantMemberResponse"
+        timestamp:
+          type: string
+          format: date-time
+    PageRestaurantMemberResponse:
+      type: object
+      properties:
+        totalPages:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantMemberResponse"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        last:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    PageableObject:
+      type: object
+      properties:
+        paged:
+          type: boolean
+        pageNumber:
+          type: integer
+          format: int32
+        pageSize:
+          type: integer
+          format: int32
+        offset:
+          type: integer
+          format: int64
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        unpaged:
+          type: boolean
+    SortObject:
+      type: object
+      properties:
+        sorted:
+          type: boolean
+        empty:
+          type: boolean
+        unsorted:
+          type: boolean
+    ApiResponseListRestaurantBranchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantBranchResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListRestaurantBankAccountResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantBankAccountResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponsePageRestaurantStatusHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/PageRestaurantStatusHistoryResponse"
+        timestamp:
+          type: string
+          format: date-time
+    PageRestaurantStatusHistoryResponse:
+      type: object
+      properties:
+        totalPages:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantStatusHistoryResponse"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        last:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    RestaurantStatusHistoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        oldStatus:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - CLOSED
+        newStatus:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - CLOSED
+        reason:
+          type: string
+        changedByUserId:
+          type: string
+          format: uuid
+        changedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+    ApiResponseListRestaurantSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantSummaryResponse"
+        timestamp:
+          type: string
+          format: date-time
+    RestaurantSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantCode:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - CLOSED
+    ApiResponseListBranchSpecialHourResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchSpecialHourResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseBranchOperatingStatusResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/BranchOperatingStatusResponse"
+        timestamp:
+          type: string
+          format: date-time
+    BranchOperatingStatusResponse:
+      type: object
+      properties:
+        open:
+          type: boolean
+        reason:
+          type: string
+    ApiResponsePageRestaurantApplicationSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/PageRestaurantApplicationSummaryResponse"
+        timestamp:
+          type: string
+          format: date-time
+    PageRestaurantApplicationSummaryResponse:
+      type: object
+      properties:
+        totalPages:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        pageable:
+          $ref: "#/components/schemas/PageableObject"
+        size:
+          type: integer
+          format: int32
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantApplicationSummaryResponse"
+        number:
+          type: integer
+          format: int32
+        sort:
+          $ref: "#/components/schemas/SortObject"
+        first:
+          type: boolean
+        last:
+          type: boolean
+        numberOfElements:
+          type: integer
+          format: int32
+        empty:
+          type: boolean
+    RestaurantApplicationSummaryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        businessName:
+          type: string
+        status:
+          type: string
+          enum:
+          - DRAFT
+          - SUBMITTED
+          - UNDER_REVIEW
+          - NEEDS_MORE_INFORMATION
+          - APPROVED
+          - REJECTED
+          - CANCELLED
+        city:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+    ApiResponseListApplicationDocumentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApplicationDocumentResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListRestaurantApplicationSummaryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RestaurantApplicationSummaryResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseVoid:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time

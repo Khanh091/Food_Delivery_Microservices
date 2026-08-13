@@ -1,0 +1,2321 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8103
+  description: Generated server url
+paths:
+  /internal/v1/catalog/search-reindex:
+    post:
+      tags:
+      - internal-catalog-search-reindex-controller
+      operationId: reindex
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogSearchReindexResponse"
+  /api/v1/catalog/menus:
+    get:
+      tags:
+      - menu-controller
+      operationId: list
+      parameters:
+      - name: restaurantId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListMenuResponse"
+    post:
+      tags:
+      - menu-controller
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuResponse"
+  /api/v1/catalog/menus/{menuId}/categories:
+    get:
+      tags:
+      - menu-category-controller
+      operationId: list_1
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListMenuCategoryResponse"
+    post:
+      tags:
+      - menu-category-controller
+      operationId: create_1
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuCategoryCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuCategoryResponse"
+  /api/v1/catalog/menus/{menuId}/categories/{categoryId}/items/{itemId}:
+    post:
+      tags:
+      - menu-category-item-controller
+      operationId: add
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuCategoryItemCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuCategoryItemResponse"
+    delete:
+      tags:
+      - menu-category-item-controller
+      operationId: remove
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - menu-category-item-controller
+      operationId: updateSortOrder
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuCategoryItemSortOrderUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuCategoryItemResponse"
+  /api/v1/catalog/items:
+    get:
+      tags:
+      - catalog-item-controller
+      operationId: list_2
+      parameters:
+      - name: restaurantId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListCatalogItemResponse"
+    post:
+      tags:
+      - catalog-item-controller
+      operationId: create_2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogItemCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogItemResponse"
+  /api/v1/catalog/items/{itemId}/option-groups:
+    get:
+      tags:
+      - option-group-controller
+      operationId: list_3
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListOptionGroupResponse"
+    post:
+      tags:
+      - option-group-controller
+      operationId: create_3
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptionGroupCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionGroupResponse"
+  /api/v1/catalog/items/{itemId}/option-groups/{optionGroupId}/values:
+    get:
+      tags:
+      - option-value-controller
+      operationId: list_4
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListOptionValueResponse"
+    post:
+      tags:
+      - option-value-controller
+      operationId: create_4
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptionValueCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionValueResponse"
+  /api/v1/catalog/items/{itemId}/images:
+    get:
+      tags:
+      - item-image-controller
+      operationId: list_5
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListItemImageResponse"
+    post:
+      tags:
+      - item-image-controller
+      operationId: upload
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: sortOrder
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          minimum: 0
+      - name: isPrimary
+        in: query
+        required: false
+        schema:
+          type: boolean
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseItemImageResponse"
+  /api/v1/catalog/branch-items:
+    get:
+      tags:
+      - branch-item-controller
+      operationId: list_6
+      parameters:
+      - name: restaurantId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListBranchItemResponse"
+    post:
+      tags:
+      - branch-item-controller
+      operationId: create_5
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchItemCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchItemResponse"
+  /api/v1/catalog/menus/{menuId}:
+    get:
+      tags:
+      - menu-controller
+      operationId: get
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuResponse"
+    delete:
+      tags:
+      - menu-controller
+      operationId: delete
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - menu-controller
+      operationId: update
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuResponse"
+  /api/v1/catalog/menus/{menuId}/deactivate:
+    patch:
+      tags:
+      - menu-controller
+      operationId: deactivate
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuResponse"
+  /api/v1/catalog/menus/{menuId}/categories/{categoryId}:
+    get:
+      tags:
+      - menu-category-controller
+      operationId: get_1
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuCategoryResponse"
+    delete:
+      tags:
+      - menu-category-controller
+      operationId: delete_1
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseVoid"
+    patch:
+      tags:
+      - menu-category-controller
+      operationId: update_1
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MenuCategoryUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuCategoryResponse"
+  /api/v1/catalog/menus/{menuId}/categories/{categoryId}/deactivate:
+    patch:
+      tags:
+      - menu-category-controller
+      operationId: deactivate_1
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuCategoryResponse"
+  /api/v1/catalog/menus/{menuId}/categories/{categoryId}/activate:
+    patch:
+      tags:
+      - menu-category-controller
+      operationId: activate
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuCategoryResponse"
+  /api/v1/catalog/menus/{menuId}/activate:
+    patch:
+      tags:
+      - menu-controller
+      operationId: activate_1
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseMenuResponse"
+  /api/v1/catalog/items/{itemId}:
+    get:
+      tags:
+      - catalog-item-controller
+      operationId: get_2
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogItemResponse"
+    patch:
+      tags:
+      - catalog-item-controller
+      operationId: update_2
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CatalogItemUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogItemResponse"
+  /api/v1/catalog/items/{itemId}/option-groups/{optionGroupId}:
+    get:
+      tags:
+      - option-group-controller
+      operationId: get_3
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionGroupResponse"
+    patch:
+      tags:
+      - option-group-controller
+      operationId: update_3
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptionGroupUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionGroupResponse"
+  /api/v1/catalog/items/{itemId}/option-groups/{optionGroupId}/values/{optionValueId}:
+    get:
+      tags:
+      - option-value-controller
+      operationId: get_4
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionValueId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionValueResponse"
+    patch:
+      tags:
+      - option-value-controller
+      operationId: update_4
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionValueId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OptionValueUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionValueResponse"
+  /api/v1/catalog/items/{itemId}/option-groups/{optionGroupId}/values/{optionValueId}/unavailable:
+    patch:
+      tags:
+      - option-value-controller
+      operationId: unavailable
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionValueId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionValueResponse"
+  /api/v1/catalog/items/{itemId}/option-groups/{optionGroupId}/values/{optionValueId}/available:
+    patch:
+      tags:
+      - option-value-controller
+      operationId: available
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionValueId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionValueResponse"
+  /api/v1/catalog/items/{itemId}/option-groups/{optionGroupId}/deactivate:
+    patch:
+      tags:
+      - option-group-controller
+      operationId: deactivate_2
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionGroupResponse"
+  /api/v1/catalog/items/{itemId}/option-groups/{optionGroupId}/activate:
+    patch:
+      tags:
+      - option-group-controller
+      operationId: activate_2
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: optionGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseOptionGroupResponse"
+  /api/v1/catalog/items/{itemId}/images/{imageId}/sort-order:
+    patch:
+      tags:
+      - item-image-controller
+      operationId: updateSortOrder_1
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ItemImageSortOrderUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseItemImageResponse"
+  /api/v1/catalog/items/{itemId}/images/{imageId}/primary:
+    patch:
+      tags:
+      - item-image-controller
+      operationId: setPrimary
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseItemImageResponse"
+  /api/v1/catalog/items/{itemId}/deactivate:
+    patch:
+      tags:
+      - catalog-item-controller
+      operationId: deactivate_3
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogItemResponse"
+  /api/v1/catalog/items/{itemId}/activate:
+    patch:
+      tags:
+      - catalog-item-controller
+      operationId: activate_3
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCatalogItemResponse"
+  /api/v1/catalog/branch-items/{branchItemId}/unavailable:
+    patch:
+      tags:
+      - branch-item-controller
+      operationId: markUnavailable
+      parameters:
+      - name: branchItemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchItemResponse"
+  /api/v1/catalog/branch-items/{branchItemId}/sold-out:
+    patch:
+      tags:
+      - branch-item-controller
+      operationId: markSoldOut
+      parameters:
+      - name: branchItemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchItemSoldOutRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchItemResponse"
+  /api/v1/catalog/branch-items/{branchItemId}/quantity:
+    patch:
+      tags:
+      - branch-item-controller
+      operationId: updateQuantity
+      parameters:
+      - name: branchItemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchItemQuantityUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchItemResponse"
+  /api/v1/catalog/branch-items/{branchItemId}/price:
+    patch:
+      tags:
+      - branch-item-controller
+      operationId: updatePrice
+      parameters:
+      - name: branchItemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BranchItemPriceUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchItemResponse"
+  /api/v1/catalog/branch-items/{branchItemId}/available:
+    patch:
+      tags:
+      - branch-item-controller
+      operationId: markAvailable
+      parameters:
+      - name: branchItemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchItemResponse"
+  /api/v1/public/catalog/restaurants/{restaurantId}/branches/{branchId}:
+    get:
+      tags:
+      - public-catalog-controller
+      operationId: getBranchCatalog
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePublicCatalogResponse"
+  /api/v1/public/catalog/restaurants/{restaurantId}/branches/{branchId}/items/{itemId}:
+    get:
+      tags:
+      - public-catalog-controller
+      operationId: getBranchItem
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePublicCatalogItemResponse"
+  /api/v1/catalog/menus/{menuId}/categories/{categoryId}/items:
+    get:
+      tags:
+      - menu-category-item-controller
+      operationId: list_7
+      parameters:
+      - name: menuId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: categoryId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListMenuCategoryItemResponse"
+  /api/v1/catalog/branch-items/{branchItemId}:
+    get:
+      tags:
+      - branch-item-controller
+      operationId: get_5
+      parameters:
+      - name: branchItemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseBranchItemResponse"
+  /api/v1/catalog/branch-items/{branchItemId}/price-history:
+    get:
+      tags:
+      - branch-item-controller
+      operationId: getPriceHistory
+      parameters:
+      - name: branchItemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListItemPriceHistoryResponse"
+  /api/v1/catalog/items/{itemId}/images/{imageId}:
+    delete:
+      tags:
+      - item-image-controller
+      operationId: delete_2
+      parameters:
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: imageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+components:
+  schemas:
+    ApiResponseCatalogSearchReindexResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/CatalogSearchReindexResponse"
+        timestamp:
+          type: string
+          format: date-time
+    CatalogSearchReindexResponse:
+      type: object
+      properties:
+        catalogItemsQueued:
+          type: integer
+          format: int64
+        branchItemsQueued:
+          type: integer
+          format: int64
+    MenuCreateRequest:
+      type: object
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        availableFrom:
+          type: string
+          format: date
+        availableUntil:
+          type: string
+          format: date
+      required:
+      - branchId
+      - restaurantId
+    ApiResponseMenuResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/MenuResponse"
+        timestamp:
+          type: string
+          format: date-time
+    MenuResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
+        availableFrom:
+          type: string
+          format: date
+        availableUntil:
+          type: string
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MenuCategoryCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+    ApiResponseMenuCategoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/MenuCategoryResponse"
+        timestamp:
+          type: string
+          format: date-time
+    MenuCategoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        menuId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MenuCategoryItemCreateRequest:
+      type: object
+      properties:
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+    ApiResponseMenuCategoryItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/MenuCategoryItemResponse"
+        timestamp:
+          type: string
+          format: date-time
+    MenuCategoryItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        sortOrder:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CatalogItemCreateRequest:
+      type: object
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        itemType:
+          type: string
+          enum:
+          - FOOD
+          - DRINK
+          - COMBO
+        basePrice:
+          type: number
+          minimum: 0.00
+        currency:
+          type: string
+          maxLength: 3
+          minLength: 3
+        preparationTimeMinutes:
+          type: integer
+          format: int32
+          minimum: 0
+        isVegetarian:
+          type: boolean
+      required:
+      - basePrice
+      - itemType
+      - restaurantId
+    ApiResponseCatalogItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/CatalogItemResponse"
+        timestamp:
+          type: string
+          format: date-time
+    CatalogItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        itemType:
+          type: string
+          enum:
+          - FOOD
+          - DRINK
+          - COMBO
+        basePrice:
+          type: number
+        currency:
+          type: string
+        preparationTimeMinutes:
+          type: integer
+          format: int32
+        isVegetarian:
+          type: boolean
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OptionGroupCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        selectionType:
+          type: string
+          enum:
+          - SINGLE
+          - MULTIPLE
+        minimumSelections:
+          type: integer
+          format: int32
+          minimum: 0
+        maximumSelections:
+          type: integer
+          format: int32
+          minimum: 1
+        required:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - maximumSelections
+      - minimumSelections
+      - required
+      - selectionType
+    ApiResponseOptionGroupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/OptionGroupResponse"
+        timestamp:
+          type: string
+          format: date-time
+    OptionGroupResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        selectionType:
+          type: string
+          enum:
+          - SINGLE
+          - MULTIPLE
+        minimumSelections:
+          type: integer
+          format: int32
+        maximumSelections:
+          type: integer
+          format: int32
+        required:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    OptionValueCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        additionalPrice:
+          type: number
+          minimum: 0.00
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - additionalPrice
+    ApiResponseOptionValueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/OptionValueResponse"
+        timestamp:
+          type: string
+          format: date-time
+    OptionValueResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        optionGroupId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        additionalPrice:
+          type: number
+        isAvailable:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ApiResponseItemImageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/ItemImageResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ItemImageResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        isPrimary:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BranchItemCreateRequest:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        sellingPrice:
+          type: number
+          minimum: 0.00
+        originalPrice:
+          type: number
+          minimum: 0.00
+        availableQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - branchId
+      - itemId
+      - sellingPrice
+    ApiResponseBranchItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/BranchItemResponse"
+        timestamp:
+          type: string
+          format: date-time
+    BranchItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        itemId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        sellingPrice:
+          type: number
+        originalPrice:
+          type: number
+        isAvailable:
+          type: boolean
+        availableQuantity:
+          type: integer
+          format: int32
+        soldOutUntil:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MenuUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        availableFrom:
+          type: string
+          format: date
+        availableUntil:
+          type: string
+          format: date
+    MenuCategoryUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+    MenuCategoryItemSortOrderUpdateRequest:
+      type: object
+      properties:
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - sortOrder
+    CatalogItemUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        description:
+          type: string
+          maxLength: 5000
+          minLength: 0
+        itemType:
+          type: string
+          enum:
+          - FOOD
+          - DRINK
+          - COMBO
+        basePrice:
+          type: number
+          minimum: 0.00
+        currency:
+          type: string
+          maxLength: 3
+          minLength: 3
+        preparationTimeMinutes:
+          type: integer
+          format: int32
+          minimum: 0
+        isVegetarian:
+          type: boolean
+    OptionGroupUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        selectionType:
+          type: string
+          enum:
+          - SINGLE
+          - MULTIPLE
+        minimumSelections:
+          type: integer
+          format: int32
+          minimum: 0
+        maximumSelections:
+          type: integer
+          format: int32
+          minimum: 1
+        required:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+    OptionValueUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          minLength: 0
+        additionalPrice:
+          type: number
+          minimum: 0.00
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+    ItemImageSortOrderUpdateRequest:
+      type: object
+      properties:
+        sortOrder:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - sortOrder
+    BranchItemSoldOutRequest:
+      type: object
+      properties:
+        soldOutUntil:
+          type: string
+          format: date-time
+      required:
+      - soldOutUntil
+    BranchItemQuantityUpdateRequest:
+      type: object
+      properties:
+        availableQuantity:
+          type: integer
+          format: int32
+          minimum: 0
+      required:
+      - availableQuantity
+    BranchItemPriceUpdateRequest:
+      type: object
+      properties:
+        sellingPrice:
+          type: number
+          minimum: 0.00
+        originalPrice:
+          type: number
+          minimum: 0.00
+        reason:
+          type: string
+          maxLength: 500
+          minLength: 0
+      required:
+      - sellingPrice
+    ApiResponsePublicCatalogResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/PublicCatalogResponse"
+        timestamp:
+          type: string
+          format: date-time
+    PublicCatalogItemResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        itemType:
+          type: string
+          enum:
+          - FOOD
+          - DRINK
+          - COMBO
+        sellingPrice:
+          type: number
+        originalPrice:
+          type: number
+        currency:
+          type: string
+        isAvailable:
+          type: boolean
+        availableQuantity:
+          type: integer
+          format: int32
+        soldOutUntil:
+          type: string
+          format: date-time
+        preparationTimeMinutes:
+          type: integer
+          format: int32
+        isVegetarian:
+          type: boolean
+        primaryImageUrl:
+          type: string
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicItemImageResponse"
+        optionGroups:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicOptionGroupResponse"
+    PublicCatalogResponse:
+      type: object
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        menus:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicMenuResponse"
+    PublicItemImageResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        imageUrl:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        isPrimary:
+          type: boolean
+    PublicMenuCategoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+          format: int32
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicCatalogItemResponse"
+    PublicMenuResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicMenuCategoryResponse"
+    PublicOptionGroupResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        selectionType:
+          type: string
+          enum:
+          - SINGLE
+          - MULTIPLE
+        minimumSelections:
+          type: integer
+          format: int32
+        maximumSelections:
+          type: integer
+          format: int32
+        required:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+        values:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicOptionValueResponse"
+    PublicOptionValueResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        additionalPrice:
+          type: number
+        sortOrder:
+          type: integer
+          format: int32
+    ApiResponsePublicCatalogItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/PublicCatalogItemResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListMenuResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListMenuCategoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuCategoryResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListMenuCategoryItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuCategoryItemResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListCatalogItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogItemResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListOptionGroupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionGroupResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListOptionValueResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionValueResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListItemImageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemImageResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListBranchItemResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/BranchItemResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ApiResponseListItemPriceHistoryResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemPriceHistoryResponse"
+        timestamp:
+          type: string
+          format: date-time
+    ItemPriceHistoryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        oldPrice:
+          type: number
+        newPrice:
+          type: number
+        reason:
+          type: string
+        changedBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    ApiResponseVoid:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time

@@ -1,0 +1,287 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8104
+  description: Generated server url
+paths:
+  /api/v1/search/admin/restaurants/rebuild:
+    post:
+      tags:
+      - restaurant-search-rebuild-controller
+      operationId: rebuild
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/RestaurantSnapshotResult"
+  /api/v1/search/admin/catalog-items/rebuild:
+    post:
+      tags:
+      - catalog-search-rebuild-controller
+      operationId: rebuild_1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/CatalogSnapshotResult"
+  /api/v1/search:
+    get:
+      tags:
+      - public-global-search-controller
+      operationId: search
+      parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          maxLength: 200
+          minLength: 0
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 50
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseGlobalSearchResult"
+  /api/v1/search/items:
+    get:
+      tags:
+      - public-item-search-controller
+      operationId: search_1
+      parameters:
+      - name: branchId
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+          maxLength: 200
+          minLength: 0
+      - name: restaurantId
+        in: query
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - name: itemType
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: vegetarian
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: available
+        in: query
+        required: false
+        schema:
+          type: boolean
+      - name: minPrice
+        in: query
+        required: false
+        schema:
+          type: number
+          minimum: 0.0
+      - name: maxPrice
+        in: query
+        required: false
+        schema:
+          type: number
+          minimum: 0.0
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+          minimum: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+          maximum: 50
+          minimum: 1
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SearchPageResponseCatalogItemSearchResponse"
+components:
+  schemas:
+    RestaurantSnapshotResult:
+      type: object
+      properties:
+        restaurantsQueued:
+          type: integer
+          format: int64
+        branchesQueued:
+          type: integer
+          format: int64
+    CatalogSnapshotResult:
+      type: object
+      properties:
+        catalogItemsQueued:
+          type: integer
+          format: int64
+        branchItemsQueued:
+          type: integer
+          format: int64
+    GlobalSearchResult:
+      type: object
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        restaurantName:
+          type: string
+        branchName:
+          type: string
+        logoUrl:
+          type: string
+        coverImageUrl:
+          type: string
+        addressLine:
+          type: string
+        ward:
+          type: string
+        district:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        acceptingOrders:
+          type: boolean
+        matchingItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/MatchingItem"
+    MatchingItem:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sellingPrice:
+          type: number
+        originalPrice:
+          type: number
+        currency:
+          type: string
+    SearchPageResponseGlobalSearchResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GlobalSearchResult"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
+    CatalogItemSearchResponse:
+      type: object
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        restaurantId:
+          type: string
+          format: uuid
+        branchId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        itemType:
+          type: string
+        sellingPrice:
+          type: number
+        originalPrice:
+          type: number
+        isAvailable:
+          type: boolean
+        availableQuantity:
+          type: integer
+          format: int32
+        soldOutUntil:
+          type: string
+          format: date-time
+        vegetarian:
+          type: boolean
+        preparationTimeMinutes:
+          type: integer
+          format: int32
+    SearchPageResponseCatalogItemSearchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CatalogItemSearchResponse"
+        page:
+          type: integer
+          format: int32
+        size:
+          type: integer
+          format: int32
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+          format: int32
