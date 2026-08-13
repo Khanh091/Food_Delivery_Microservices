@@ -77,6 +77,7 @@
   .header-inner { gap: 12px; grid-template-columns: auto minmax(0, 1fr); padding: 12px 16px; }
   .header-actions { grid-column: 2; grid-row: 1; }
   .delivery-selector-wrap { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; width: 100%; }
+  .header-inner > .delivery-selector { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; width: 100%; }
   .account-menu-name { display: none; }
   .page-heading { align-items: flex-start; flex-direction: column; }
 }

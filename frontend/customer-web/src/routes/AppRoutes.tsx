@@ -5,6 +5,7 @@ import { MainLayout } from '../layouts/MainLayout'
 import { AccountPage } from '../pages/AccountPage'
 import { AddressesPage } from '../features/address/pages/AddressesPage'
 import { HomePage } from '../pages/HomePage'
+import { SearchPage } from '../features/search/pages/SearchPage'
 
 export function AppRoutes() {
   return (
@@ -12,6 +13,7 @@ export function AppRoutes() {
       <Routes>
         <Route element={<MainLayout />}>
           <Route index element={<HomePage />} />
+          <Route path="search" element={<SearchPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="account" element={<AccountPage />} />
