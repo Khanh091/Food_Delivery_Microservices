@@ -89,7 +89,8 @@ public class GatewaySecurityConfig {
                         // Public downstream APIs
                         .pathMatchers(
                                 HttpMethod.GET,
-                                "/api/v1/search/**"
+                                "/api/v1/search/**",
+                                "/api/v1/public/restaurants/**"
                         )
                         .permitAll()
 

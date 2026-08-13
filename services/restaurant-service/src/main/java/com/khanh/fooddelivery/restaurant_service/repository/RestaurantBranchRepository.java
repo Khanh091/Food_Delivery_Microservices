@@ -15,6 +15,13 @@ public interface RestaurantBranchRepository extends JpaRepository<RestaurantBran
 
     Optional<RestaurantBranch> findByIdAndRestaurantId(UUID id, UUID restaurantId);
 
+    @Query(
+            "select branch from RestaurantBranch branch "
+                    + "join fetch branch.restaurant restaurant "
+                    + "where branch.id = :branchId and restaurant.id = :restaurantId")
+    Optional<RestaurantBranch> findPublicByIdAndRestaurantId(
+            @Param("restaurantId") UUID restaurantId, @Param("branchId") UUID branchId);
+
     boolean existsByRestaurantIdAndBranchCode(UUID restaurantId, String branchCode);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

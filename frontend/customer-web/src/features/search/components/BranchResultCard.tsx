@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { GlobalSearchResult, MatchingItem } from '../types/search'
 
 const currency = (item: MatchingItem) => {
@@ -45,6 +46,12 @@ export function BranchResultCard({ result }: { result: GlobalSearchResult }) {
             </ul>
           </section>
         )}
+        <Link
+          className="button secondary search-result-cta"
+          to={`/restaurants/${result.restaurantId}/branches/${result.branchId}`}
+        >
+          Xem cửa hàng
+        </Link>
       </div>
     </article>
   )

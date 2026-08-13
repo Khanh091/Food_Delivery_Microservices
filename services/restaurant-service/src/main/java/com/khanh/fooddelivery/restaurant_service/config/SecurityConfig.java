@@ -36,6 +36,10 @@ public class SecurityConfig {
                                         .permitAll()
                                         .requestMatchers(
                                                 HttpMethod.GET,
+                                                "/api/v1/public/restaurants/*/branches/*")
+                                        .permitAll()
+                                        .requestMatchers(
+                                                HttpMethod.GET,
                                                 "/internal/v1/restaurants/*/branches/*/public-availability")
                                         .permitAll()
                                         .requestMatchers("/internal/v1/**")

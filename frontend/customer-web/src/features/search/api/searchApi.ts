@@ -1,4 +1,5 @@
 import { httpClient } from '../../../api/httpClient'
+import type { ApiResponse } from '../../../types/api'
 import type { SearchPageResponse } from '../types/search'
 
 export const searchGlobally = async (
@@ -7,10 +8,10 @@ export const searchGlobally = async (
   size: number,
   signal?: AbortSignal,
 ): Promise<SearchPageResponse> => {
-  const response = await httpClient.get<SearchPageResponse>('/api/v1/search', {
+  const response = await httpClient.get<ApiResponse<SearchPageResponse>>('/api/v1/search', {
     params: { q: query, page, size },
     signal,
   })
 
-  return response.data
+  return response.data.data
 }

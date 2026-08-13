@@ -1107,6 +1107,31 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ApiResponseListRestaurantApplicationSummaryResponse"
+  /api/v1/public/restaurants/{restaurantId}/branches/{branchId}:
+    get:
+      tags:
+      - public-restaurant-branch-controller
+      operationId: get_3
+      parameters:
+      - name: restaurantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: branchId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponsePublicRestaurantBranchResponse"
   /api/v1/restaurant-applications/{id}/documents/{documentId}:
     delete:
       tags:
@@ -2499,6 +2524,69 @@ components:
         timestamp:
           type: string
           format: date-time
+    ApiResponsePublicRestaurantBranchResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/PublicRestaurantBranchResponse"
+        timestamp:
+          type: string
+          format: date-time
+    PublicBranchBusinessHourResponse:
+      type: object
+      properties:
+        dayOfWeek:
+          type: integer
+          format: int32
+        openTime:
+          type: string
+          example: 14:30:00
+        closeTime:
+          type: string
+          example: 14:30:00
+        closed:
+          type: boolean
+    PublicRestaurantBranchResponse:
+      type: object
+      properties:
+        restaurantId:
+          type: string
+          format: uuid
+        restaurantName:
+          type: string
+        restaurantDescription:
+          type: string
+        restaurantLogoUrl:
+          type: string
+        restaurantCoverImageUrl:
+          type: string
+        branchId:
+          type: string
+          format: uuid
+        branchName:
+          type: string
+        phoneNumber:
+          type: string
+        addressLine:
+          type: string
+        ward:
+          type: string
+        district:
+          type: string
+        city:
+          type: string
+        acceptingOrders:
+          type: boolean
+        businessHours:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicBranchBusinessHourResponse"
     ApiResponseVoid:
       type: object
       properties:
