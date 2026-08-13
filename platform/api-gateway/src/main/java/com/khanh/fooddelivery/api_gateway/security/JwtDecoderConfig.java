@@ -19,12 +19,18 @@ public class JwtDecoderConfig {
             String issuerUri,
 
             @Value("${spring.security.oauth2.resourceserver.jwt.audience}")
-            String audience
+            String audience,
+
+            @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:}") String jwkSetUri
     ) {
         NimbusReactiveJwtDecoder decoder =
-                NimbusReactiveJwtDecoder
-                        .withIssuerLocation(issuerUri)
-                        .build();
+                jwkSetUri.isBlank()
+                        ? NimbusReactiveJwtDecoder
+                                .withIssuerLocation(issuerUri)
+                                .build()
+                        : NimbusReactiveJwtDecoder
+                                .withJwkSetUri(jwkSetUri)
+                                .build();
 
         OAuth2TokenValidator<Jwt> issuerValidator =
                 JwtValidators.createDefaultWithIssuer(issuerUri);

@@ -73,29 +73,37 @@ services:
     image: quay.io/keycloak/keycloak:26.6.4
     container_name: food-delivery-keycloak
     restart: unless-stopped
+
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
       KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
-      KC_HOSTNAME: http://host.docker.internal:${KEYCLOAK_PORT:-8180}
+
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8180}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+
     command:
       - start-dev
       - --import-realm
+
     ports:
       - "${KEYCLOAK_PORT:-8180}:8080"
+
     volumes:
       - ./infrastructure/keycloak/realms:/opt/keycloak/data/import:ro
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - ./infrastructure/keycloak/themes:/opt/keycloak/themes:ro
+
     depends_on:
       postgres:
         condition: service_healthy
+
     networks:
       - food-delivery-network
     healthcheck:
@@ -139,12 +147,11 @@ services:
       SERVER_PORT: 8081
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: api-gateway
-      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
     ports:
       - "${API_GATEWAY_PORT:-8081}:8081"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       discovery-service:
         condition: service_healthy
@@ -172,12 +179,11 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: user-service
-      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
     ports:
       - "${USER_SERVICE_PORT:-8101}:8101"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -207,7 +213,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: restaurant-service
-      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-CLOUDINARY}
       STORAGE_MAX_FILE_SIZE: ${STORAGE_MAX_FILE_SIZE:-10485760}
@@ -229,8 +236,6 @@ services:
       SEARCH_REINDEX_BATCH_SIZE: ${RESTAURANT_SEARCH_REINDEX_BATCH_SIZE:-100}
     ports:
       - "${RESTAURANT_SERVICE_PORT:-8102}:8102"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -262,7 +267,8 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: catalog-service
-      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
@@ -286,8 +292,6 @@ services:
       CLOUDINARY_BASE_FOLDER: ${CATALOG_CLOUDINARY_BASE_FOLDER:-food-delivery/catalog-items}
     ports:
       - "${CATALOG_SERVICE_PORT:-8103}:8103"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -332,12 +336,11 @@ services:
       SEARCH_KAFKA_RETRY_BACKOFF_MS: ${SEARCH_KAFKA_RETRY_BACKOFF_MS:-1000}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: search-service
-      KEYCLOAK_ISSUER_URI: http://host.docker.internal:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
     ports:
       - "${SEARCH_SERVICE_PORT:-8104}:8104"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       elasticsearch:
         condition: service_healthy

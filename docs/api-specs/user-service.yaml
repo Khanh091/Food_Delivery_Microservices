@@ -1,0 +1,393 @@
+openapi: 3.1.0
+info:
+  title: OpenAPI definition
+  version: v0
+servers:
+- url: http://localhost:8101
+  description: Generated server url
+paths:
+  /api/v1/users/me/addresses:
+    get:
+      tags:
+      - user-address-controller
+      operationId: getMyAddresses
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseListUserAddressResponse"
+    post:
+      tags:
+      - user-address-controller
+      operationId: createAddress
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserAddressCreateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseUserAddressResponse"
+  /api/v1/users/me:
+    get:
+      tags:
+      - user-controller
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCurrentUserResponse"
+    patch:
+      tags:
+      - user-controller
+      operationId: updateCurrentUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseCurrentUserResponse"
+  /api/v1/users/me/addresses/{addressId}:
+    delete:
+      tags:
+      - user-address-controller
+      operationId: deleteAddress
+      parameters:
+      - name: addressId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+    patch:
+      tags:
+      - user-address-controller
+      operationId: updateAddress
+      parameters:
+      - name: addressId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserAddressUpdateRequest"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseUserAddressResponse"
+  /api/v1/users/me/addresses/{addressId}/default:
+    patch:
+      tags:
+      - user-address-controller
+      operationId: setDefaultAddress
+      parameters:
+      - name: addressId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ApiResponseUserAddressResponse"
+components:
+  schemas:
+    UserAddressCreateRequest:
+      type: object
+      properties:
+        labelType:
+          type: string
+          enum:
+          - HOME
+          - WORK
+          - OTHER
+        customLabel:
+          type: string
+          maxLength: 100
+          minLength: 0
+        recipientName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        recipientPhone:
+          type: string
+          maxLength: 20
+          minLength: 0
+        addressLine:
+          type: string
+          maxLength: 500
+          minLength: 0
+        ward:
+          type: string
+          maxLength: 255
+          minLength: 0
+        district:
+          type: string
+          maxLength: 255
+          minLength: 0
+        city:
+          type: string
+          maxLength: 255
+          minLength: 0
+        latitude:
+          type: number
+          maximum: 90
+          minimum: -90
+        longitude:
+          type: number
+          maximum: 180
+          minimum: -180
+        buildingName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        floor:
+          type: string
+          maxLength: 100
+          minLength: 0
+        entrance:
+          type: string
+          maxLength: 255
+          minLength: 0
+        deliveryNote:
+          type: string
+          maxLength: 500
+          minLength: 0
+        isDefault:
+          type: boolean
+      required:
+      - labelType
+    ApiResponseUserAddressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/UserAddressResponse"
+        timestamp:
+          type: string
+          format: date-time
+    UserAddressResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        labelType:
+          type: string
+          enum:
+          - HOME
+          - WORK
+          - OTHER
+        customLabel:
+          type: string
+        displayLabel:
+          type: string
+        recipientName:
+          type: string
+        recipientPhone:
+          type: string
+        addressLine:
+          type: string
+        ward:
+          type: string
+        district:
+          type: string
+        city:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        buildingName:
+          type: string
+        floor:
+          type: string
+        entrance:
+          type: string
+        deliveryNote:
+          type: string
+        isDefault:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+    UserProfileUpdateRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        phoneNumber:
+          type: string
+          maxLength: 20
+          minLength: 0
+        avatarUrl:
+          type: string
+          maxLength: 1000
+          minLength: 0
+    ApiResponseCurrentUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/CurrentUserResponse"
+        timestamp:
+          type: string
+          format: date-time
+    CurrentUserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        keycloakUserId:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+        phoneNumber:
+          type: string
+        fullName:
+          type: string
+        avatarUrl:
+          type: string
+        status:
+          type: string
+          enum:
+          - ACTIVE
+          - INACTIVE
+          - SUSPENDED
+          - DELETED
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserAddressUpdateRequest:
+      type: object
+      properties:
+        labelType:
+          type: string
+          enum:
+          - HOME
+          - WORK
+          - OTHER
+        customLabel:
+          type: string
+          maxLength: 100
+          minLength: 0
+        recipientName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        recipientPhone:
+          type: string
+          maxLength: 20
+          minLength: 0
+        addressLine:
+          type: string
+          maxLength: 500
+          minLength: 0
+        ward:
+          type: string
+          maxLength: 255
+          minLength: 0
+        district:
+          type: string
+          maxLength: 255
+          minLength: 0
+        city:
+          type: string
+          maxLength: 255
+          minLength: 0
+        latitude:
+          type: number
+          maximum: 90
+          minimum: -90
+        longitude:
+          type: number
+          maximum: 180
+          minimum: -180
+        buildingName:
+          type: string
+          maxLength: 255
+          minLength: 0
+        floor:
+          type: string
+          maxLength: 100
+          minLength: 0
+        entrance:
+          type: string
+          maxLength: 255
+          minLength: 0
+        deliveryNote:
+          type: string
+          maxLength: 500
+          minLength: 0
+    ApiResponseListUserAddressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserAddressResponse"
+        timestamp:
+          type: string
+          format: date-time
