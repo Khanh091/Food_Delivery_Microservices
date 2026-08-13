@@ -17,7 +17,7 @@ import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.CatalogItemMapper;
-import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogItemSearchEventPublisher;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import java.math.BigDecimal;
@@ -37,7 +37,7 @@ class CatalogItemServiceImplTests {
     @Mock private CatalogItemRepository itemRepository;
     @Mock private CatalogItemMapper itemMapper;
     @Mock private CatalogAuthorizationService authorizationService;
-    @Mock private OutboxEventService outboxEventService;
+    @Mock private CatalogItemSearchEventPublisher catalogItemSearchEventPublisher;
 
     private CatalogItemServiceImpl service;
 
@@ -45,7 +45,7 @@ class CatalogItemServiceImplTests {
     void setUp() {
         service =
                 new CatalogItemServiceImpl(
-                        itemRepository, itemMapper, authorizationService, outboxEventService);
+                        itemRepository, itemMapper, authorizationService, catalogItemSearchEventPublisher);
     }
 
     @Test
@@ -58,12 +58,7 @@ class CatalogItemServiceImplTests {
         service.create(createRequest(null, null));
 
         verify(authorizationService).requireRestaurantCatalogAccess(restaurantId);
-        verify(outboxEventService)
-                .enqueue(
-                        any(),
-                        org.mockito.ArgumentMatchers.eq("CATALOG_ITEM"),
-                        org.mockito.ArgumentMatchers.eq(itemId),
-                        any());
+        verify(catalogItemSearchEventPublisher).enqueue(any(), org.mockito.ArgumentMatchers.same(item), any());
         assertEquals(CatalogStatus.ACTIVE, item.getStatus());
         assertEquals("VND", item.getCurrency());
         assertEquals(Boolean.FALSE, item.getIsVegetarian());

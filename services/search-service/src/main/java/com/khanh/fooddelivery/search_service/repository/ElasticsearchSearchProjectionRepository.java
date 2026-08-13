@@ -30,6 +30,7 @@ public class ElasticsearchSearchProjectionRepository implements SearchProjection
                 ctx._source.preparationTimeMinutes = params.preparationTimeMinutes;
                 ctx._source.vegetarian = params.vegetarian;
                 ctx._source.status = params.status;
+                ctx._source.primaryImageUrl = params.primaryImageUrl;
                 ctx._source.catalogItemAggregateVersion = params.aggregateVersion;
                 ctx._source.catalogItemLastEventId = params.lastEventId;
                 if (ctx._source.branches == null) { ctx._source.branches = []; }
@@ -120,6 +121,7 @@ public class ElasticsearchSearchProjectionRepository implements SearchProjection
         params.put("preparationTimeMinutes", projection.preparationTimeMinutes());
         params.put("vegetarian", projection.vegetarian());
         params.put("status", projection.status());
+        params.put("primaryImageUrl", projection.primaryImageUrl());
         params.put("aggregateVersion", projection.aggregateVersion());
         params.put("lastEventId", projection.lastEventId().toString());
         update(
@@ -266,6 +268,7 @@ public class ElasticsearchSearchProjectionRepository implements SearchProjection
         properties.put("preparationTimeMinutes", Map.of("type", "integer"));
         properties.put("vegetarian", Map.of("type", "boolean"));
         properties.put("status", Map.of("type", "keyword"));
+        properties.put("primaryImageUrl", Map.of("type", "keyword", "index", false));
         properties.put("catalogItemAggregateVersion", Map.of("type", "long"));
         properties.put("catalogItemLastEventId", Map.of("type", "keyword"));
         properties.put("branches", Map.of("type", "nested", "properties", branchMappings()));

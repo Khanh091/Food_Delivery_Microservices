@@ -10,6 +10,7 @@ import com.khanh.fooddelivery.catalog_service.entity.BranchItem;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
 import com.khanh.fooddelivery.catalog_service.enums.CatalogItemType;
 import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogItemSearchEventPublisher;
 import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
 import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.BranchItemRepository;
@@ -27,6 +28,8 @@ class CatalogSearchReindexBatchServiceTests {
     void catalogItemBatchWritesCurrentSnapshotToOutbox() {
         CatalogItemRepository catalogItemRepository = Mockito.mock(CatalogItemRepository.class);
         BranchItemRepository branchItemRepository = Mockito.mock(BranchItemRepository.class);
+        CatalogItemSearchEventPublisher catalogItemSearchEventPublisher =
+                Mockito.mock(CatalogItemSearchEventPublisher.class);
         OutboxEventService outboxEventService = Mockito.mock(OutboxEventService.class);
         CatalogItem item = catalogItem();
         when(catalogItemRepository.findSnapshotIds(any(PageRequest.class)))
@@ -35,25 +38,16 @@ class CatalogSearchReindexBatchServiceTests {
                 .thenReturn(List.of(item));
         CatalogSearchReindexBatchService service =
                 new CatalogSearchReindexBatchService(
-                        catalogItemRepository, branchItemRepository, outboxEventService);
+                        catalogItemRepository,
+                        branchItemRepository,
+                        catalogItemSearchEventPublisher,
+                        outboxEventService);
 
         CatalogSearchReindexBatchService.BatchResult result =
                 service.enqueueCatalogItemBatch(null, PageRequest.of(0, 100));
 
-        ArgumentCaptor<Object> data = ArgumentCaptor.forClass(Object.class);
-        verify(outboxEventService)
-                .enqueue(
-                        eq(CatalogEventType.CATALOG_ITEM_UPSERTED),
-                        eq("CATALOG_ITEM"),
-                        eq(item.getId()),
-                        data.capture());
-        assertThat(data.getValue())
-                .isInstanceOfSatisfying(
-                        java.util.Map.class,
-                        payload -> {
-                            assertThat(payload).containsEntry("itemId", item.getId());
-                            assertThat(payload).containsEntry("status", CatalogStatus.ACTIVE);
-                        });
+        verify(catalogItemSearchEventPublisher)
+                .enqueueAll(any(), eq(List.of(item)), eq("SEARCH_REINDEX"));
         assertThat(result.queued()).isEqualTo(1);
         assertThat(result.lastProcessedId()).isEqualTo(item.getId());
     }
@@ -62,6 +56,8 @@ class CatalogSearchReindexBatchServiceTests {
     void branchItemBatchWritesCurrentSnapshotToOutbox() {
         CatalogItemRepository catalogItemRepository = Mockito.mock(CatalogItemRepository.class);
         BranchItemRepository branchItemRepository = Mockito.mock(BranchItemRepository.class);
+        CatalogItemSearchEventPublisher catalogItemSearchEventPublisher =
+                Mockito.mock(CatalogItemSearchEventPublisher.class);
         OutboxEventService outboxEventService = Mockito.mock(OutboxEventService.class);
         CatalogItem item = catalogItem();
         BranchItem branchItem = new BranchItem();
@@ -76,7 +72,10 @@ class CatalogSearchReindexBatchServiceTests {
                 .thenReturn(List.of(branchItem));
         CatalogSearchReindexBatchService service =
                 new CatalogSearchReindexBatchService(
-                        catalogItemRepository, branchItemRepository, outboxEventService);
+                        catalogItemRepository,
+                        branchItemRepository,
+                        catalogItemSearchEventPublisher,
+                        outboxEventService);
 
         service.enqueueBranchItemBatch(null, PageRequest.of(0, 100));
 

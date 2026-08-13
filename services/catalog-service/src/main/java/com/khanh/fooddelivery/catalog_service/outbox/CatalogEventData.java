@@ -14,6 +14,11 @@ public final class CatalogEventData {
     private CatalogEventData() {}
 
     public static Map<String, Object> catalogItem(CatalogItem item, String action) {
+        return catalogItem(item, action, null);
+    }
+
+    public static Map<String, Object> catalogItem(
+            CatalogItem item, String action, String primaryImageUrl) {
         Map<String, Object> data = base(action);
         data.put("itemId", item.getId());
         data.put("restaurantId", item.getRestaurantId());
@@ -25,6 +30,7 @@ public final class CatalogEventData {
         data.put("preparationTimeMinutes", item.getPreparationTimeMinutes());
         data.put("isVegetarian", item.getIsVegetarian());
         data.put("status", item.getStatus());
+        data.put("primaryImageUrl", primaryImageUrl);
         return data;
     }
 

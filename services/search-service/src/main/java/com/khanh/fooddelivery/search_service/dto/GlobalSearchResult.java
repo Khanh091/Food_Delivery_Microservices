@@ -18,7 +18,23 @@ public record GlobalSearchResult(
         BigDecimal latitude,
         BigDecimal longitude,
         boolean acceptingOrders,
-        List<MatchingItem> matchingItems) {
+        List<MatchingItem> matchingItems,
+        List<PreviewItem> previewItems) {
     public record MatchingItem(
-            UUID itemId, String name, BigDecimal sellingPrice, BigDecimal originalPrice, String currency) {}
+            UUID itemId,
+            UUID branchItemId,
+            String name,
+            BigDecimal sellingPrice,
+            BigDecimal originalPrice,
+            String currency,
+            String imageUrl) {}
+
+    public record PreviewItem(
+            UUID itemId,
+            UUID branchItemId,
+            String name,
+            BigDecimal sellingPrice,
+            BigDecimal originalPrice,
+            String currency,
+            String imageUrl) {}
 }

@@ -14,5 +14,6 @@ public record CatalogItemSearchProjection(
         Integer preparationTimeMinutes,
         boolean vegetarian,
         String status,
+        String primaryImageUrl,
         long aggregateVersion,
         UUID lastEventId) {}

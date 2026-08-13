@@ -46,6 +46,7 @@ public class CatalogProjectionServiceImpl implements CatalogProjectionService {
                 nullableInteger(data, "preparationTimeMinutes"),
                 data.path("isVegetarian").asBoolean(),
                 text(data, "status"),
+                nullableText(data, "primaryImageUrl"),
                 event.aggregateVersion(),
                 event.eventId());
     }

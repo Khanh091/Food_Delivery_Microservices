@@ -1,6 +1,6 @@
 import { httpClient } from '../../../api/httpClient'
 import type { ApiResponse } from '../../../types/api'
-import type { PublicCatalog, PublicRestaurantBranch } from '../types/restaurant'
+import type { PublicCatalog, PublicCatalogItem, PublicRestaurantBranch } from '../types/restaurant'
 
 export const getPublicRestaurantBranch = async (
   restaurantId: string,
@@ -22,6 +22,20 @@ export const getPublicBranchCatalog = async (
 ): Promise<PublicCatalog> => {
   const response = await httpClient.get<ApiResponse<PublicCatalog>>(
     `/api/v1/public/catalog/restaurants/${restaurantId}/branches/${branchId}`,
+    { signal },
+  )
+
+  return response.data.data
+}
+
+export const getPublicBranchItem = async (
+  restaurantId: string,
+  branchId: string,
+  itemId: string,
+  signal?: AbortSignal,
+): Promise<PublicCatalogItem> => {
+  const response = await httpClient.get<ApiResponse<PublicCatalogItem>>(
+    `/api/v1/public/catalog/restaurants/${restaurantId}/branches/${branchId}/items/${itemId}`,
     { signal },
   )
 

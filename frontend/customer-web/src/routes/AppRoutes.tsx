@@ -7,6 +7,7 @@ import { AddressesPage } from '../features/address/pages/AddressesPage'
 import { HomePage } from '../pages/HomePage'
 import { SearchPage } from '../features/search/pages/SearchPage'
 import { RestaurantBranchDetailPage } from '../features/restaurant/pages/RestaurantBranchDetailPage'
+import { RestaurantItemDetailPage } from '../features/restaurant/pages/RestaurantItemDetailPage'
 
 export function AppRoutes() {
   return (
@@ -16,6 +17,7 @@ export function AppRoutes() {
           <Route index element={<HomePage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="restaurants/:restaurantId/branches/:branchId" element={<RestaurantBranchDetailPage />} />
+          <Route path="restaurants/:restaurantId/branches/:branchId/items/:itemId" element={<RestaurantItemDetailPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="account" element={<AccountPage />} />

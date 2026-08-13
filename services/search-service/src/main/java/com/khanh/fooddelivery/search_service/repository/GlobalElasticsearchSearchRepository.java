@@ -55,6 +55,30 @@ public class GlobalElasticsearchSearchRepository {
                 .retrieve().body(JsonNode.class);
     }
 
+    /**
+     * Fetches eligible branch items for every candidate branch in one request. Branch IDs are
+     * globally unique UUIDs, so filtering nested branch IDs cannot associate an item with the
+     * wrong branch.
+     */
+    public JsonNode previewItemsForBranches(List<UUID> branchIds) {
+        if (branchIds.isEmpty()) return null;
+        List<String> values = branchIds.stream().map(UUID::toString).toList();
+        Map<String, Object> candidateBranches = Map.of("nested", Map.of(
+                "path", "branches",
+                "query", Map.of("bool", Map.of("filter", List.of(
+                        Map.of("terms", Map.of("branches.branchId", values)),
+                        Map.of("term", Map.of("branches.isAvailable", true))))),
+                "inner_hits", Map.of("size", INNER_HIT_LIMIT)));
+        Map<String, Object> request = Map.of(
+                "size", CANDIDATE_LIMIT,
+                "track_total_hits", false,
+                "sort", List.of(Map.of("name.keyword", Map.of("order", "asc")), Map.of("itemId", Map.of("order", "asc"))),
+                "query", Map.of("bool", Map.of("filter", List.of(
+                        Map.of("term", Map.of("status", "ACTIVE")), candidateBranches))));
+        return client.post().uri("/{index}/_search", properties.getIndexName()).body(request)
+                .retrieve().body(JsonNode.class);
+    }
+
     public JsonNode restaurantsByIds(List<UUID> ids) {
         if (ids.isEmpty()) return null;
         List<String> values = ids.stream().map(UUID::toString).toList();

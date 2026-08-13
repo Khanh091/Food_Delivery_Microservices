@@ -6,6 +6,8 @@ import com.khanh.fooddelivery.catalog_service.entity.ItemImage;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.ItemImageMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogItemSearchEventPublisher;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.ItemImageRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
@@ -33,12 +35,13 @@ public class ItemImageServiceImpl implements ItemImageService {
     private final StorageService storageService;
     private final StorageProperties storageProperties;
     private final ImageUploadValidator imageUploadValidator;
+    private final CatalogItemSearchEventPublisher catalogItemSearchEventPublisher;
 
     @Override
     @Transactional
     public ItemImageResponse upload(
             UUID itemId, MultipartFile file, Integer sortOrder, Boolean requestedPrimary) {
-        CatalogItem item = requiredItem(itemId);
+        CatalogItem item = requiredItemForUpdate(itemId);
         authorize(item);
         imageUploadValidator.validate(file);
 
@@ -60,7 +63,11 @@ public class ItemImageServiceImpl implements ItemImageService {
             if (primary) {
                 imageRepository.clearPrimaryByItemId(itemId);
             }
-            return imageMapper.toResponse(imageRepository.saveAndFlush(image));
+            ItemImage saved = imageRepository.saveAndFlush(image);
+            if (primary) {
+                publishPrimaryImageChanged(item, "IMAGE_UPDATED");
+            }
+            return imageMapper.toResponse(saved);
         } catch (RuntimeException exception) {
             compensateUpload(imageId, uploaded);
             throw exception;
@@ -80,12 +87,15 @@ public class ItemImageServiceImpl implements ItemImageService {
     @Override
     @Transactional
     public ItemImageResponse setPrimary(UUID itemId, UUID imageId) {
+        requiredImage(itemId, imageId);
+        CatalogItem item = requiredItemForUpdate(itemId);
         ItemImage image = requiredImage(itemId, imageId);
-        authorize(image.getItem());
+        authorize(item);
         if (!Boolean.TRUE.equals(image.getIsPrimary())) {
             imageRepository.clearPrimaryByItemId(itemId);
             image.setIsPrimary(true);
             imageRepository.save(image);
+            publishPrimaryImageChanged(item, "IMAGE_UPDATED");
         }
         return imageMapper.toResponse(image);
     }
@@ -102,8 +112,10 @@ public class ItemImageServiceImpl implements ItemImageService {
     @Override
     @Transactional
     public void delete(UUID itemId, UUID imageId) {
+        requiredImage(itemId, imageId);
+        CatalogItem item = requiredItemForUpdate(itemId);
         ItemImage image = requiredImage(itemId, imageId);
-        authorize(image.getItem());
+        authorize(item);
         requireActiveProvider(image);
         storageService.delete(image.getStorageKey());
 
@@ -118,6 +130,7 @@ public class ItemImageServiceImpl implements ItemImageService {
                                     replacement.setIsPrimary(true);
                                     imageRepository.save(replacement);
                                 });
+                publishPrimaryImageChanged(item, "IMAGE_UPDATED");
             }
         } catch (RuntimeException exception) {
             log.error(
@@ -132,6 +145,16 @@ public class ItemImageServiceImpl implements ItemImageService {
         return itemRepository
                 .findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATALOG_ITEM_NOT_FOUND));
+    }
+
+    private CatalogItem requiredItemForUpdate(UUID itemId) {
+        return itemRepository
+                .findByIdForUpdate(itemId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATALOG_ITEM_NOT_FOUND));
+    }
+
+    private void publishPrimaryImageChanged(CatalogItem item, String action) {
+        catalogItemSearchEventPublisher.enqueue(CatalogEventType.CATALOG_ITEM_UPSERTED, item, action);
     }
 
     private ItemImage requiredImage(UUID itemId, UUID imageId) {

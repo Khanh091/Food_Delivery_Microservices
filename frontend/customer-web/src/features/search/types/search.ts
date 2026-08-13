@@ -1,10 +1,14 @@
 export interface MatchingItem {
   itemId: string
+  branchItemId: string
   name: string
   sellingPrice: number | null
   originalPrice: number | null
   currency: string | null
+  imageUrl: string | null
 }
+
+export interface PreviewItem extends MatchingItem {}
 
 export interface GlobalSearchResult {
   restaurantId: string
@@ -21,6 +25,7 @@ export interface GlobalSearchResult {
   longitude: number | null
   acceptingOrders: boolean
   matchingItems: MatchingItem[]
+  previewItems: PreviewItem[]
 }
 
 export interface SearchPageResponse {

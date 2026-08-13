@@ -6,7 +6,6 @@ import com.khanh.fooddelivery.search_service.dto.SearchPageResponse;
 import com.khanh.fooddelivery.search_service.repository.GlobalElasticsearchSearchRepository;
 import java.math.BigDecimal;
 import java.text.Normalizer;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ElasticsearchGlobalSearchService implements GlobalSearchService {
-    private static final int ITEMS_PER_BRANCH = 3;
+    private static final int PREVIEW_ITEMS_PER_BRANCH = 6;
     private final GlobalElasticsearchSearchRepository repository;
 
     public ElasticsearchGlobalSearchService(GlobalElasticsearchSearchRepository repository) {
@@ -31,6 +30,8 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
         addRestaurantMatches(repository.searchRestaurants(query), query, candidates, restaurants);
         JsonNode itemHits = repository.searchItems(query);
         addItemMatches(itemHits, candidates);
+        addPreviewFallbacks(repository.previewItemsForBranches(
+                candidates.keySet().stream().map(Key::branchId).distinct().toList()), candidates);
 
         List<UUID> missing = candidates.keySet().stream().map(Key::restaurantId)
                 .filter(id -> !restaurants.containsKey(id)).distinct().toList();
@@ -83,11 +84,30 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
                 if (!branch.path("isAvailable").asBoolean()) continue;
                 Candidate candidate = candidates.computeIfAbsent(new Key(restaurantId, uuid(branch, "branchId")), Candidate::new);
                 candidate.itemScore = Math.max(candidate.itemScore, score);
-                if (candidate.items.size() < ITEMS_PER_BRANCH) candidate.items.add(new GlobalSearchResult.MatchingItem(
-                        uuid(item, "itemId"), item.path("name").asText(), decimal(branch, "sellingPrice"),
-                        nullableDecimal(branch, "originalPrice"), item.path("currency").asText()));
+                candidate.addMatching(item(item, branch));
             }
         }
+    }
+
+    private void addPreviewFallbacks(JsonNode response, Map<Key, Candidate> candidates) {
+        if (response == null) return;
+        for (JsonNode hit : response.path("hits").path("hits")) {
+            JsonNode item = hit.path("_source");
+            UUID restaurantId = uuid(item, "restaurantId");
+            for (JsonNode branchHit : hit.path("inner_hits").path("branches").path("hits").path("hits")) {
+                JsonNode branch = branchHit.path("_source");
+                if (!branch.path("isAvailable").asBoolean()) continue;
+                Candidate candidate = candidates.get(new Key(restaurantId, uuid(branch, "branchId")));
+                if (candidate != null) candidate.addPreview(item(item, branch));
+            }
+        }
+    }
+
+    private GlobalSearchResult.MatchingItem item(JsonNode item, JsonNode branch) {
+        return new GlobalSearchResult.MatchingItem(
+                uuid(item, "itemId"), uuid(branch, "branchItemId"), item.path("name").asText(),
+                decimal(branch, "sellingPrice"), nullableDecimal(branch, "originalPrice"),
+                item.path("currency").asText(), nullable(item, "primaryImageUrl"));
     }
 
     private void addRestaurantMetadata(JsonNode response, Map<UUID, JsonNode> restaurants) {
@@ -104,7 +124,8 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
         return new GlobalSearchResult(candidate.key.restaurantId(), candidate.key.branchId(), restaurant.path("name").asText(),
                 branch.path("name").asText(), nullable(restaurant, "logoUrl"), nullable(restaurant, "coverImageUrl"),
                 nullable(branch, "addressLine"), nullable(branch, "ward"), nullable(branch, "district"), nullable(branch, "city"),
-                decimal(branch, "latitude"), decimal(branch, "longitude"), branch.path("acceptingOrders").asBoolean(), List.copyOf(candidate.items));
+                decimal(branch, "latitude"), decimal(branch, "longitude"), branch.path("acceptingOrders").asBoolean(),
+                List.copyOf(candidate.matchingItems()), candidate.previewItems());
     }
 
     private boolean restaurantTextMatches(JsonNode source, String query) {
@@ -119,8 +140,24 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
 
     private record Key(UUID restaurantId, UUID branchId) {}
     private static class Candidate {
-        private final Key key; private double restaurantScore; private double itemScore; private final List<GlobalSearchResult.MatchingItem> items = new ArrayList<>();
+        private final Key key;
+        private double restaurantScore;
+        private double itemScore;
+        private final Map<UUID, GlobalSearchResult.MatchingItem> matchingItems = new LinkedHashMap<>();
+        private final Map<UUID, GlobalSearchResult.MatchingItem> previewItems = new LinkedHashMap<>();
         Candidate(Key key) { this.key=key; }
-        double score() { return restaurantScore + itemScore + (items.size() * 0.01); }
+        void addMatching(GlobalSearchResult.MatchingItem item) {
+            if (matchingItems.size() < PREVIEW_ITEMS_PER_BRANCH) matchingItems.putIfAbsent(item.branchItemId(), item);
+            addPreview(item);
+        }
+        void addPreview(GlobalSearchResult.MatchingItem item) {
+            if (previewItems.size() < PREVIEW_ITEMS_PER_BRANCH) previewItems.putIfAbsent(item.branchItemId(), item);
+        }
+        List<GlobalSearchResult.MatchingItem> matchingItems() { return List.copyOf(matchingItems.values()); }
+        List<GlobalSearchResult.PreviewItem> previewItems() {
+            return previewItems.values().stream().map(item -> new GlobalSearchResult.PreviewItem(
+                    item.itemId(), item.branchItemId(), item.name(), item.sellingPrice(), item.originalPrice(), item.currency(), item.imageUrl())).toList();
+        }
+        double score() { return restaurantScore + itemScore + (matchingItems.size() * 0.01); }
     }
 }

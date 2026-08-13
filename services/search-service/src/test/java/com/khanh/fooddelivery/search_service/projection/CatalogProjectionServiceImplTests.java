@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.mockito.ArgumentCaptor;
 
 class CatalogProjectionServiceImplTests {
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
@@ -24,7 +25,12 @@ class CatalogProjectionServiceImplTests {
 
         service.apply(catalogItemEvent(1));
 
-        verify(repository).applyCatalogItem(any());
+        ArgumentCaptor<com.khanh.fooddelivery.search_service.document.CatalogItemSearchProjection>
+                projection = ArgumentCaptor.forClass(
+                        com.khanh.fooddelivery.search_service.document.CatalogItemSearchProjection.class);
+        verify(repository).applyCatalogItem(projection.capture());
+        org.assertj.core.api.Assertions.assertThat(projection.getValue().primaryImageUrl())
+                .isEqualTo("https://images.example/pho-bo.png");
     }
 
     @Test
@@ -77,7 +83,8 @@ class CatalogProjectionServiceImplTests {
                                 "basePrice", 50000,
                                 "currency", "VND",
                                 "isVegetarian", false,
-                                "status", "ACTIVE")));
+                                "status", "ACTIVE",
+                                "primaryImageUrl", "https://images.example/pho-bo.png")));
     }
 
     private DomainEventEnvelope branchItemEvent(UUID itemId, UUID branchItemId, long version) {

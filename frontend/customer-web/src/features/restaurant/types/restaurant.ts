@@ -36,6 +36,14 @@ export interface PublicCatalogItem {
   preparationTimeMinutes: number | null
   isVegetarian: boolean | null
   primaryImageUrl: string | null
+  images: PublicItemImage[]
+}
+
+export interface PublicItemImage {
+  id: string
+  imageUrl: string
+  sortOrder: number | null
+  isPrimary: boolean
 }
 
 export interface PublicMenuCategory {

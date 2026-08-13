@@ -15,6 +15,7 @@ import com.khanh.fooddelivery.catalog_service.entity.ItemImage;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.ItemImageMapper;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogItemSearchEventPublisher;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.ItemImageRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
@@ -43,6 +44,7 @@ class ItemImageServiceImplTests {
     @Mock private CatalogAuthorizationService authorizationService;
     @Mock private StorageService storageService;
     @Mock private ImageUploadValidator imageUploadValidator;
+    @Mock private CatalogItemSearchEventPublisher catalogItemSearchEventPublisher;
     private ItemImageServiceImpl service;
     private MockMultipartFile file;
 
@@ -57,13 +59,14 @@ class ItemImageServiceImplTests {
                         authorizationService,
                         storageService,
                         properties,
-                        imageUploadValidator);
+                        imageUploadValidator,
+                        catalogItemSearchEventPublisher);
         file = new MockMultipartFile("file", "item.png", "image/png", new byte[] {1});
     }
 
     @Test
     void firstImageIsPrimaryAndPersistsStorageMetadata() {
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item()));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(item()));
         when(imageRepository.existsByItemId(itemId)).thenReturn(false);
         when(storageService.upload(any(), any(), any())).thenReturn(uploadResult());
         when(imageRepository.saveAndFlush(any()))
@@ -78,11 +81,12 @@ class ItemImageServiceImplTests {
         assertEquals("image:catalog/items/image-key", saved.getStorageKey());
         assertEquals(StorageProvider.CLOUDINARY, saved.getStorageProvider());
         verify(authorizationService).requireRestaurantCatalogAccess(restaurantId);
+        verify(catalogItemSearchEventPublisher).enqueue(any(), org.mockito.ArgumentMatchers.same(saved.getItem()), any());
     }
 
     @Test
     void unauthorizedUploadDoesNotCallStorage() {
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item()));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(item()));
         doThrow(new AppException(ErrorCode.ACCESS_DENIED))
                 .when(authorizationService)
                 .requireRestaurantCatalogAccess(restaurantId);
@@ -94,7 +98,7 @@ class ItemImageServiceImplTests {
 
     @Test
     void invalidImageDoesNotCallStorage() {
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item()));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(item()));
         doThrow(new AppException(ErrorCode.INVALID_IMAGE_FILE))
                 .when(imageUploadValidator)
                 .validate(file);
@@ -108,7 +112,7 @@ class ItemImageServiceImplTests {
 
     @Test
     void requestedPrimaryClearsExistingPrimary() {
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item()));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(item()));
         when(storageService.upload(any(), any(), any())).thenReturn(uploadResult());
         when(imageRepository.saveAndFlush(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -123,6 +127,7 @@ class ItemImageServiceImplTests {
         ItemImage image = image(false);
         when(imageRepository.findByIdAndItemId(image.getId(), itemId))
                 .thenReturn(Optional.of(image));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(image.getItem()));
         when(imageRepository.save(image)).thenReturn(image);
 
         service.setPrimary(itemId, image.getId());
@@ -130,6 +135,7 @@ class ItemImageServiceImplTests {
         assertEquals(Boolean.TRUE, image.getIsPrimary());
         verify(imageRepository).clearPrimaryByItemId(itemId);
         verify(authorizationService).requireRestaurantCatalogAccess(restaurantId);
+        verify(catalogItemSearchEventPublisher).enqueue(any(), org.mockito.ArgumentMatchers.same(image.getItem()), any());
     }
 
     @Test
@@ -162,6 +168,7 @@ class ItemImageServiceImplTests {
         ItemImage image = image(false);
         when(imageRepository.findByIdAndItemId(image.getId(), itemId))
                 .thenReturn(Optional.of(image));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(image.getItem()));
         when(storageService.getProvider()).thenReturn(StorageProvider.CLOUDINARY);
         doNothing().when(storageService).delete(image.getStorageKey());
 
@@ -179,6 +186,7 @@ class ItemImageServiceImplTests {
         ItemImage replacement = image(false);
         when(imageRepository.findByIdAndItemId(deleted.getId(), itemId))
                 .thenReturn(Optional.of(deleted));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(deleted.getItem()));
         when(storageService.getProvider()).thenReturn(StorageProvider.CLOUDINARY);
         when(imageRepository.findFirstByItemIdOrderBySortOrderAscCreatedAtAsc(itemId))
                 .thenReturn(Optional.of(replacement));
@@ -188,11 +196,12 @@ class ItemImageServiceImplTests {
 
         assertEquals(Boolean.TRUE, replacement.getIsPrimary());
         verify(imageRepository).save(replacement);
+        verify(catalogItemSearchEventPublisher).enqueue(any(), org.mockito.ArgumentMatchers.same(deleted.getItem()), any());
     }
 
     @Test
     void databaseFailureAfterUploadAttemptsCompensatingDelete() {
-        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item()));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(item()));
         when(imageRepository.existsByItemId(itemId)).thenReturn(false);
         StorageUploadResult uploaded = uploadResult();
         when(storageService.upload(any(), any(), any())).thenReturn(uploaded);
@@ -209,6 +218,7 @@ class ItemImageServiceImplTests {
         ItemImage image = image(false);
         when(imageRepository.findByIdAndItemId(image.getId(), itemId))
                 .thenReturn(Optional.of(image));
+        when(itemRepository.findByIdForUpdate(itemId)).thenReturn(Optional.of(image.getItem()));
         when(storageService.getProvider()).thenReturn(StorageProvider.CLOUDINARY);
         doThrow(new AppException(ErrorCode.IMAGE_DELETE_FAILED))
                 .when(storageService)

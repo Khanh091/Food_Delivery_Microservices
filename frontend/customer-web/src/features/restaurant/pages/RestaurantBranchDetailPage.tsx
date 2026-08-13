@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios'
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { getPublicBranchCatalog, getPublicRestaurantBranch } from '../api/restaurantApi'
 import { BranchHeader } from '../components/BranchHeader'
 import { BusinessHours } from '../components/BusinessHours'
@@ -11,6 +11,12 @@ const unavailableRoute = (error: unknown) => isAxiosError(error) && error.respon
 
 export function RestaurantBranchDetailPage() {
   const { restaurantId, branchId } = useParams()
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const targetItemId = searchParams.get('item')?.trim() || null
+  const searchOrigin = typeof location.state?.searchOrigin === 'string' && location.state.searchOrigin.startsWith('/search')
+    ? location.state.searchOrigin
+    : '/search'
   const [branch, setBranch] = useState<PublicRestaurantBranch | null>(null)
   const [catalog, setCatalog] = useState<PublicCatalog | null>(null)
   const [branchLoading, setBranchLoading] = useState(true)
@@ -78,11 +84,12 @@ export function RestaurantBranchDetailPage() {
 
   return (
     <main className="page-shell branch-detail-page">
+      <Link className="branch-detail-back" to={searchOrigin}>← Quay lại tìm kiếm</Link>
       <BranchHeader branch={branch} />
       <BusinessHours hours={branch.businessHours} />
       {menuLoading && <section className="branch-menu-loading" aria-live="polite"><p>Đang tải thực đơn…</p><div className="menu-loading-grid"><div /><div /><div /></div></section>}
       {menuError && <section className="menu-empty"><h2>Chưa thể tải thực đơn</h2><p>{menuError}</p><button type="button" className="button secondary" onClick={() => setMenuRetryKey((value) => value + 1)}>Thử lại</button></section>}
-      {catalog && !menuLoading && !menuError && <MenuSection catalog={catalog} />}
+      {catalog && !menuLoading && !menuError && <MenuSection catalog={catalog} targetItemId={targetItemId} searchOrigin={searchOrigin} />}
     </main>
   )
 }

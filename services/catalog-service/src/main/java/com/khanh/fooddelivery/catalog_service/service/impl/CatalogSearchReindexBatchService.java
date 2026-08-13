@@ -2,8 +2,8 @@ package com.khanh.fooddelivery.catalog_service.service.impl;
 
 import com.khanh.fooddelivery.catalog_service.entity.BranchItem;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
-import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
 import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogItemSearchEventPublisher;
 import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.BranchItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
@@ -17,14 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class CatalogSearchReindexBatchService {
     private final CatalogItemRepository catalogItemRepository;
     private final BranchItemRepository branchItemRepository;
+    private final CatalogItemSearchEventPublisher catalogItemSearchEventPublisher;
     private final OutboxEventService outboxEventService;
 
     public CatalogSearchReindexBatchService(
             CatalogItemRepository catalogItemRepository,
             BranchItemRepository branchItemRepository,
+            CatalogItemSearchEventPublisher catalogItemSearchEventPublisher,
             OutboxEventService outboxEventService) {
         this.catalogItemRepository = catalogItemRepository;
         this.branchItemRepository = branchItemRepository;
+        this.catalogItemSearchEventPublisher = catalogItemSearchEventPublisher;
         this.outboxEventService = outboxEventService;
     }
 
@@ -35,13 +38,8 @@ public class CatalogSearchReindexBatchService {
             return new BatchResult(0, null);
         }
         List<CatalogItem> items = catalogItemRepository.findAllByIdInForUpdate(itemIds);
-        items.forEach(
-                item ->
-                        outboxEventService.enqueue(
-                                CatalogEventType.CATALOG_ITEM_UPSERTED,
-                                "CATALOG_ITEM",
-                                item.getId(),
-                                CatalogEventData.catalogItem(item, "SEARCH_REINDEX")));
+        catalogItemSearchEventPublisher.enqueueAll(
+                CatalogEventType.CATALOG_ITEM_UPSERTED, items, "SEARCH_REINDEX");
         return new BatchResult(items.size(), lastId(itemIds));
     }
 
@@ -58,7 +56,7 @@ public class CatalogSearchReindexBatchService {
                                 CatalogEventType.BRANCH_ITEM_UPSERTED,
                                 "BRANCH_ITEM",
                                 item.getId(),
-                                CatalogEventData.branchItem(item, "SEARCH_REINDEX")));
+                                com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData.branchItem(item, "SEARCH_REINDEX")));
         return new BatchResult(items.size(), lastId(branchItemIds));
     }
 

@@ -8,9 +8,8 @@ import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.CatalogItemMapper;
-import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
 import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
-import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
+import com.khanh.fooddelivery.catalog_service.outbox.CatalogItemSearchEventPublisher;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import com.khanh.fooddelivery.catalog_service.service.CatalogItemService;
@@ -30,7 +29,7 @@ public class CatalogItemServiceImpl implements CatalogItemService {
     private final CatalogItemRepository itemRepository;
     private final CatalogItemMapper itemMapper;
     private final CatalogAuthorizationService authorizationService;
-    private final OutboxEventService outboxEventService;
+    private final CatalogItemSearchEventPublisher catalogItemSearchEventPublisher;
 
     @Override
     public CatalogItemResponse create(CatalogItemCreateRequest request) {
@@ -117,10 +116,6 @@ public class CatalogItemServiceImpl implements CatalogItemService {
     }
 
     private void enqueue(CatalogEventType eventType, CatalogItem item, String action) {
-        outboxEventService.enqueue(
-                eventType,
-                "CATALOG_ITEM",
-                item.getId(),
-                CatalogEventData.catalogItem(item, action));
+        catalogItemSearchEventPublisher.enqueue(eventType, item, action);
     }
 }
