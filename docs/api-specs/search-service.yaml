@@ -66,7 +66,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/SearchPageResponseGlobalSearchResult"
+                $ref: "#/components/schemas/ApiResponseSearchPageResponseGlobalSearchResult"
   /api/v1/search/items:
     get:
       tags:
@@ -163,6 +163,20 @@ components:
         branchItemsQueued:
           type: integer
           format: int64
+    ApiResponseSearchPageResponseGlobalSearchResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: "#/components/schemas/SearchPageResponseGlobalSearchResult"
+        timestamp:
+          type: string
+          format: date-time
     GlobalSearchResult:
       type: object
       properties:

@@ -9,7 +9,8 @@ public enum SearchErrorCode {
     CATALOG_REINDEX_TRIGGER_FAILED(
             HttpStatus.BAD_GATEWAY, "SEARCH_004", "Unable to trigger catalog snapshot reindex"),
     RESTAURANT_REINDEX_TRIGGER_FAILED(
-            HttpStatus.BAD_GATEWAY, "SEARCH_005", "Unable to trigger restaurant snapshot reindex");
+            HttpStatus.BAD_GATEWAY, "SEARCH_005", "Unable to trigger restaurant snapshot reindex"),
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "SEARCH_006", "Invalid request");
 
     private final HttpStatus status;
     private final String code;
