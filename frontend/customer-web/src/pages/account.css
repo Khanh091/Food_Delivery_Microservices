@@ -1,0 +1,28 @@
+.account-page { min-height: calc(100svh - 79px); }
+.account-overview { display: grid; gap: var(--space-6); grid-template-columns: 220px minmax(0, 1fr); }
+.account-navigation, .account-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
+.account-navigation { align-self: start; display: grid; gap: var(--space-2); padding: var(--space-3); position: sticky; top: 102px; }
+.account-navigation a { border-radius: var(--radius-sm); color: var(--color-text-secondary); font-size: 0.92rem; font-weight: 700; padding: 12px; text-decoration: none; }
+.account-navigation a:hover, .account-navigation a.active { background: var(--color-primary-soft); color: var(--color-primary); }
+.account-card { padding: 38px; }
+.account-card h2 { color: var(--color-primary-strong); font-size: clamp(2rem, 4vw, 2.85rem); letter-spacing: -0.055em; line-height: 1.08; margin: 0; }
+.account-identity { align-items: center; border-bottom: 1px solid var(--color-border); display: flex; gap: var(--space-4); margin: var(--space-8) 0 var(--space-6); padding-bottom: var(--space-6); }
+.account-identity h3, .account-section h3 { color: var(--color-ink); font-size: 1.08rem; margin: 0; }
+.account-identity p { color: var(--color-text-secondary); margin: 5px 0 0; }
+.account-section { max-width: 680px; }
+.account-section dl { display: grid; gap: 0; margin: var(--space-4) 0 var(--space-8); }
+.account-section dl div { align-items: baseline; border-bottom: 1px solid #edf1f6; display: grid; gap: var(--space-4); grid-template-columns: 150px minmax(0, 1fr); padding: 15px 0; }
+.account-section dt { color: var(--color-text-secondary); font-size: 0.9rem; }
+.account-section dd { color: var(--color-ink); font-weight: 650; margin: 0; overflow-wrap: anywhere; }
+.account-links { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+
+@media (max-width: 760px) {
+  .account-overview { grid-template-columns: 1fr; }
+  .account-navigation { display: flex; overflow: auto; position: static; }
+  .account-navigation a { flex: 1 0 auto; text-align: center; }
+  .account-card { padding: 28px 22px; }
+}
+
+@media (max-width: 520px) {
+  .account-section dl div { gap: 5px; grid-template-columns: 1fr; }
+}

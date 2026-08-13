@@ -26,27 +26,48 @@ export function AddressesPage() {
   const [formOpen, setFormOpen] = useState(searchParams.get('new') === '1')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<string | null>(null)
   const [busyAddressId, setBusyAddressId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeliveryAddress | null>(null)
 
   useEffect(() => { void loadAddresses() }, [loadAddresses])
   useEffect(() => { if (searchParams.get('new') === '1') setFormOpen(true) }, [searchParams])
+  useEffect(() => {
+    if (!formOpen && !deleteTarget) return undefined
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || submitting || busyAddressId) return
+      setFormOpen(false)
+      setEditingAddress(null)
+      setDeleteTarget(null)
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [busyAddressId, deleteTarget, formOpen, submitting])
 
-  const closeForm = () => {
+  const closeForm = (force = false) => {
+    if (submitting && !force) return
     setFormOpen(false)
     setEditingAddress(null)
     setSubmitError(null)
     setSearchParams({})
   }
 
+  const openCreate = () => {
+    setEditingAddress(null)
+    setSubmitError(null)
+    setFormOpen(true)
+  }
+
   const save = async (input: AddressCreateInput | AddressUpdateInput) => {
     setSubmitting(true)
     setSubmitError(null)
     try {
+      const updated = Boolean(editingAddress)
       if (editingAddress) await updateAddress(editingAddress.id, input as AddressUpdateInput)
       else await createAddress(input as AddressCreateInput)
       await refreshAddresses()
-      closeForm()
+      setFeedback(updated ? 'Địa chỉ đã được cập nhật.' : 'Địa chỉ giao hàng đã được thêm.')
+      closeForm(true)
     } catch (saveError) {
       setSubmitError(friendlyError(saveError, 'Chưa thể lưu địa chỉ. Vui lòng thử lại.'))
     } finally {
@@ -56,20 +77,25 @@ export function AddressesPage() {
 
   const makeDefault = async (address: DeliveryAddress) => {
     setBusyAddressId(address.id)
-    try { await setDefaultAddress(address.id); await refreshAddresses() }
-    catch (defaultError) {
+    setSubmitError(null)
+    try {
+      await setDefaultAddress(address.id)
+      await refreshAddresses()
+      setFeedback(`Đã đặt “${address.displayLabel}” làm địa chỉ mặc định.`)
+    } catch (defaultError) {
       setSubmitError(friendlyError(defaultError, 'Chưa thể đặt địa chỉ mặc định. Vui lòng thử lại.'))
       await refreshAddresses()
-    }
-    finally { setBusyAddressId(null) }
+    } finally { setBusyAddressId(null) }
   }
 
   const confirmDelete = async () => {
     if (!deleteTarget) return
     setBusyAddressId(deleteTarget.id)
+    setSubmitError(null)
     try {
       await deleteAddress(deleteTarget.id)
       await refreshAddresses()
+      setFeedback('Địa chỉ đã được xóa.')
       setDeleteTarget(null)
     } catch (deleteError) {
       setSubmitError(friendlyError(deleteError, 'Chưa thể xóa địa chỉ. Vui lòng thử lại.'))
@@ -80,14 +106,15 @@ export function AddressesPage() {
   return (
     <main className="page-shell addresses-page">
       <div className="page-heading">
-        <div><p className="eyebrow">Tài khoản</p><h1>Địa chỉ giao hàng</h1><p>Chọn địa chỉ cho từng lần đặt món hoặc đặt địa chỉ mặc định.</p></div>
-        <button type="button" className="button primary" onClick={() => { setEditingAddress(null); setFormOpen(true) }}>+ Thêm địa chỉ</button>
+        <div><p className="eyebrow">Tài khoản</p><h1>Địa chỉ giao hàng</h1><p>Quản lý các địa chỉ dùng cho đơn hàng. Địa chỉ mặc định và địa chỉ đang chọn để giao có thể khác nhau.</p></div>
+        <button type="button" className="button primary" onClick={openCreate}>+ Thêm địa chỉ</button>
       </div>
+      {feedback && <p className="operation-feedback" role="status">{feedback}</p>}
       {submitError && <p className="form-error" role="alert">{submitError}</p>}
-      {loading && addresses.length === 0 ? <p className="empty-state">Đang tải địa chỉ…</p> : error ? <div className="empty-state"><p>{error}</p><button className="button secondary" onClick={() => void loadAddresses()}>Thử lại</button></div> : addresses.length === 0 ? <div className="empty-state"><h2>Chưa có địa chỉ giao hàng</h2><p>Thêm địa chỉ để sẵn sàng cho lần đặt món đầu tiên.</p></div> : <AddressList addresses={addresses} busy={busyAddressId !== null} onEdit={(address) => { setEditingAddress(address); setFormOpen(true) }} onSetDefault={(address) => void makeDefault(address)} onDelete={setDeleteTarget} />}
+      {loading && addresses.length === 0 ? <div className="empty-state"><p>Đang tải địa chỉ giao hàng…</p></div> : error ? <div className="empty-state"><p>{error}</p><button className="button secondary" onClick={() => void loadAddresses()}>Thử lại</button></div> : addresses.length === 0 ? <div className="empty-state"><h2>Chưa có địa chỉ giao hàng</h2><p>Thêm một địa chỉ để Food Delivery biết nơi gửi đơn hàng của bạn.</p><button type="button" className="button primary" onClick={openCreate}>Thêm địa chỉ</button></div> : <AddressList addresses={addresses} busy={busyAddressId !== null} onEdit={(address) => { setEditingAddress(address); setSubmitError(null); setFormOpen(true) }} onSetDefault={(address) => void makeDefault(address)} onDelete={setDeleteTarget} />}
 
-      {formOpen && <div className="modal-backdrop" role="presentation"><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="address-form-title"><header><div><p className="eyebrow">Địa chỉ giao hàng</p><h2 id="address-form-title">{editingAddress ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}</h2></div><button type="button" className="icon-button" aria-label="Đóng" onClick={closeForm}>×</button></header><AddressForm address={editingAddress} submitting={submitting} submitError={submitError} onSubmit={save} onCancel={closeForm} /></section></div>}
-      {deleteTarget && <div className="modal-backdrop" role="presentation"><section className="confirm-card" role="dialog" aria-modal="true" aria-labelledby="delete-address-title"><h2 id="delete-address-title">Xóa địa chỉ?</h2><p>Địa chỉ “{deleteTarget.displayLabel}” sẽ bị xóa. Thao tác này không thể hoàn tác.</p><div className="form-actions"><button type="button" className="button secondary" onClick={() => setDeleteTarget(null)} disabled={busyAddressId !== null}>Hủy</button><button type="button" className="button danger-button" onClick={() => void confirmDelete()} disabled={busyAddressId !== null}>{busyAddressId ? 'Đang xóa…' : 'Xóa địa chỉ'}</button></div></section></div>}
+      {formOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm() }}><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="address-form-title"><header><div><p className="eyebrow">Địa chỉ giao hàng</p><h2 id="address-form-title">{editingAddress ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}</h2></div><button type="button" className="icon-button" aria-label="Đóng" onClick={() => closeForm()} disabled={submitting}>×</button></header><AddressForm address={editingAddress} submitting={submitting} submitError={submitError} onSubmit={save} onCancel={() => closeForm()} /></section></div>}
+      {deleteTarget && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busyAddressId) setDeleteTarget(null) }}><section className="confirm-card" role="dialog" aria-modal="true" aria-labelledby="delete-address-title"><h2 id="delete-address-title">Xóa địa chỉ?</h2><p>Địa chỉ “{deleteTarget.displayLabel}” sẽ bị xóa. Thao tác này không thể hoàn tác.</p><div className="form-actions"><button type="button" className="button secondary" onClick={() => setDeleteTarget(null)} disabled={busyAddressId !== null}>Hủy</button><button type="button" className="button danger-button" onClick={() => void confirmDelete()} disabled={busyAddressId !== null}>{busyAddressId ? 'Đang xóa…' : 'Xóa địa chỉ'}</button></div></section></div>}
       <button type="button" className="back-link" onClick={() => navigate('/account')}>← Quay lại tài khoản</button>
     </main>
   )

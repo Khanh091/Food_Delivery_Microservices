@@ -37,16 +37,25 @@ export function MainLayout() {
     <div className="app-shell">
       <header className="site-header">
         <div className="header-inner">
-          <Link className="brand" to="/"><span className="brand-mark">FD</span><span>Food Delivery</span></Link>
+          <Link className="brand" to="/" aria-label="Food Delivery - Trang chủ">
+            <span className="brand-mark" aria-hidden="true">FD</span>
+            <span>Food Delivery</span>
+          </Link>
           <AddressSelector />
-          <nav className="header-actions" aria-label="Điều hướng chính">
+          <nav className="header-actions" aria-label="Điều hướng tài khoản">
             {status === 'authenticated' ? (
               <details className="account-menu">
-                <summary><span className="avatar" aria-hidden="true">{visibleName.slice(0, 1).toUpperCase()}</span><span className="account-menu-name">{visibleName}</span><span aria-hidden="true">⌄</span></summary>
+                <summary>
+                  <span className="avatar" aria-hidden="true">{visibleName.slice(0, 1).toUpperCase()}</span>
+                  <span className="account-menu-name">{visibleName}</span>
+                  <span className="menu-chevron" aria-hidden="true">⌄</span>
+                </summary>
                 <div className="account-menu-popover">
-                  <p>{visibleName}</p>
-                  {profile?.email && <small>{profile.email}</small>}
-                  <Link to="/account">Tài khoản</Link>
+                  <div className="account-menu-intro">
+                    <p>{visibleName}</p>
+                    {profile?.email && <small>{profile.email}</small>}
+                  </div>
+                  <Link to="/account">Tài khoản của tôi</Link>
                   <Link to="/account/addresses">Địa chỉ giao hàng</Link>
                   <button type="button" onClick={() => void handleLogout()}>Đăng xuất</button>
                 </div>
