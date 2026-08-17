@@ -4,7 +4,7 @@ export interface CheckoutPreviewRequest {
   addressId: string
 }
 
-export type DeliveryQuoteStatus = 'NOT_AVAILABLE'
+export type DeliveryQuoteStatus = 'AVAILABLE' | 'NOT_AVAILABLE'
 
 export interface CheckoutAddressSnapshot {
   addressId: string
@@ -55,6 +55,9 @@ export interface CheckoutPreview {
   itemsSubtotal: number
   discountAmount: number
   deliveryQuoteStatus: DeliveryQuoteStatus
+  deliveryQuoteId: string | null
+  deliveryQuoteExpiresAt: string | null
+  deliveryPricingPolicyVersion: string | null
   deliveryFee: number | null
   totalAmount: number | null
   priceChanges: PriceChange[]

@@ -4,6 +4,8 @@ import { updateAddress } from '../../address/api/addressApi'
 import { useAddressStore } from '../../address/stores/addressStore'
 import { addressLabel, addressSummary } from '../../address/types/address'
 import { useCartStore } from '../../cart/stores/cartStore'
+import { ChevronDownIcon } from '../../../components/icons/ChevronDownIcon'
+import { CrosshairIcon } from '../../../components/icons/CrosshairIcon'
 import { deliveryErrorMessage, reverseGeocode } from '../../delivery/api/deliveryApi'
 import type { ReverseGeocodeCandidate } from '../../delivery/types/delivery'
 import { CheckoutApiError, checkoutErrorMessage, getCheckoutPreview } from '../api/checkoutApi'
@@ -52,6 +54,7 @@ export function CheckoutReviewPage() {
   const requestGeneration = useRef(0)
   const addressMenuRef = useRef<HTMLDivElement>(null)
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
+  const locationButtonRef = useRef<HTMLButtonElement>(null)
   const validBranchId = isUuid(branchId)
   const selectedAddress = addresses.find((address) => address.id === selectedAddressId) ?? null
   const menuUrl = cart?.restaurantId && branchId ? `/restaurants/${cart.restaurantId}/branches/${branchId}` : '/carts'
@@ -192,9 +195,9 @@ export function CheckoutReviewPage() {
                     <div className="checkout-address-control-row">
                       <div className="checkout-address-select" ref={addressMenuRef}>
                         <button type="button" className="checkout-address-trigger" aria-expanded={addressMenuOpen} aria-controls="checkout-address-list" onClick={() => setAddressMenuOpen((open) => !open)}>
-                          <span className="checkout-address-pin" aria-hidden="true">⌖</span>
+                          <span className="checkout-address-pin" aria-hidden="true"><CrosshairIcon /></span>
                           <span>{selectedAddress && <><strong>{addressLabel(selectedAddress)}</strong><small>{selectedAddress.recipientName} · {selectedAddress.recipientPhone}</small><b>{addressSummary(selectedAddress)}</b></>}</span>
-                          <span className="checkout-address-chevron" aria-hidden="true">⌄</span>
+                          <ChevronDownIcon className={`checkout-address-chevron${addressMenuOpen ? ' open' : ''}`} />
                         </button>
                         {addressMenuOpen && <div id="checkout-address-list" className="checkout-address-menu" role="listbox" aria-label="Chọn địa chỉ giao hàng">
                           {addresses.map((address) => <button key={address.id} type="button" role="option" aria-selected={address.id === selectedAddressId} className={address.id === selectedAddressId ? 'selected' : ''} onClick={() => selectAddress(address.id)}>
@@ -204,7 +207,7 @@ export function CheckoutReviewPage() {
                           <div className="checkout-address-menu-footer"><Link to="/account/addresses">Quản lý địa chỉ</Link><Link to="/account/addresses?new=1">+ Thêm địa chỉ</Link></div>
                         </div>}
                       </div>
-                      <button type="button" className="checkout-location-button" aria-label="Dùng vị trí hiện tại" title="Dùng vị trí hiện tại" disabled={locationBusy} onClick={useCurrentLocation}>{locationBusy ? <span className="checkout-spinner" aria-hidden="true" /> : '⌖'}</button>
+                      <button ref={locationButtonRef} type="button" className="checkout-location-button" aria-label="Dùng vị trí hiện tại" title="Dùng vị trí hiện tại" disabled={locationBusy} onClick={useCurrentLocation}>{locationBusy ? <span className="checkout-spinner" aria-hidden="true" /> : <CrosshairIcon />}</button>
                     </div>
                     {selectedAddress && <p className={`checkout-location-status ${selectedAddress.latitude !== null && selectedAddress.longitude !== null ? 'confirmed' : ''}`}>{selectedAddress.latitude !== null && selectedAddress.longitude !== null ? 'Vị trí của địa chỉ này đã được xác nhận.' : 'Địa chỉ này chưa xác nhận vị trí.'}</p>}
                     {locationBusy && <p className="checkout-location-message" role="status">Đang xác định vị trí…</p>}
@@ -215,12 +218,12 @@ export function CheckoutReviewPage() {
           <section className="checkout-card">
             <div className="checkout-card-heading"><div><p className="eyebrow">Đơn hàng</p><h2>ĐƠN HÀNG ({preview?.items.reduce((total, item) => total + item.quantity, 0) ?? cart?.totalQuantity ?? 0})</h2></div><Link to={menuUrl}>Thêm món</Link></div>
             {previewLoading && <span className="checkout-loading-label">Đang cập nhật…</span>}
-            {previewError && <div className="checkout-inline-error" role="alert"><p>{previewError}</p>{['CHECKOUT_004', 'CHECKOUT_007', 'CHECKOUT_008', 'CHECKOUT_009'].includes(previewErrorCode ?? '') ? <Link className="button secondary" to={menuUrl}>Quay lại thực đơn</Link> : <button type="button" className="button secondary" onClick={retryPreview}>Kiểm tra lại</button>}</div>}
+            {previewError && <div className="checkout-inline-error" role="alert"><p>{previewError}</p>{previewErrorCode === 'CHECKOUT_016' ? <button type="button" className="button secondary" onClick={() => locationButtonRef.current?.focus()}>Xác nhận vị trí</button> : ['CHECKOUT_004', 'CHECKOUT_007', 'CHECKOUT_008', 'CHECKOUT_009'].includes(previewErrorCode ?? '') ? <Link className="button secondary" to={menuUrl}>Quay lại thực đơn</Link> : <button type="button" className="button secondary" onClick={retryPreview}>Kiểm tra lại</button>}</div>}
             {preview?.priceChanges.length ? <p className="checkout-price-notice" role="status">Giá của một số món đã được cập nhật.</p> : null}
             {!selectedAddressId && addresses.length > 0 ? <p className="checkout-waiting">Chọn một địa chỉ để kiểm tra đơn hàng.</p> : preview ? <div className="checkout-item-list">{preview.items.map((item) => { const change = priceChanges.get(item.cartItemId); const options = groupedOptions(item); return <article key={item.cartItemId} className="checkout-item">{item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <span className="checkout-item-placeholder" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>}<div><h3>{item.name}</h3>{Object.entries(options).map(([group, values]) => <p key={group}><strong>{group}:</strong> {values.join(', ')}</p>)}{item.note && <p className="checkout-item-note">{item.note}</p>}<span>{item.quantity} × {change ? <><del>{money(change.previousUnitPrice, preview.currency)}</del> {money(change.currentUnitPrice, preview.currency)}</> : money(item.unitPrice, preview.currency)}</span></div><strong>{money(item.lineTotal, preview.currency)}</strong></article> })}</div> : <p className="checkout-waiting">Đang chờ dữ liệu kiểm tra đơn hàng.</p>}
           </section>
         </div>
-        <aside className="checkout-summary"><h2>Thanh toán</h2>{preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Khuyến mãi</span><span>{preview.discountAmount === 0 ? 'Chưa áp dụng' : `−${money(preview.discountAmount, preview.currency)}`}</span></div><div><span>Phí giao hàng</span><span>{preview.deliveryFee === null ? 'Chưa thể tính' : money(preview.deliveryFee, preview.currency)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div><p className="checkout-delivery-note">Phí giao hàng sẽ được xác định sau khi hệ thống giao hàng được cấu hình.</p><button type="button" className="button primary" disabled={!preview.canPlaceOrder}>Đặt món</button><p className="checkout-place-disabled">Chưa thể đặt món vì phí giao hàng chưa được xác định.</p></> : <p className="checkout-waiting">{selectedAddress ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}</aside>
+        <aside className="checkout-summary"><h2>Thanh toán</h2>{preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Khuyến mãi</span><span>{preview.discountAmount === 0 ? 'Chưa áp dụng' : `−${money(preview.discountAmount, preview.currency)}`}</span></div><div><span>Phí giao hàng</span><span>{preview.deliveryFee === null ? 'Chưa thể tính' : money(preview.deliveryFee, preview.currency)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div>{preview.deliveryQuoteExpiresAt ? <p className="checkout-delivery-note">Phí giao hàng được giữ đến {new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date(preview.deliveryQuoteExpiresAt))}.</p> : <p className="checkout-delivery-note">Phí giao hàng chưa thể được xác định.</p>}<button type="button" className="button primary" disabled>Đặt món — Sắp có</button><p className="checkout-place-disabled">Đơn hàng đã được kiểm tra, nhưng chức năng đặt món chưa khả dụng.</p></> : <p className="checkout-waiting">{selectedAddress ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}</aside>
       </div>
     </div>
     {locationCandidate && selectedAddress && <div className="checkout-location-overlay" role="presentation"><section className="checkout-location-dialog" role="dialog" aria-modal="true" aria-labelledby="checkout-location-dialog-title"><p className="eyebrow">Vị trí hiện tại</p><h2 id="checkout-location-dialog-title">Cập nhật vị trí cho {addressLabel(selectedAddress)}?</h2><p>{locationCandidate.formattedAddress}</p><small>Thông tin địa chỉ, người nhận và ghi chú hiện tại sẽ được giữ nguyên.</small><div><button type="button" className="button secondary" onClick={() => setLocationCandidate(null)} disabled={locationSaving}>Hủy</button><button ref={confirmButtonRef} type="button" className="button primary" onClick={() => void confirmLocation()} disabled={locationSaving}>{locationSaving ? 'Đang cập nhật…' : 'Cập nhật địa chỉ này'}</button></div></section></div>}

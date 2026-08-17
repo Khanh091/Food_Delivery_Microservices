@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { logout } from '../features/auth/authService'
 import { useAuthStore } from '../features/auth/stores/authStore'
@@ -6,6 +6,7 @@ import { useCurrentUserStore } from '../features/auth/stores/currentUserStore'
 import { AddressSelector } from '../features/address/components/AddressSelector'
 import { useAddressStore } from '../features/address/stores/addressStore'
 import { useCartStore } from '../features/cart/stores/cartStore'
+import { ChevronDownIcon } from '../components/icons/ChevronDownIcon'
 
 const profileName = (profile: { fullName: string | null; email: string | null } | null, fallback: string | null): string =>
   profile?.fullName?.trim() || fallback || profile?.email || 'Tài khoản'
@@ -21,6 +22,8 @@ export function MainLayout() {
   const summaries = useCartStore((state) => state.summaries)
   const loadCartSummaries = useCartStore((state) => state.loadCartSummaries)
   const resetCart = useCartStore((state) => state.resetCart)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (status !== 'authenticated') {
@@ -33,7 +36,23 @@ export function MainLayout() {
     void loadCartSummaries().catch(() => undefined)
   }, [clearAddresses, clearProfile, loadCartSummaries, loadProfile, resetCart, status])
 
+  useEffect(() => {
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) setProfileMenuOpen(false)
+    }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileMenuOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutsideClick)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutsideClick)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [])
+
   const handleLogout = async () => {
+    setProfileMenuOpen(false)
     clearAddresses()
     clearProfile()
     resetCart()
@@ -61,22 +80,22 @@ export function MainLayout() {
                 <span>Giỏ hàng</span>
                 {totalCartQuantity > 0 && <b>{totalCartQuantity > 99 ? '99+' : totalCartQuantity}</b>}
               </Link>
-              <details className="account-menu">
-                <summary>
+              <div className="account-menu" ref={profileMenuRef}>
+                <button type="button" className="account-menu-trigger" aria-haspopup="menu" aria-expanded={profileMenuOpen} aria-controls="account-menu-popover" onClick={() => setProfileMenuOpen((open) => !open)}>
                   <span className="avatar" aria-hidden="true">{visibleName.slice(0, 1).toUpperCase()}</span>
                   <span className="account-menu-name">{visibleName}</span>
-                  <span className="menu-chevron" aria-hidden="true">⌄</span>
-                </summary>
-                <div className="account-menu-popover">
+                  <ChevronDownIcon className={`menu-chevron${profileMenuOpen ? ' open' : ''}`} />
+                </button>
+                {profileMenuOpen && <div id="account-menu-popover" className="account-menu-popover" role="menu">
                   <div className="account-menu-intro">
                     <p>{visibleName}</p>
                     {profile?.email && <small>{profile.email}</small>}
                   </div>
-                  <Link to="/account">Tài khoản của tôi</Link>
-                  <Link to="/account/addresses">Địa chỉ giao hàng</Link>
+                  <Link to="/account" role="menuitem" onClick={() => setProfileMenuOpen(false)}>Tài khoản của tôi</Link>
+                  <Link to="/account/addresses" role="menuitem" onClick={() => setProfileMenuOpen(false)}>Địa chỉ giao hàng</Link>
                   <button type="button" onClick={() => void handleLogout()}>Đăng xuất</button>
-                </div>
-              </details>
+                </div>}
+              </div>
               </>
             ) : <Link className="button primary login-link" to="/login">Đăng nhập</Link>}
           </nav>

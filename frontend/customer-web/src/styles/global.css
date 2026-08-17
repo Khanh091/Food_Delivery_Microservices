@@ -51,7 +51,7 @@ input:focus-visible,
 textarea:focus-visible,
 .delivery-selector:focus-visible,
 .address-option:focus-visible,
-.account-menu summary:focus-visible {
+.account-menu-trigger:focus-visible {
   outline: 3px solid rgba(7, 91, 216, 0.32);
   outline-offset: 3px;
 }

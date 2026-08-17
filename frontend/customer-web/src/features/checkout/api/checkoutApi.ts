@@ -29,6 +29,9 @@ export const getCheckoutPreview = (input: CheckoutPreviewRequest, signal?: Abort
 
 export const checkoutErrorMessage = (error: unknown): string => {
   const code = error instanceof CheckoutApiError ? error.code : null
+  if (code === 'CHECKOUT_016') return 'Vui lòng xác nhận vị trí giao hàng cho địa chỉ đã chọn.'
+  if (code === 'CHECKOUT_017') return 'Địa chỉ này nằm ngoài phạm vi giao hàng.'
+  if (code === 'CHECKOUT_018') return 'Chưa thể tính phí giao hàng lúc này. Vui lòng thử lại.'
   switch (code) {
     case 'CHECKOUT_004': return 'Giỏ hàng này đang trống.'
     case 'CHECKOUT_005': return 'Giỏ hàng đã thay đổi. Vui lòng kiểm tra lại đơn hàng.'
