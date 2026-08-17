@@ -30,6 +30,7 @@ export function AddressCard({ address, busy, onEdit, onSetDefault, onDelete }: A
         <p className="address-recipient">{address.recipientName} · {address.recipientPhone}</p>
         {detail && <p className="address-location">{detail}</p>}
         <p className="address-location">{addressSummary(address)}</p>
+        <p className={`address-location-status${address.latitude !== null && address.longitude !== null ? ' confirmed' : ''}`}>{address.latitude !== null && address.longitude !== null ? 'Vị trí đã được xác nhận' : 'Chưa xác nhận vị trí'}</p>
         {address.deliveryNote && <p className="address-note">Ghi chú giao hàng: {address.deliveryNote}</p>}
       </div>
     </article>

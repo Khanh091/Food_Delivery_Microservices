@@ -4,7 +4,7 @@ export interface CheckoutPreviewRequest {
   addressId: string
 }
 
-export type DeliveryQuoteStatus = 'AVAILABLE' | 'NOT_AVAILABLE'
+export type DeliveryQuoteStatus = 'AVAILABLE' | 'LOCATION_REQUIRED' | 'NOT_SERVICEABLE' | 'TEMPORARILY_UNAVAILABLE'
 
 export interface CheckoutAddressSnapshot {
   addressId: string

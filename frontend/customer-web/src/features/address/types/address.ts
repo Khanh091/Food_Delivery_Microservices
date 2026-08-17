@@ -10,7 +10,7 @@ export interface DeliveryAddress {
   addressLine: string
   ward: string | null
   district: string | null
-  city: string
+  city: string | null
   latitude: number | null
   longitude: number | null
   buildingName: string | null
@@ -31,7 +31,7 @@ export interface AddressCreateInput {
   addressLine: string
   ward?: string
   district?: string
-  city: string
+  city?: string
   latitude?: number
   longitude?: number
   buildingName?: string

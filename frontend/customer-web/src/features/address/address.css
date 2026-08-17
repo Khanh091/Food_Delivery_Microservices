@@ -9,6 +9,8 @@
 .address-card-actions { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; }
 .address-recipient { color: var(--color-ink); font-weight: 720; margin: var(--space-5) 0 6px; }
 .address-location { color: var(--color-text); line-height: 1.58; margin: 0; max-width: 680px; }
+.address-location-status { color: #9a6100; font-size: .8rem; font-weight: 700; margin: 10px 0 0; }
+.address-location-status.confirmed { color: var(--color-success); }
 .address-note { border-left: 3px solid var(--color-primary-soft-strong); color: var(--color-text-secondary); font-size: 0.9rem; line-height: 1.5; margin: var(--space-4) 0 0; padding-left: var(--space-3); }
 .address-card-footer { background: var(--color-surface-subtle); border-top: 1px solid #eef2f7; color: var(--color-text-secondary); font-size: 0.82rem; padding: 10px 24px; }
 .address-card-footer strong { color: var(--color-primary); font-weight: 720; }
@@ -43,6 +45,33 @@
 .checkbox-label { align-items: center; display: flex !important; font-weight: 550 !important; }
 .checkbox-label input { accent-color: var(--color-primary); height: 17px; width: 17px; }
 .form-actions { justify-content: flex-end; margin-top: var(--space-1); }
+.address-location-picker-field { align-items: center; background: var(--color-surface-subtle); border: 1px solid var(--color-border); border-radius: 12px; display: flex; gap: var(--space-4); justify-content: space-between; padding: 13px; }
+.address-location-picker-field > div { display: grid; gap: 4px; min-width: 0; }
+.address-location-picker-field strong { color: var(--color-ink); font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.address-location-picker-field small { color: var(--color-text-secondary); font-size: .78rem; }
+.location-picker-backdrop { align-items: center; background: rgba(7, 27, 61, .56); display: flex; inset: 0; justify-content: center; padding: 24px; position: fixed; z-index: 100; }
+.location-picker { background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); display: grid; gap: var(--space-4); max-height: calc(100svh - 48px); overflow: hidden; padding: 22px; width: min(820px, 100%); }
+.location-picker > header { align-items: flex-start; display: flex; justify-content: space-between; }
+.location-picker h2 { color: var(--color-ink); font-size: 1.3rem; margin: 0; }
+.location-picker-map-wrap { background: #e8eef5; height: clamp(420px, 56svh, 560px); min-height: 420px; overflow: hidden; position: relative; }
+.location-picker-map { height: 100%; min-height: 420px; width: 100%; }
+.location-picker-map .maplibregl-canvas { outline: none; }
+.location-picker-map-error { align-items: center; background: rgba(255, 255, 255, .92); color: #a43d00; display: flex; inset: 0; justify-content: center; padding: var(--space-5); position: absolute; text-align: center; z-index: 3; }
+.location-picker-pin { color: #d93a3a; font-size: 36px; left: 50%; line-height: 1; pointer-events: none; position: absolute; text-shadow: 0 2px 4px rgba(0,0,0,.3); top: calc(50% - 28px); transform: translate(-50%, -100%); }
+.location-picker-search { left: 14px; position: absolute; right: 14px; top: 14px; z-index: 2; }
+.location-picker-search input { background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 10px; box-shadow: var(--shadow-sm); min-height: 46px; padding: 10px 13px; width: 100%; }
+.location-picker-results { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; box-shadow: var(--shadow-lg); display: grid; margin-top: 6px; max-height: 240px; overflow: auto; padding: 5px; }
+.location-picker-results p { color: var(--color-text-secondary); font-size: .84rem; margin: 9px; }
+.location-picker-results button { background: transparent; border: 0; border-radius: 8px; color: var(--color-ink); cursor: pointer; display: grid; gap: 3px; padding: 10px; text-align: left; }
+.location-picker-results button:hover { background: var(--color-primary-soft); }
+.location-picker-results small { color: var(--color-text-secondary); }
+.location-picker-current { align-items: center; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; bottom: 18px; box-shadow: var(--shadow-sm); color: var(--color-primary-strong); display: flex; height: 44px; justify-content: center; position: absolute; right: 14px; width: 44px; z-index: 2; }
+.location-picker-current svg { height: 20px; width: 20px; }
+.location-picker > footer { align-items: center; display: flex; gap: var(--space-5); justify-content: space-between; }
+.location-picker > footer > div { display: grid; gap: 4px; min-width: 0; }
+.location-picker > footer strong { color: var(--color-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.location-picker > footer small, .location-picker > footer p { color: var(--color-text-secondary); font-size: .8rem; margin: 0; }
+.location-picker > footer p { color: #a43d00; }
 
 @media (max-width: 600px) {
   .address-card-content { padding: 20px; }
@@ -54,4 +83,11 @@
   .two-columns, .three-columns { grid-template-columns: 1fr; }
   .address-label-choices { grid-template-columns: 1fr; }
   .form-actions .button { flex: 1; }
+  .location-picker-backdrop { padding: 0; }
+  .location-picker { border-radius: var(--radius-lg) var(--radius-lg) 0 0; grid-template-rows: auto minmax(0, 1fr) auto; height: min(92svh, 760px); padding: 18px; width: 100%; }
+  .location-picker-map-wrap { height: auto; min-height: 320px; }
+  .location-picker-map { min-height: 320px; }
+  .location-picker > footer { align-items: stretch; flex-direction: column; }
+  .location-picker > footer .button { width: 100%; }
+  .address-location-picker-field { align-items: stretch; flex-direction: column; }
 }

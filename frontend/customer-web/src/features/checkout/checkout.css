@@ -43,6 +43,9 @@
 .checkout-location-status, .checkout-location-message, .checkout-location-success, .checkout-location-error { font-size: .8rem; margin: 10px 0 0; }
 .checkout-location-status { color: var(--color-text-secondary); }
 .checkout-location-status.confirmed, .checkout-location-success { color: var(--color-success); }
+.checkout-delivery-state { align-items: center; background: #fff6e7; border-radius: 10px; color: #8c5000; display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; margin-top: 10px; padding: 10px 12px; }
+.checkout-delivery-state p { font-size: .8rem; font-weight: 650; margin: 0; }
+.checkout-delivery-state .button { font-size: .78rem; }
 .checkout-location-message { color: var(--color-primary-strong); }
 .checkout-location-error { color: #a43d00; }
 .checkout-empty-address { color: var(--color-text-secondary); margin-top: var(--space-4); }
