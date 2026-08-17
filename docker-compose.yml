@@ -69,6 +69,22 @@ services:
       retries: 20
       start_period: 45s
 
+  redis:
+    image: redis:7.4-alpine
+    container_name: food-delivery-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
   keycloak:
     image: quay.io/keycloak/keycloak:26.6.4
     container_name: food-delivery-keycloak
@@ -359,6 +375,47 @@ services:
       retries: 12
       start_period: 60s
 
+  cart-service:
+    build:
+      context: ./services/cart-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-cart-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8105
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CART_TTL: ${CART_TTL:-7d}
+      CART_CAS_MAX_RETRIES: ${CART_CAS_MAX_RETRIES:-3}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: cart-service
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+    ports:
+      - "${CART_SERVICE_PORT:-8105}:8105"
+    depends_on:
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      restaurant-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8105/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
 networks:
   food-delivery-network:
     name: food-delivery-network
@@ -367,3 +424,4 @@ networks:
 volumes:
   postgres_data:
   elasticsearch_data:
+  redis_data:

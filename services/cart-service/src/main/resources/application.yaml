@@ -1,3 +1,53 @@
 spring:
   application:
     name: cart-service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/food-delivery}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:}
+  cloud:
+    openfeign:
+      client:
+        config:
+          user-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+          catalog-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+          restaurant-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+
+server:
+  port: ${SERVER_PORT:8105}
+
+security:
+  jwt:
+    audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
+
+app:
+  cart:
+    ttl: ${CART_TTL:7d}
+    cas-max-retries: ${CART_CAS_MAX_RETRIES:3}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
