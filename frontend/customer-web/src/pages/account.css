@@ -1,20 +1,34 @@
 .account-page { min-height: calc(100svh - 79px); }
-.account-overview { display: grid; gap: var(--space-6); grid-template-columns: 220px minmax(0, 1fr); }
+.account-overview { align-items: start; display: grid; gap: var(--space-6); grid-template-columns: 228px minmax(0, 1fr); }
 .account-navigation, .account-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); }
 .account-navigation { align-self: start; display: grid; gap: var(--space-2); padding: var(--space-3); position: sticky; top: 102px; }
-.account-navigation a { border-radius: var(--radius-sm); color: var(--color-text-secondary); font-size: 0.92rem; font-weight: 700; padding: 12px; text-decoration: none; }
+.account-navigation a { border-radius: var(--radius-sm); color: var(--color-text-secondary); font-size: 0.92rem; font-weight: 720; padding: 12px; text-decoration: none; transition: background 150ms ease, color 150ms ease; }
 .account-navigation a:hover, .account-navigation a.active { background: var(--color-primary-soft); color: var(--color-primary); }
-.account-card { padding: 38px; }
+.account-card { padding: clamp(26px, 5vw, 42px); }
 .account-card h2 { color: var(--color-primary-strong); font-size: clamp(2rem, 4vw, 2.85rem); letter-spacing: -0.055em; line-height: 1.08; margin: 0; }
-.account-identity { align-items: center; border-bottom: 1px solid var(--color-border); display: flex; gap: var(--space-4); margin: var(--space-8) 0 var(--space-6); padding-bottom: var(--space-6); }
+.account-identity { align-items: center; background: linear-gradient(135deg, var(--color-primary-soft), #f8fbff); border: 1px solid #d9e8fa; border-radius: var(--radius-md); display: flex; gap: var(--space-4); margin: var(--space-8) 0 var(--space-6); padding: var(--space-4); }
 .account-identity h3, .account-section h3 { color: var(--color-ink); font-size: 1.08rem; margin: 0; }
 .account-identity p { color: var(--color-text-secondary); margin: 5px 0 0; }
+.account-identity .account-identity-label { color: var(--color-primary); font-size: .72rem; font-weight: 780; letter-spacing: .06em; margin: 0 0 5px; text-transform: uppercase; }
 .account-section { max-width: 680px; }
+.account-section-heading { align-items: center; border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; gap: var(--space-3); padding-bottom: var(--space-3); }
 .account-section dl { display: grid; gap: 0; margin: var(--space-4) 0 var(--space-8); }
-.account-section dl div { align-items: baseline; border-bottom: 1px solid #edf1f6; display: grid; gap: var(--space-4); grid-template-columns: 150px minmax(0, 1fr); padding: 15px 0; }
+.account-section dl div { align-items: baseline; border-bottom: 1px solid #edf1f6; display: grid; gap: var(--space-4); grid-template-columns: 150px minmax(0, 1fr); padding: 16px 0; }
 .account-section dt { color: var(--color-text-secondary); font-size: 0.9rem; }
 .account-section dd { color: var(--color-ink); font-weight: 650; margin: 0; overflow-wrap: anywhere; }
 .account-links { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.account-edit-form { display: grid; gap: var(--space-5); margin: var(--space-5) 0 var(--space-8); }
+.account-edit-form label { color: var(--color-ink); display: grid; font-size: 0.9rem; font-weight: 700; gap: 8px; }
+.account-edit-form input { background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-ink); min-height: 46px; padding: 10px 12px; transition: border-color 150ms ease, box-shadow 150ms ease; width: 100%; }
+.account-edit-form input:hover { border-color: var(--color-border-strong); }
+.account-edit-form input:focus { border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(7, 91, 216, 0.14); outline: none; }
+.account-links { border-top: 1px solid var(--color-border); padding-top: var(--space-6); }
+.account-loading { display: grid; gap: var(--space-4); }
+.account-loading div { animation: account-pulse 1.35s ease-in-out infinite; background: linear-gradient(90deg, #f1f5fa 25%, #f8fbff 45%, #f1f5fa 65%); background-size: 300% 100%; border-radius: var(--radius-lg); height: 74px; }
+.account-loading div:nth-child(2) { height: 230px; }
+.account-loading div:nth-child(3) { height: 120px; }
+
+@keyframes account-pulse { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
 
 @media (max-width: 760px) {
   .account-overview { grid-template-columns: 1fr; }

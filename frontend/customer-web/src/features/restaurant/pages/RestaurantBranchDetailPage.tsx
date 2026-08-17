@@ -8,6 +8,7 @@ import { MenuSection } from '../components/MenuSection'
 import type { PublicCatalog, PublicRestaurantBranch } from '../types/restaurant'
 
 const unavailableRoute = (error: unknown) => isAxiosError(error) && error.response?.status === 404
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 
 export function RestaurantBranchDetailPage() {
   const { restaurantId, branchId } = useParams()
@@ -28,6 +29,16 @@ export function RestaurantBranchDetailPage() {
   const [menuRetryKey, setMenuRetryKey] = useState(0)
 
   const validRoute = Boolean(restaurantId && branchId)
+  const validTargetItemId = targetItemId !== null && isUuid(targetItemId)
+  const targetItemInCatalog = validTargetItemId && catalog?.menus.some((menu) =>
+    menu.categories.some((category) => category.items.some((item) => item.id === targetItemId)),
+  )
+  const catalogHasVisibleItems = catalog?.menus.some((menu) =>
+    menu.categories.some((category) => category.items.length > 0),
+  )
+  const itemDetailUrl = restaurantId && branchId && validTargetItemId
+    ? `/restaurants/${restaurantId}/branches/${branchId}/items/${targetItemId}`
+    : null
 
   useEffect(() => {
     if (!restaurantId || !branchId) {
@@ -89,7 +100,9 @@ export function RestaurantBranchDetailPage() {
       <BusinessHours hours={branch.businessHours} />
       {menuLoading && <section className="branch-menu-loading" aria-live="polite"><p>Đang tải thực đơn…</p><div className="menu-loading-grid"><div /><div /><div /></div></section>}
       {menuError && <section className="menu-empty"><h2>Chưa thể tải thực đơn</h2><p>{menuError}</p><button type="button" className="button secondary" onClick={() => setMenuRetryKey((value) => value + 1)}>Thử lại</button></section>}
-      {catalog && !menuLoading && !menuError && <MenuSection catalog={catalog} targetItemId={targetItemId} searchOrigin={searchOrigin} />}
+      {catalog && !menuLoading && !menuError && targetItemId && !validTargetItemId && <section className="menu-empty"><h2>Đường dẫn món ăn không hợp lệ</h2><p>Hãy quay lại kết quả tìm kiếm hoặc mở thực đơn của cửa hàng để chọn món.</p></section>}
+      {catalog && !menuLoading && !menuError && validTargetItemId && !targetItemInCatalog && itemDetailUrl && <section className="menu-empty"><h2>Món này chưa có trong thực đơn hiện tại</h2><p>Món có thể vẫn được bán tại chi nhánh, nhưng chưa được xếp vào danh mục thực đơn.</p><Link className="button secondary" to={itemDetailUrl} state={{ searchOrigin }}>Xem chi tiết món</Link></section>}
+      {catalog && !menuLoading && !menuError && (!validTargetItemId || targetItemInCatalog || catalogHasVisibleItems) && <MenuSection catalog={catalog} targetItemId={targetItemId} searchOrigin={searchOrigin} />}
     </main>
   )
 }

@@ -37,6 +37,25 @@ export interface PublicCatalogItem {
   isVegetarian: boolean | null
   primaryImageUrl: string | null
   images: PublicItemImage[]
+  optionGroups: PublicOptionGroup[]
+}
+
+export interface PublicOptionGroup {
+  id: string
+  name: string
+  selectionType: 'SINGLE' | 'MULTIPLE'
+  minimumSelections: number
+  maximumSelections: number
+  required: boolean
+  sortOrder: number
+  values: PublicOptionValue[]
+}
+
+export interface PublicOptionValue {
+  id: string
+  name: string
+  additionalPrice: number
+  sortOrder: number
 }
 
 export interface PublicItemImage {

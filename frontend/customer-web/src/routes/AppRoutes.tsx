@@ -8,6 +8,7 @@ import { HomePage } from '../pages/HomePage'
 import { SearchPage } from '../features/search/pages/SearchPage'
 import { RestaurantBranchDetailPage } from '../features/restaurant/pages/RestaurantBranchDetailPage'
 import { RestaurantItemDetailPage } from '../features/restaurant/pages/RestaurantItemDetailPage'
+import { CartPage } from '../features/cart/pages/CartPage'
 
 export function AppRoutes() {
   return (
@@ -22,6 +23,7 @@ export function AppRoutes() {
           <Route element={<ProtectedRoute />}>
             <Route path="account" element={<AccountPage />} />
             <Route path="account/addresses" element={<AddressesPage />} />
+            <Route path="cart" element={<CartPage />} />
           </Route>
         </Route>
       </Routes>

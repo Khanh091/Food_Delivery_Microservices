@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { getCurrentUser, type CurrentUserProfile } from '../features/auth/api/currentUserApi'
 import { logout } from '../features/auth/authService'
 import { useAuthStore } from '../features/auth/stores/authStore'
+import { useCurrentUserStore } from '../features/auth/stores/currentUserStore'
 import { AddressSelector } from '../features/address/components/AddressSelector'
 import { useAddressStore } from '../features/address/stores/addressStore'
+import { useCartStore } from '../features/cart/stores/cartStore'
 
-const profileName = (profile: CurrentUserProfile | null, fallback: string | null): string =>
+const profileName = (profile: { fullName: string | null; email: string | null } | null, fallback: string | null): string =>
   profile?.fullName?.trim() || fallback || profile?.email || 'Tài khoản'
 
 export function MainLayout() {
@@ -14,19 +15,28 @@ export function MainLayout() {
   const status = useAuthStore((state) => state.status)
   const displayName = useAuthStore((state) => state.displayName)
   const clearAddresses = useAddressStore((state) => state.clearAddresses)
-  const [profile, setProfile] = useState<CurrentUserProfile | null>(null)
+  const profile = useCurrentUserStore((state) => state.profile)
+  const loadProfile = useCurrentUserStore((state) => state.loadProfile)
+  const clearProfile = useCurrentUserStore((state) => state.clearProfile)
+  const cart = useCartStore((state) => state.cart)
+  const loadCart = useCartStore((state) => state.loadCart)
+  const resetCart = useCartStore((state) => state.resetCart)
 
   useEffect(() => {
     if (status !== 'authenticated') {
-      setProfile(null)
+      clearProfile()
       clearAddresses()
+      resetCart()
       return
     }
-    void getCurrentUser().then(setProfile).catch(() => setProfile(null))
-  }, [clearAddresses, status])
+    void loadProfile().catch(() => undefined)
+    void loadCart().catch(() => undefined)
+  }, [clearAddresses, clearProfile, loadCart, loadProfile, resetCart, status])
 
   const handleLogout = async () => {
     clearAddresses()
+    clearProfile()
+    resetCart()
     await logout()
     navigate('/', { replace: true })
   }
@@ -44,6 +54,12 @@ export function MainLayout() {
           <AddressSelector />
           <nav className="header-actions" aria-label="Điều hướng tài khoản">
             {status === 'authenticated' ? (
+              <>
+              <Link className="header-cart-link" to="/cart" aria-label={`Giỏ hàng, ${cart?.totalQuantity ?? 0} món`}>
+                <svg className="header-cart-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M3.5 4.5h2l1.8 10.2a2 2 0 0 0 2 1.65h7.95a2 2 0 0 0 1.94-1.48L21 8H7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.5 20a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1Zm7 0a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1Z" stroke="currentColor" strokeWidth="1.8"/></svg>
+                <span>Giỏ hàng</span>
+                {(cart?.totalQuantity ?? 0) > 0 && <b>{(cart?.totalQuantity ?? 0) > 99 ? '99+' : cart?.totalQuantity}</b>}
+              </Link>
               <details className="account-menu">
                 <summary>
                   <span className="avatar" aria-hidden="true">{visibleName.slice(0, 1).toUpperCase()}</span>
@@ -60,6 +76,7 @@ export function MainLayout() {
                   <button type="button" onClick={() => void handleLogout()}>Đăng xuất</button>
                 </div>
               </details>
+              </>
             ) : <Link className="button primary login-link" to="/login">Đăng nhập</Link>}
           </nav>
         </div>
