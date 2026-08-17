@@ -177,6 +177,22 @@ class UserAddressServiceImplTest {
     }
 
     @Test
+    void providerDerivedAdministrativeMetadataMayBeAbsent() {
+        when(userRepository.findByIdForUpdate(userId)).thenReturn(Optional.of(user));
+        when(addressRepository.existsByUserId(userId)).thenReturn(false);
+        when(addressRepository.saveAndFlush(any(UserAddress.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        UserAddressCreateRequest request = new UserAddressCreateRequest(
+                AddressLabelType.HOME, null, "Nguyen Khanh", "0912345678", "25 Nguyen Trai",
+                null, null, null, new BigDecimal("20.995"), new BigDecimal("105.810"),
+                null, null, null, null, false);
+
+        var response = service.createAddress(null, request);
+
+        assertThat(response.city()).isNull();
+        assertThat(response.addressLine()).isEqualTo("25 Nguyen Trai");
+    }
+
+    @Test
     void checkoutLookupReturnsOnlyTheCurrentUsersAddressSnapshot() {
         UserAddress address = address(AddressLabelType.HOME);
         address.setRecipientName("Nguyen Khanh");

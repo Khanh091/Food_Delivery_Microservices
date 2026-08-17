@@ -17,7 +17,7 @@ public record UserAddressCreateRequest(
         @NotBlank @Size(max = 500) String addressLine,
         @Size(max = 255) String ward,
         @Size(max = 255) String district,
-        @NotBlank @Size(max = 255) String city,
+        @Size(max = 255) String city,
         @DecimalMin("-90") @DecimalMax("90") BigDecimal latitude,
         @DecimalMin("-180") @DecimalMax("180") BigDecimal longitude,
         @Size(max = 255) String buildingName,

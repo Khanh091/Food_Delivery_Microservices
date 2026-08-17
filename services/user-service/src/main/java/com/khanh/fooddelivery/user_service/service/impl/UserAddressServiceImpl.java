@@ -190,7 +190,6 @@ public class UserAddressServiceImpl implements UserAddressService {
                 request.addressLine(),
                 "addressLine"
         );
-        requireNotBlankWhenPresent(request.city(), "city");
     }
 
     private void requireNotBlankWhenPresent(
@@ -216,7 +215,7 @@ public class UserAddressServiceImpl implements UserAddressService {
         address.setAddressLine(request.addressLine().trim());
         address.setWard(trimToNull(request.ward()));
         address.setDistrict(trimToNull(request.district()));
-        address.setCity(request.city().trim());
+        address.setCity(trimToNull(request.city()));
         address.setBuildingName(trimToNull(request.buildingName()));
         address.setFloor(trimToNull(request.floor()));
         address.setEntrance(trimToNull(request.entrance()));
@@ -247,7 +246,7 @@ public class UserAddressServiceImpl implements UserAddressService {
             address.setDistrict(trimToNull(request.district()));
         }
         if (request.city() != null) {
-            address.setCity(request.city().trim());
+            address.setCity(trimToNull(request.city()));
         }
         if (request.deliveryNote() != null) {
             address.setDeliveryNote(trimToNull(request.deliveryNote()));
