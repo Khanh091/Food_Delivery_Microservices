@@ -10,6 +10,7 @@ interface AddressState {
   loadAddresses: () => Promise<void>
   refreshAddresses: () => Promise<void>
   selectAddress: (addressId: string | null) => void
+  replaceAddress: (address: DeliveryAddress) => void
   clearAddresses: () => void
 }
 
@@ -44,5 +45,8 @@ export const useAddressStore = create<AddressState>((set, get) => ({
 
   refreshAddresses: async () => get().loadAddresses(),
   selectAddress: (selectedAddressId) => set({ selectedAddressId }),
+  replaceAddress: (address) => set((state) => ({
+    addresses: state.addresses.map((current) => current.id === address.id ? address : current),
+  })),
   clearAddresses: () => set({ addresses: [], selectedAddressId: null, loading: false, error: null }),
 }))

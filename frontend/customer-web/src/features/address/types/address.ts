@@ -32,6 +32,8 @@ export interface AddressCreateInput {
   ward?: string
   district?: string
   city: string
+  latitude?: number
+  longitude?: number
   buildingName?: string
   floor?: string
   entrance?: string

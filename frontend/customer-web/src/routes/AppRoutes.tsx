@@ -9,6 +9,7 @@ import { SearchPage } from '../features/search/pages/SearchPage'
 import { RestaurantBranchDetailPage } from '../features/restaurant/pages/RestaurantBranchDetailPage'
 import { RestaurantItemDetailPage } from '../features/restaurant/pages/RestaurantItemDetailPage'
 import { CartListPage } from '../features/cart/pages/CartListPage'
+import { CheckoutReviewPage } from '../features/checkout/pages/CheckoutReviewPage'
 
 export function AppRoutes() {
   return (
@@ -25,6 +26,7 @@ export function AppRoutes() {
             <Route path="account/addresses" element={<AddressesPage />} />
             <Route path="carts" element={<CartListPage />} />
             <Route path="cart" element={<Navigate to="/carts" replace />} />
+            <Route path="checkout/:branchId" element={<CheckoutReviewPage />} />
           </Route>
         </Route>
       </Routes>
