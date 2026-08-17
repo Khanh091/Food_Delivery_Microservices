@@ -64,7 +64,7 @@ class CheckoutPreviewServiceImplTests {
 
     @Test
     void happyPreviewUsesAuthoritativePriceAndOneBatchFeignCall() {
-        var preview = service.preview(jwt, new CheckoutPreviewRequest(3L, addressId));
+        var preview = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
 
         assertThat(preview.itemsSubtotal()).isEqualByComparingTo("110");
         assertThat(preview.deliveryFee()).isNull();
@@ -78,37 +78,37 @@ class CheckoutPreviewServiceImplTests {
 
     @Test
     void emptyCartIsRejected() {
-        when(carts.getCurrentSnapshot(anyString())).thenReturn(success(new CartServiceClient.InternalCartSnapshotResponse(
+        when(carts.getCurrentSnapshot(anyString(), any())).thenReturn(success(new CartServiceClient.InternalCartSnapshotResponse(
                 ownerId, null, null, null, List.of(), 0L, null, null)));
 
-        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(1L, addressId)), ErrorCode.CART_EMPTY);
+        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(branchId, 1L, addressId)), ErrorCode.CART_EMPTY);
     }
 
     @Test
     void staleCartVersionIsRejectedBeforeDownstreamValidation() {
-        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(2L, addressId)), ErrorCode.CART_VERSION_CONFLICT);
+        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(branchId, 2L, addressId)), ErrorCode.CART_VERSION_CONFLICT);
     }
 
     @Test
     void branchNotAcceptingOrdersIsRejected() {
         happyRestaurant(false);
 
-        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(3L, addressId)), ErrorCode.BRANCH_NOT_ACCEPTING_ORDERS);
+        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId)), ErrorCode.BRANCH_NOT_ACCEPTING_ORDERS);
     }
 
     @Test
     void catalogUnavailableIsMappedWithoutReturningStaleCartPrices() {
         when(catalog.validateCheckoutItems(anyString(), any())).thenReturn(null);
 
-        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(3L, addressId)), ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
+        assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId)), ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
     }
 
     @Test
     void fingerprintIsDeterministicAndChangesWhenAuthoritativePriceChanges() {
-        var first = service.preview(jwt, new CheckoutPreviewRequest(3L, addressId));
-        var second = service.preview(jwt, new CheckoutPreviewRequest(3L, addressId));
+        var first = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
+        var second = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
         happyCatalog(BigDecimal.valueOf(60));
-        var changed = service.preview(jwt, new CheckoutPreviewRequest(3L, addressId));
+        var changed = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
 
         assertThat(first.previewFingerprint()).isEqualTo(second.previewFingerprint());
         assertThat(changed.previewFingerprint()).isNotEqualTo(first.previewFingerprint());
@@ -122,7 +122,7 @@ class CheckoutPreviewServiceImplTests {
                 new CartServiceClient.InternalCartItemSnapshotResponse(
                         cartItemId, catalogItemId, UUID.randomUUID(), 2, "no onion", List.of(option), "Burger", null,
                         BigDecimal.valueOf(40), BigDecimal.TEN, BigDecimal.valueOf(50), null);
-        when(carts.getCurrentSnapshot(anyString())).thenReturn(success(new CartServiceClient.InternalCartSnapshotResponse(
+        when(carts.getCurrentSnapshot(anyString(), any())).thenReturn(success(new CartServiceClient.InternalCartSnapshotResponse(
                 ownerId, restaurantId, branchId, "VND", List.of(item), version, Instant.parse("2026-08-17T00:00:00Z"), Instant.now())));
     }
 

@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.cart_service.client;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -11,22 +12,23 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 @FeignClient(name = "restaurant-service")
 public interface RestaurantServiceClient {
-    @GetMapping("/internal/v1/restaurants/{restaurantId}/branches/{branchId}/cart-availability")
-    ApiResponse<RestaurantBranchCartAvailabilityResponse> getCartAvailability(
+    @GetMapping("/internal/v1/restaurants/branches/{branchId}/ordering-context")
+    ApiResponse<RestaurantBranchOrderingContextResponse> getOrderingContext(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
-            @PathVariable UUID restaurantId,
             @PathVariable UUID branchId);
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record ApiResponse<T>(boolean success, String code, String message, T data, Instant timestamp) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record RestaurantBranchCartAvailabilityResponse(
+    record RestaurantBranchOrderingContextResponse(
             UUID restaurantId,
             String restaurantName,
             boolean restaurantActive,
             UUID branchId,
             String branchName,
             boolean branchActive,
-            boolean acceptingOrders) {}
+            boolean acceptingOrders,
+            BigDecimal latitude,
+            BigDecimal longitude) {}
 }

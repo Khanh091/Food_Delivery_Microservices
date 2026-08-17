@@ -4,16 +4,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.khanh.fooddelivery.cart_service.client.CatalogServiceClient;
 import com.khanh.fooddelivery.cart_service.client.RestaurantServiceClient;
-import com.khanh.fooddelivery.cart_service.client.UserServiceClient;
 import com.khanh.fooddelivery.cart_service.config.CartProperties;
 import com.khanh.fooddelivery.cart_service.dto.request.AddCartItemRequest;
-import com.khanh.fooddelivery.cart_service.dto.request.ReplaceCartItemRequest;
+import com.khanh.fooddelivery.cart_service.dto.request.UpdateCartItemConfigurationRequest;
+import com.khanh.fooddelivery.cart_service.dto.request.UpdateCartItemQuantityRequest;
 import com.khanh.fooddelivery.cart_service.dto.response.CartResponse;
-import com.khanh.fooddelivery.cart_service.dto.response.internal.InternalCartSnapshotResponse;
 import com.khanh.fooddelivery.cart_service.exception.AppException;
 import com.khanh.fooddelivery.cart_service.exception.ErrorCode;
 import com.khanh.fooddelivery.cart_service.model.Cart;
@@ -25,15 +26,18 @@ import com.khanh.fooddelivery.cart_service.service.CartFingerprint;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -41,8 +45,10 @@ import org.springframework.security.oauth2.jwt.Jwt;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class CartServiceImplTests {
     private final UUID ownerId = UUID.randomUUID();
-    private final UUID restaurantId = UUID.randomUUID();
-    private final UUID branchId = UUID.randomUUID();
+    private final UUID restaurantA = UUID.randomUUID();
+    private final UUID restaurantB = UUID.randomUUID();
+    private final UUID branchA = UUID.randomUUID();
+    private final UUID branchB = UUID.randomUUID();
     private final UUID itemId = UUID.randomUUID();
     private final UUID optionA = UUID.randomUUID();
     private final UUID optionB = UUID.randomUUID();
@@ -59,65 +65,74 @@ class CartServiceImplTests {
     @BeforeEach
     void setUp() {
         carts = new InMemoryCartRepository();
-        service =
-                new CartServiceImpl(
-                        carts,
-                        catalog,
-                        restaurant,
-                        currentUser,
-                        bearer,
-                        new CartProperties(Duration.ofDays(7), 3));
+        service = new CartServiceImpl(carts, catalog, restaurant, currentUser, bearer, new CartProperties(Duration.ofDays(7), 3));
         when(currentUser.getCurrentUserId(jwt)).thenReturn(ownerId);
         when(bearer.getBearerToken()).thenReturn("Bearer token");
-        when(restaurant.getCartAvailability(anyString(), any(), any()))
-                .thenReturn(
-                        new RestaurantServiceClient.ApiResponse<>(
-                                true,
-                                "SUCCESS",
-                                "",
-                                new RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse(
-                                        restaurantId,
-                                        "Restaurant",
-                                        true,
-                                        branchId,
-                                        "Branch",
-                                        true,
-                                        true),
-                                Instant.now()));
-        when(catalog.validateCartItem(anyString(), any()))
-                .thenAnswer(
-                        invocation -> {
-                            CatalogServiceClient.CartItemValidationRequest request = invocation.getArgument(1);
-                            List<CatalogServiceClient.SelectedOptionResponse> selected =
-                                    request.selectedOptionValueIds().stream()
-                                            .sorted()
-                                            .map(
-                                                    id ->
-                                                            new CatalogServiceClient.SelectedOptionResponse(
-                                                                    UUID.randomUUID(),
-                                                                    id,
-                                                                    "Group",
-                                                                    "Option",
-                                                                    BigDecimal.TEN))
-                                            .toList();
-                            return new CatalogServiceClient.ApiResponse<>(
-                                    true,
-                                    "SUCCESS",
-                                    "",
-                                    new CatalogServiceClient.CartItemValidationResponse(
-                                            itemId,
-                                            UUID.randomUUID(),
-                                            "Item",
-                                            null,
-                                            BigDecimal.valueOf(100),
-                                            null,
-                                            "VND",
-                                            selected,
-                                            BigDecimal.TEN.multiply(BigDecimal.valueOf(selected.size())),
-                                            BigDecimal.valueOf(100)
-                                                    .add(BigDecimal.TEN.multiply(BigDecimal.valueOf(selected.size())))),
-                                    Instant.now());
-                        });
+        when(restaurant.getOrderingContext(anyString(), any())).thenAnswer(invocation -> {
+            UUID branchId = invocation.getArgument(1);
+            UUID restaurantId = branchId.equals(branchA) ? restaurantA : restaurantB;
+            return success(new RestaurantServiceClient.RestaurantBranchOrderingContextResponse(
+                    restaurantId, "Restaurant " + branchId, true, branchId, "Branch " + branchId, true, true,
+                    BigDecimal.TEN, BigDecimal.TEN));
+        });
+        when(catalog.validateCartItem(anyString(), any())).thenAnswer(invocation -> {
+            CatalogServiceClient.CartItemValidationRequest request = invocation.getArgument(1);
+            List<CatalogServiceClient.SelectedOptionResponse> selected = request.selectedOptionValueIds().stream()
+                    .sorted().map(id -> new CatalogServiceClient.SelectedOptionResponse(
+                            UUID.randomUUID(), id, "Group", "Option", BigDecimal.TEN)).toList();
+            return catalogSuccess(new CatalogServiceClient.CartItemValidationResponse(
+                    request.catalogItemId(), UUID.randomUUID(), "Item", null, BigDecimal.valueOf(100), null, "VND",
+                    selected, BigDecimal.TEN.multiply(BigDecimal.valueOf(selected.size())),
+                    BigDecimal.valueOf(100).add(BigDecimal.TEN.multiply(BigDecimal.valueOf(selected.size())))));
+        });
+    }
+
+    @Test
+    void branchCartsAreIndependentAndUseAuthoritativeRestaurantContext() {
+        CartResponse a = service.add(jwt, branchA, request(itemId, 1, List.of(), null));
+        CartResponse b = service.add(jwt, branchB, request(itemId, 2, List.of(), null));
+
+        assertThat(a.restaurantId()).isEqualTo(restaurantA);
+        assertThat(b.restaurantId()).isEqualTo(restaurantB);
+        assertThat(service.get(jwt, branchA).totalQuantity()).isEqualTo(1);
+        assertThat(service.get(jwt, branchB).totalQuantity()).isEqualTo(2);
+        verify(catalog, times(2)).validateCartItem(anyString(), any(CatalogServiceClient.CartItemValidationRequest.class));
+    }
+
+    @Test
+    void updateAndClearOnlyAffectTheRequestedBranch() {
+        CartResponse a = service.add(jwt, branchA, request(itemId, 1, List.of(), null));
+        service.add(jwt, branchB, request(itemId, 2, List.of(), null));
+
+        service.updateQuantity(jwt, branchA, a.items().getFirst().cartItemId(), new UpdateCartItemQuantityRequest(3));
+        service.clear(jwt, branchA);
+
+        assertThat(service.get(jwt, branchA).items()).isEmpty();
+        assertThat(service.get(jwt, branchB).totalQuantity()).isEqualTo(2);
+    }
+
+    @Test
+    void configurationEditMergesWithExistingEquivalentLine() {
+        CartResponse cart = service.add(jwt, branchA, request(itemId, 1, List.of(optionA), null));
+        CartResponse distinct = service.add(jwt, branchA, request(itemId, 2, List.of(optionB), null));
+        UUID changingLine = distinct.items().stream()
+                .filter(item -> item.selectedOptions().stream().anyMatch(option -> option.optionValueId().equals(optionB)))
+                .findFirst().orElseThrow().cartItemId();
+
+        CartResponse merged = service.updateConfiguration(
+                jwt, branchA, changingLine, new UpdateCartItemConfigurationRequest(2, List.of(optionA), null));
+
+        assertThat(merged.items()).singleElement().satisfies(item -> assertThat(item.quantity()).isEqualTo(3));
+        assertThat(merged.version()).isEqualTo(3);
+        assertThat(cart.items()).hasSize(1);
+    }
+
+    @Test
+    void listReturnsOnlyNonEmptyBranchCartsSortedByUpdateTime() {
+        service.add(jwt, branchA, request(itemId, 1, List.of(), null));
+        service.add(jwt, branchB, request(itemId, 2, List.of(), null));
+
+        assertThat(service.list(jwt)).extracting(summary -> summary.branchId()).containsExactlyInAnyOrder(branchA, branchB);
     }
 
     @Test
@@ -127,111 +142,59 @@ class CartServiceImplTests {
     }
 
     @Test
-    void sameConfigurationMergesQuantityAndDifferentNoteCreatesNewLine() {
-        service.add(jwt, request(1, List.of(optionA, optionB), " no onion "));
-        CartResponse merged = service.add(jwt, request(2, List.of(optionB, optionA), "no onion"));
-
-        assertThat(merged.items()).hasSize(1);
-        assertThat(merged.items().getFirst().quantity()).isEqualTo(3);
-
-        CartResponse distinct = service.add(jwt, request(1, List.of(optionA, optionB), "extra spicy"));
-        assertThat(distinct.items()).hasSize(2);
-    }
-
-    @Test
-    void addingDifferentBranchReturnsConflictWithoutReplacingCart() {
-        service.add(jwt, request(1, List.of(), null));
-        AddCartItemRequest otherBranch =
-                new AddCartItemRequest(restaurantId, UUID.randomUUID(), itemId, 1, List.of(), null);
-
-        assertThatThrownBy(() -> service.add(jwt, otherBranch))
-                .isInstanceOf(AppException.class)
-                .extracting(exception -> ((AppException) exception).getErrorCode())
-                .isEqualTo(ErrorCode.CART_DIFFERENT_BRANCH);
-        assertThat(carts.cart).isNotNull();
-        assertThat(carts.cart.branchId()).isEqualTo(branchId);
-    }
-
-    @Test
-    void staleReplaceVersionIsRejected() {
-        service.add(jwt, request(1, List.of(), null));
-
-        assertThatThrownBy(
-                        () ->
-                                service.replace(
-                                        jwt,
-                                        new ReplaceCartItemRequest(2L, request(1, List.of(), null))))
-                .isInstanceOf(AppException.class)
-                .extracting(exception -> ((AppException) exception).getErrorCode())
-                .isEqualTo(ErrorCode.CART_VERSION_CONFLICT);
-    }
-
-    @Test
     void catalogFailureDoesNotPersistCandidateCart() {
-        org.mockito.Mockito.doReturn(
-                        new CatalogServiceClient.ApiResponse<>(
-                                false, "ERROR", "", null, Instant.now()))
-                .when(catalog)
-                .validateCartItem(anyString(), any());
+        org.mockito.Mockito.doReturn(new CatalogServiceClient.ApiResponse<>(false, "ERROR", "", null, Instant.now()))
+                .when(catalog).validateCartItem(anyString(), any());
 
-        assertThatThrownBy(() -> service.add(jwt, request(1, List.of(), null)))
+        assertThatThrownBy(() -> service.add(jwt, branchA, request(itemId, 1, List.of(), null)))
                 .isInstanceOf(AppException.class)
                 .extracting(exception -> ((AppException) exception).getErrorCode())
                 .isEqualTo(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
-        assertThat(carts.cart).isNull();
+        assertThat(carts.find(ownerId, branchA)).isEmpty();
     }
 
-    @Test
-    void removingLastItemDeletesCart() {
-        CartResponse added = service.add(jwt, request(1, List.of(), null));
-
-        CartResponse empty = service.remove(jwt, added.items().getFirst().cartItemId());
-
-        assertThat(empty.items()).isEmpty();
-        assertThat(carts.cart).isNull();
+    private AddCartItemRequest request(UUID catalogItemId, int quantity, List<UUID> options, String note) {
+        return new AddCartItemRequest(catalogItemId, quantity, options, note);
     }
 
-    @Test
-    void internalSnapshotIsScopedToCurrentOwnerAndPreservesCheckoutFields() {
-        service.add(jwt, request(2, List.of(optionA), "no onion"));
-
-        InternalCartSnapshotResponse snapshot = service.getInternalSnapshot(jwt);
-
-        assertThat(snapshot.ownerUserId()).isEqualTo(ownerId);
-        assertThat(snapshot.version()).isEqualTo(1);
-        assertThat(snapshot.items()).singleElement().satisfies(item -> {
-            assertThat(item.catalogItemId()).isEqualTo(itemId);
-            assertThat(item.quantity()).isEqualTo(2);
-            assertThat(item.selectedOptions()).extracting(option -> option.optionValueId()).containsExactly(optionA);
-        });
+    private static <T> RestaurantServiceClient.ApiResponse<T> success(T data) {
+        return new RestaurantServiceClient.ApiResponse<>(true, "SUCCESS", "", data, Instant.now());
     }
 
-    private AddCartItemRequest request(int quantity, List<UUID> options, String note) {
-        return new AddCartItemRequest(restaurantId, branchId, itemId, quantity, options, note);
+    private static <T> CatalogServiceClient.ApiResponse<T> catalogSuccess(T data) {
+        return new CatalogServiceClient.ApiResponse<>(true, "SUCCESS", "", data, Instant.now());
     }
 
     private static final class InMemoryCartRepository implements CartRepository {
-        private Cart cart;
+        private final Map<UUID, Cart> carts = new HashMap<>();
 
         @Override
-        public Optional<CartSnapshot> find(UUID ownerUserId) {
-            return cart == null
-                    ? Optional.empty()
-                    : Optional.of(new CartSnapshot(cart, Instant.now().plus(Duration.ofDays(7))));
+        public Optional<CartSnapshot> find(UUID ownerUserId, UUID branchId) {
+            Cart cart = carts.get(branchId);
+            return cart == null ? Optional.empty() : Optional.of(new CartSnapshot(cart, Instant.now().plus(Duration.ofDays(7))));
         }
 
         @Override
-        public boolean compareAndSet(UUID ownerUserId, long expectedVersion, Cart candidate) {
-            if ((cart == null && expectedVersion != 0)
-                    || (cart != null && cart.version() != expectedVersion)) return false;
-            cart = candidate;
+        public List<CartSnapshot> findAll(UUID ownerUserId) {
+            return carts.values().stream()
+                    .map(cart -> new CartSnapshot(cart, Instant.now().plus(Duration.ofDays(7))))
+                    .sorted(Comparator.comparing(snapshot -> snapshot.cart().updatedAt()))
+                    .toList();
+        }
+
+        @Override
+        public boolean compareAndSet(UUID ownerUserId, UUID branchId, long expectedVersion, Cart candidate) {
+            Cart current = carts.get(branchId);
+            if ((current == null && expectedVersion != 0) || (current != null && current.version() != expectedVersion)) return false;
+            carts.put(branchId, candidate);
             return true;
         }
 
         @Override
-        public boolean compareAndDelete(UUID ownerUserId, long expectedVersion) {
-            if (cart == null || cart.version() != expectedVersion) return false;
-            cart = null;
+        public boolean compareAndDelete(UUID ownerUserId, UUID branchId, long expectedVersion) {
+            Cart current = carts.get(branchId);
+            if (current == null || current.version() != expectedVersion) return false;
+            carts.remove(branchId);
             return true;
         }
     }

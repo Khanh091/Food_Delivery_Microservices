@@ -41,8 +41,8 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     public CheckoutPreviewResponse preview(Jwt jwt, CheckoutPreviewRequest request) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
         String bearer = bearerTokenProvider.getBearerToken();
-        CartServiceClient.InternalCartSnapshotResponse cart = requireCart(bearer);
-        validateCart(ownerUserId, cart, request.cartVersion());
+        CartServiceClient.InternalCartSnapshotResponse cart = requireCart(bearer, request.branchId());
+        validateCart(ownerUserId, cart, request.branchId(), request.cartVersion());
         CheckoutPreviewResponse.CheckoutAddressSnapshot address = requireAddress(bearer, request.addressId());
         RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse branch =
                 requireRestaurant(bearer, cart.restaurantId(), cart.branchId());
@@ -73,10 +73,10 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
                 DeliveryQuoteStatus.NOT_AVAILABLE, null, null, priceChanges, previewFingerprint, Instant.now(), false);
     }
 
-    private CartServiceClient.InternalCartSnapshotResponse requireCart(String bearer) {
+    private CartServiceClient.InternalCartSnapshotResponse requireCart(String bearer, UUID branchId) {
         try {
             RemoteApiResponse<CartServiceClient.InternalCartSnapshotResponse> response =
-                    cartServiceClient.getCurrentSnapshot(bearer);
+                    cartServiceClient.getCurrentSnapshot(bearer, branchId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.CART_SERVICE_UNAVAILABLE);
             }
@@ -87,9 +87,10 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     }
 
     private void validateCart(
-            UUID ownerUserId, CartServiceClient.InternalCartSnapshotResponse cart, long expectedVersion) {
+            UUID ownerUserId, CartServiceClient.InternalCartSnapshotResponse cart, UUID expectedBranchId, long expectedVersion) {
         if (!ownerUserId.equals(cart.ownerUserId())) throw new AppException(ErrorCode.ACCESS_DENIED);
         if (cart.items() == null || cart.items().isEmpty()) throw new AppException(ErrorCode.CART_EMPTY);
+        if (!expectedBranchId.equals(cart.branchId())) throw new AppException(ErrorCode.CART_SERVICE_UNAVAILABLE);
         if (cart.version() != expectedVersion) throw new AppException(ErrorCode.CART_VERSION_CONFLICT);
         if (cart.restaurantId() == null || cart.branchId() == null) throw new AppException(ErrorCode.CART_EMPTY);
     }

@@ -6,8 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 
-public record AddCartItemRequest(
-        @NotNull UUID catalogItemId,
+public record UpdateCartItemConfigurationRequest(
         @Min(1) @Max(99) int quantity,
         @NotNull List<UUID> selectedOptionValueIds,
         String note) {}

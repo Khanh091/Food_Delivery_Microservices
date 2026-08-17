@@ -4,10 +4,11 @@ import com.khanh.fooddelivery.cart_service.client.CatalogServiceClient;
 import com.khanh.fooddelivery.cart_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.cart_service.config.CartProperties;
 import com.khanh.fooddelivery.cart_service.dto.request.AddCartItemRequest;
-import com.khanh.fooddelivery.cart_service.dto.request.ReplaceCartItemRequest;
+import com.khanh.fooddelivery.cart_service.dto.request.UpdateCartItemConfigurationRequest;
 import com.khanh.fooddelivery.cart_service.dto.request.UpdateCartItemQuantityRequest;
 import com.khanh.fooddelivery.cart_service.dto.response.CartItemResponse;
 import com.khanh.fooddelivery.cart_service.dto.response.CartResponse;
+import com.khanh.fooddelivery.cart_service.dto.response.CartSummaryResponse;
 import com.khanh.fooddelivery.cart_service.dto.response.SelectedOptionResponse;
 import com.khanh.fooddelivery.cart_service.dto.response.internal.InternalCartItemSnapshotResponse;
 import com.khanh.fooddelivery.cart_service.dto.response.internal.InternalCartSnapshotResponse;
@@ -39,7 +40,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
     private static final int MAX_QUANTITY = 99;
-    private static final int SCHEMA_VERSION = 1;
+    private static final int SCHEMA_VERSION = 2;
 
     private final CartRepository carts;
     private final CatalogServiceClient catalogServiceClient;
@@ -49,32 +50,42 @@ public class CartServiceImpl implements CartService {
     private final CartProperties properties;
 
     @Override
-    public CartResponse get(Jwt jwt) {
+    public List<CartSummaryResponse> list(Jwt jwt) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
-        return carts.find(ownerUserId).map(this::toResponse).orElseGet(CartServiceImpl::emptyResponse);
+        return carts.findAll(ownerUserId).stream()
+                .filter(snapshot -> !snapshot.cart().items().isEmpty())
+                .sorted(Comparator.comparing((CartSnapshot snapshot) -> snapshot.cart().updatedAt()).reversed())
+                .map(this::toSummary)
+                .toList();
     }
 
     @Override
-    public InternalCartSnapshotResponse getInternalSnapshot(Jwt jwt) {
+    public CartResponse get(Jwt jwt, UUID branchId) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
-        return carts.find(ownerUserId)
+        Optional<CartSnapshot> current = carts.find(ownerUserId, branchId);
+        if (current.isPresent()) return toResponse(current.get());
+        return emptyResponse(resolveOrderingContext(branchId));
+    }
+
+    @Override
+    public InternalCartSnapshotResponse getInternalSnapshot(Jwt jwt, UUID branchId) {
+        UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
+        return carts.find(ownerUserId, branchId)
                 .map(CartSnapshot::cart)
                 .map(this::toInternalSnapshot)
-                .orElseGet(() -> new InternalCartSnapshotResponse(
-                        ownerUserId, null, null, null, List.of(), 0, null, null));
+                .orElseGet(() -> new InternalCartSnapshotResponse(ownerUserId, null, branchId, null, List.of(), 0, null, null));
     }
 
     @Override
-    public CartResponse add(Jwt jwt, AddCartItemRequest request) {
+    public CartResponse add(Jwt jwt, UUID branchId, AddCartItemRequest request) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
-        ValidatedAdd validated = validate(request);
+        RestaurantServiceClient.RestaurantBranchOrderingContextResponse context = requireOrderableContext(branchId);
+        ValidatedItem validated = validate(context, branchId, request.catalogItemId(), request.selectedOptionValueIds(), request.note());
         for (int attempt = 0; attempt < properties.casMaxRetries(); attempt++) {
-            Optional<CartSnapshot> current = carts.find(ownerUserId);
-            Cart existing = current.map(CartSnapshot::cart).orElse(null);
-            requireSameBranch(existing, request.restaurantId(), request.branchId());
-            Cart candidate = addToCart(ownerUserId, existing, request, validated);
+            Cart existing = carts.find(ownerUserId, branchId).map(CartSnapshot::cart).orElse(null);
+            Cart candidate = addToCart(ownerUserId, branchId, context, existing, request.quantity(), request.catalogItemId(), validated);
             long expectedVersion = existing == null ? 0 : existing.version();
-            if (carts.compareAndSet(ownerUserId, expectedVersion, candidate)) {
+            if (carts.compareAndSet(ownerUserId, branchId, expectedVersion, candidate)) {
                 return toResponse(candidate, Instant.now().plus(properties.ttl()));
             }
         }
@@ -82,43 +93,15 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponse replace(Jwt jwt, ReplaceCartItemRequest request) {
+    public CartResponse updateQuantity(Jwt jwt, UUID branchId, UUID cartItemId, UpdateCartItemQuantityRequest request) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
-        CartSnapshot current = carts.find(ownerUserId).orElseThrow(() -> new AppException(ErrorCode.CART_VERSION_CONFLICT));
-        if (current.cart().version() != request.expectedCartVersion()) {
-            throw new AppException(ErrorCode.CART_VERSION_CONFLICT);
-        }
-        ValidatedAdd validated = validate(request.item());
-        Cart candidate = addToCart(ownerUserId, null, request.item(), validated, current.cart().version() + 1);
-        if (!carts.compareAndSet(ownerUserId, current.cart().version(), candidate)) {
-            throw new AppException(ErrorCode.CART_VERSION_CONFLICT);
-        }
-        return toResponse(candidate, Instant.now().plus(properties.ttl()));
-    }
-
-    @Override
-    public CartResponse updateQuantity(Jwt jwt, UUID cartItemId, UpdateCartItemQuantityRequest request) {
-        UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
+        RestaurantServiceClient.RestaurantBranchOrderingContextResponse context = requireOrderableContext(branchId);
         for (int attempt = 0; attempt < properties.casMaxRetries(); attempt++) {
-            CartSnapshot current = carts.find(ownerUserId).orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_FOUND));
-            CartItem existingItem =
-                    current.cart().items().stream()
-                            .filter(item -> item.id().equals(cartItemId))
-                            .findFirst()
-                            .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_FOUND));
-            ValidatedAdd validated =
-                    validate(
-                            new AddCartItemRequest(
-                                    current.cart().restaurantId(),
-                                    current.cart().branchId(),
-                                    existingItem.catalogItemId(),
-                                    request.quantity(),
-                                    existingItem.selectedOptions().stream()
-                                            .map(SelectedOption::optionValueId)
-                                            .toList(),
-                                    existingItem.note()));
-            Cart candidate = replaceItem(current.cart(), existingItem, request.quantity(), validated);
-            if (carts.compareAndSet(ownerUserId, current.cart().version(), candidate)) {
+            Cart current = requireCart(ownerUserId, branchId);
+            CartItem item = requireItem(current, cartItemId);
+            ValidatedItem validated = validate(context, branchId, item.catalogItemId(), optionIds(item.selectedOptions()), item.note());
+            Cart candidate = replaceItem(current, item.id(), newItem(item.id(), request.quantity(), item.catalogItemId(), validated));
+            if (carts.compareAndSet(ownerUserId, branchId, current.version(), candidate)) {
                 return toResponse(candidate, Instant.now().plus(properties.ttl()));
             }
         }
@@ -126,20 +109,52 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponse remove(Jwt jwt, UUID cartItemId) {
+    public CartResponse updateConfiguration(
+            Jwt jwt, UUID branchId, UUID cartItemId, UpdateCartItemConfigurationRequest request) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
+        RestaurantServiceClient.RestaurantBranchOrderingContextResponse context = requireOrderableContext(branchId);
         for (int attempt = 0; attempt < properties.casMaxRetries(); attempt++) {
-            CartSnapshot current = carts.find(ownerUserId).orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_FOUND));
-            List<CartItem> remaining =
-                    current.cart().items().stream().filter(item -> !item.id().equals(cartItemId)).toList();
-            if (remaining.size() == current.cart().items().size()) {
-                throw new AppException(ErrorCode.CART_ITEM_NOT_FOUND);
-            }
-            if (remaining.isEmpty()) {
-                if (carts.compareAndDelete(ownerUserId, current.cart().version())) return emptyResponse();
+            Cart current = requireCart(ownerUserId, branchId);
+            CartItem target = requireItem(current, cartItemId);
+            ValidatedItem validated = validate(
+                    context, branchId, target.catalogItemId(), request.selectedOptionValueIds(), request.note());
+            CartItem edited = newItem(target.id(), request.quantity(), target.catalogItemId(), validated);
+            List<CartItem> items = new ArrayList<>(current.items());
+            int collision = indexOfFingerprint(items, edited.configurationFingerprint(), target.id());
+            if (collision >= 0) {
+                CartItem existing = items.get(collision);
+                int mergedQuantity = existing.quantity() + request.quantity();
+                requireQuantity(mergedQuantity);
+                items.set(collision, newItem(existing.id(), mergedQuantity, target.catalogItemId(), validated));
+                items.removeIf(item -> item.id().equals(target.id()));
             } else {
-                Cart candidate = copyCart(current.cart(), remaining, current.cart().version() + 1, Instant.now());
-                if (carts.compareAndSet(ownerUserId, current.cart().version(), candidate)) {
+                for (int index = 0; index < items.size(); index++) {
+                    if (items.get(index).id().equals(target.id())) {
+                        items.set(index, edited);
+                        break;
+                    }
+                }
+            }
+            Cart candidate = copyCart(current, List.copyOf(items), current.version() + 1, Instant.now());
+            if (carts.compareAndSet(ownerUserId, branchId, current.version(), candidate)) {
+                return toResponse(candidate, Instant.now().plus(properties.ttl()));
+            }
+        }
+        throw new AppException(ErrorCode.CART_VERSION_CONFLICT);
+    }
+
+    @Override
+    public CartResponse remove(Jwt jwt, UUID branchId, UUID cartItemId) {
+        UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
+        for (int attempt = 0; attempt < properties.casMaxRetries(); attempt++) {
+            Cart current = requireCart(ownerUserId, branchId);
+            List<CartItem> remaining = current.items().stream().filter(item -> !item.id().equals(cartItemId)).toList();
+            if (remaining.size() == current.items().size()) throw new AppException(ErrorCode.CART_ITEM_NOT_FOUND);
+            if (remaining.isEmpty()) {
+                if (carts.compareAndDelete(ownerUserId, branchId, current.version())) return emptyResponse(current);
+            } else {
+                Cart candidate = copyCart(current, remaining, current.version() + 1, Instant.now());
+                if (carts.compareAndSet(ownerUserId, branchId, current.version(), candidate)) {
                     return toResponse(candidate, Instant.now().plus(properties.ttl()));
                 }
             }
@@ -148,38 +163,37 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponse clear(Jwt jwt) {
+    public CartResponse clear(Jwt jwt, UUID branchId) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
         for (int attempt = 0; attempt < properties.casMaxRetries(); attempt++) {
-            Optional<CartSnapshot> current = carts.find(ownerUserId);
-            if (current.isEmpty()) return emptyResponse();
-            if (carts.compareAndDelete(ownerUserId, current.get().cart().version())) return emptyResponse();
+            Optional<CartSnapshot> current = carts.find(ownerUserId, branchId);
+            if (current.isEmpty()) return emptyResponse(branchId);
+            if (carts.compareAndDelete(ownerUserId, branchId, current.get().cart().version())) {
+                return emptyResponse(current.get().cart());
+            }
         }
         throw new AppException(ErrorCode.CART_VERSION_CONFLICT);
     }
 
-    private ValidatedAdd validate(AddCartItemRequest request) {
-        String bearer = bearerTokenProvider.getBearerToken();
-        RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse restaurant =
-                requireRestaurantAvailability(bearer, request.restaurantId(), request.branchId());
-        CatalogServiceClient.CartItemValidationResponse catalog =
-                requireCatalogValidation(bearer, request);
-        return new ValidatedAdd(restaurant, catalog, normalizeNote(request.note()));
+    private Cart requireCart(UUID ownerUserId, UUID branchId) {
+        return carts.find(ownerUserId, branchId).map(CartSnapshot::cart)
+                .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_FOUND));
     }
 
-    private RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse requireRestaurantAvailability(
-            String bearer, UUID restaurantId, UUID branchId) {
+    private CartItem requireItem(Cart cart, UUID cartItemId) {
+        return cart.items().stream().filter(item -> item.id().equals(cartItemId)).findFirst()
+                .orElseThrow(() -> new AppException(ErrorCode.CART_ITEM_NOT_FOUND));
+    }
+
+    private RestaurantServiceClient.RestaurantBranchOrderingContextResponse resolveOrderingContext(UUID branchId) {
         try {
-            RestaurantServiceClient.ApiResponse<RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse>
-                    response = restaurantServiceClient.getCartAvailability(bearer, restaurantId, branchId);
+            RestaurantServiceClient.ApiResponse<RestaurantServiceClient.RestaurantBranchOrderingContextResponse> response =
+                    restaurantServiceClient.getOrderingContext(bearerTokenProvider.getBearerToken(), branchId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.RESTAURANT_SERVICE_UNAVAILABLE);
             }
-            RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse data = response.data();
-            if (!data.restaurantActive() || !data.branchActive() || !data.acceptingOrders()) {
-                throw new AppException(ErrorCode.BRANCH_NOT_ACCEPTING_ORDERS);
-            }
-            return data;
+            RestaurantServiceClient.RestaurantBranchOrderingContextResponse context = response.data();
+            return context;
         } catch (FeignException.NotFound exception) {
             throw new AppException(ErrorCode.BRANCH_NOT_ACCEPTING_ORDERS);
         } catch (FeignException exception) {
@@ -187,21 +201,31 @@ public class CartServiceImpl implements CartService {
         }
     }
 
-    private CatalogServiceClient.CartItemValidationResponse requireCatalogValidation(
-            String bearer, AddCartItemRequest request) {
+    private RestaurantServiceClient.RestaurantBranchOrderingContextResponse requireOrderableContext(UUID branchId) {
+        RestaurantServiceClient.RestaurantBranchOrderingContextResponse context = resolveOrderingContext(branchId);
+        if (!context.restaurantActive() || !context.branchActive() || !context.acceptingOrders()) {
+            throw new AppException(ErrorCode.BRANCH_NOT_ACCEPTING_ORDERS);
+        }
+        return context;
+    }
+
+    private ValidatedItem validate(
+            RestaurantServiceClient.RestaurantBranchOrderingContextResponse context,
+            UUID branchId,
+            UUID catalogItemId,
+            List<UUID> selectedOptionValueIds,
+            String note) {
+        String normalizedNote = normalizeNote(note);
         try {
             CatalogServiceClient.ApiResponse<CatalogServiceClient.CartItemValidationResponse> response =
                     catalogServiceClient.validateCartItem(
-                            bearer,
+                            bearerTokenProvider.getBearerToken(),
                             new CatalogServiceClient.CartItemValidationRequest(
-                                    request.restaurantId(),
-                                    request.branchId(),
-                                    request.catalogItemId(),
-                                    request.selectedOptionValueIds()));
+                                    context.restaurantId(), branchId, catalogItemId, selectedOptionValueIds));
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
             }
-            return response.data();
+            return new ValidatedItem(response.data(), normalizedNote, selectedOptionValueIds);
         } catch (FeignException exception) {
             throw catalogFailure(exception);
         }
@@ -210,172 +234,112 @@ public class CartServiceImpl implements CartService {
     private AppException catalogFailure(FeignException exception) {
         String body = exception.contentUTF8();
         if (exception.status() == 404) {
-            return new AppException(
-                    body.contains("CATALOG_016")
-                            ? ErrorCode.BRANCH_ITEM_NOT_FOUND
-                            : ErrorCode.CATALOG_ITEM_NOT_FOUND);
+            return new AppException(body.contains("CATALOG_016")
+                    ? ErrorCode.BRANCH_ITEM_NOT_FOUND : ErrorCode.CATALOG_ITEM_NOT_FOUND);
         }
         if (exception.status() == 400) return new AppException(ErrorCode.INVALID_OPTION_SELECTION);
         if (exception.status() == 409) return new AppException(ErrorCode.ITEM_UNAVAILABLE);
         return new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
     }
 
-    private Cart addToCart(UUID ownerUserId, Cart existing, AddCartItemRequest request, ValidatedAdd validated) {
-        return addToCart(ownerUserId, existing, request, validated, existing == null ? 1 : existing.version() + 1);
-    }
-
     private Cart addToCart(
             UUID ownerUserId,
+            UUID branchId,
+            RestaurantServiceClient.RestaurantBranchOrderingContextResponse context,
             Cart existing,
-            AddCartItemRequest request,
-            ValidatedAdd validated,
-            long version) {
-        CartItem newItem = newItem(request, validated);
+            int quantity,
+            UUID catalogItemId,
+            ValidatedItem validated) {
+        requireQuantity(quantity);
+        CartItem newItem = newItem(UUID.randomUUID(), quantity, catalogItemId, validated);
         Instant now = Instant.now();
         if (existing == null) {
             return new Cart(
-                    SCHEMA_VERSION,
-                    ownerUserId,
-                    request.restaurantId(),
-                    request.branchId(),
-                    validated.restaurant().restaurantName(),
-                    validated.restaurant().branchName(),
-                    validated.catalog().currency(),
-                    List.of(newItem),
-                    version,
-                    now,
-                    now);
+                    SCHEMA_VERSION, ownerUserId, context.restaurantId(), branchId,
+                    context.restaurantName(), context.branchName(), validated.catalog().currency(),
+                    List.of(newItem), 1, now, now);
         }
         List<CartItem> items = new ArrayList<>(existing.items());
-        for (int index = 0; index < items.size(); index++) {
-            CartItem item = items.get(index);
-            if (item.configurationFingerprint().equals(newItem.configurationFingerprint())) {
-                int mergedQuantity = item.quantity() + request.quantity();
-                requireQuantity(mergedQuantity);
-                items.set(index, newItem(item.id(), mergedQuantity, request, validated));
-                return copyCart(existing, List.copyOf(items), version, now);
-            }
+        int match = indexOfFingerprint(items, newItem.configurationFingerprint(), null);
+        if (match >= 0) {
+            CartItem prior = items.get(match);
+            int mergedQuantity = prior.quantity() + quantity;
+            requireQuantity(mergedQuantity);
+            items.set(match, newItem(prior.id(), mergedQuantity, catalogItemId, validated));
+        } else {
+            items.add(newItem);
         }
-        items.add(newItem);
-        return copyCart(existing, List.copyOf(items), version, now);
+        return copyCart(existing, List.copyOf(items), existing.version() + 1, now);
     }
 
-    private Cart replaceItem(Cart cart, CartItem oldItem, int quantity, ValidatedAdd validated) {
-        List<CartItem> items =
-                cart.items().stream()
-                        .map(
-                                item ->
-                                        item.id().equals(oldItem.id())
-                                                ? newItem(item.id(), quantity, oldItem.note(), oldItem.selectedOptions(), validated)
-                                                : item)
-                        .toList();
+    private Cart replaceItem(Cart cart, UUID targetId, CartItem replacement) {
+        List<CartItem> items = cart.items().stream()
+                .map(item -> item.id().equals(targetId) ? replacement : item).toList();
         return copyCart(cart, items, cart.version() + 1, Instant.now());
     }
 
-    private CartItem newItem(AddCartItemRequest request, ValidatedAdd validated) {
-        return newItem(UUID.randomUUID(), request.quantity(), request, validated);
-    }
-
-    private CartItem newItem(UUID id, int quantity, AddCartItemRequest request, ValidatedAdd validated) {
-        String note = validated.note();
-        return newItem(
+    private CartItem newItem(UUID id, int quantity, UUID catalogItemId, ValidatedItem validated) {
+        return new CartItem(
                 id,
-                quantity,
-                note,
-                selectedOptions(validated.catalog()),
-                validated.catalog(),
-                CartFingerprint.of(request.catalogItemId(), request.selectedOptionValueIds(), note));
-    }
-
-    private CartItem newItem(
-            UUID id,
-            int quantity,
-            String note,
-            List<SelectedOption> priorSelectedOptions,
-            ValidatedAdd validated) {
-        List<UUID> optionIds = priorSelectedOptions.stream().map(SelectedOption::optionValueId).toList();
-        return newItem(
-                id,
+                CartFingerprint.of(catalogItemId, validated.optionIds(), validated.note()),
+                validated.catalog().catalogItemId(),
+                validated.catalog().branchItemId(),
                 quantity,
                 validated.note(),
                 selectedOptions(validated.catalog()),
-                validated.catalog(),
-                CartFingerprint.of(validated.catalog().catalogItemId(), optionIds, validated.note()));
-    }
-
-    private CartItem newItem(
-            UUID id,
-            int quantity,
-            String note,
-            List<SelectedOption> options,
-            CatalogServiceClient.CartItemValidationResponse catalog,
-            String fingerprint) {
-        return new CartItem(
-                id,
-                fingerprint,
-                catalog.catalogItemId(),
-                catalog.branchItemId(),
-                quantity,
-                note,
-                options,
-                catalog.itemName(),
-                catalog.primaryImageUrl(),
-                catalog.sellingPrice(),
-                catalog.optionUnitPrice(),
-                catalog.finalUnitPrice(),
-                catalog.originalPrice());
+                validated.catalog().itemName(),
+                validated.catalog().primaryImageUrl(),
+                validated.catalog().sellingPrice(),
+                validated.catalog().optionUnitPrice(),
+                validated.catalog().finalUnitPrice(),
+                validated.catalog().originalPrice());
     }
 
     private List<SelectedOption> selectedOptions(CatalogServiceClient.CartItemValidationResponse catalog) {
         return catalog.selectedOptions().stream()
-                .map(
-                        option ->
-                                new SelectedOption(
-                                        option.optionGroupId(),
-                                        option.optionValueId(),
-                                        option.groupName(),
-                                        option.valueName(),
-                                        option.additionalPrice()))
+                .map(option -> new SelectedOption(
+                        option.optionGroupId(), option.optionValueId(), option.groupName(), option.valueName(), option.additionalPrice()))
                 .toList();
     }
 
     private Cart copyCart(Cart source, List<CartItem> items, long version, Instant updatedAt) {
         return new Cart(
-                source.schemaVersion(),
-                source.ownerUserId(),
-                source.restaurantId(),
-                source.branchId(),
-                source.restaurantNameSnapshot(),
-                source.branchNameSnapshot(),
-                source.currency(),
-                items,
-                version,
-                source.createdAt(),
-                updatedAt);
+                source.schemaVersion(), source.ownerUserId(), source.restaurantId(), source.branchId(),
+                source.restaurantNameSnapshot(), source.branchNameSnapshot(), source.currency(), items,
+                version, source.createdAt(), updatedAt);
     }
 
-    private void requireSameBranch(Cart cart, UUID restaurantId, UUID branchId) {
-        if (cart == null) return;
-        if (!cart.restaurantId().equals(restaurantId) || !cart.branchId().equals(branchId)) {
-            throw new AppException(
-                    ErrorCode.CART_DIFFERENT_BRANCH,
-                    "Cart already contains items from " + cart.restaurantNameSnapshot() + " - " + cart.branchNameSnapshot());
+    private int indexOfFingerprint(List<CartItem> items, String fingerprint, UUID excludedId) {
+        for (int index = 0; index < items.size(); index++) {
+            CartItem item = items.get(index);
+            if ((excludedId == null || !item.id().equals(excludedId)) && item.configurationFingerprint().equals(fingerprint)) {
+                return index;
+            }
         }
+        return -1;
+    }
+
+    private List<UUID> optionIds(List<SelectedOption> options) {
+        return options.stream().map(SelectedOption::optionValueId).toList();
     }
 
     private void requireQuantity(int quantity) {
-        if (quantity < 1 || quantity > MAX_QUANTITY) {
-            throw new AppException(ErrorCode.QUANTITY_OUT_OF_RANGE);
-        }
+        if (quantity < 1 || quantity > MAX_QUANTITY) throw new AppException(ErrorCode.QUANTITY_OUT_OF_RANGE);
     }
 
     private String normalizeNote(String note) {
         if (note == null) return null;
         String normalized = note.trim();
-        if (normalized.length() > 500) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Note must not exceed 500 characters");
-        }
+        if (normalized.length() > 500) throw new AppException(ErrorCode.INVALID_REQUEST, "Note must not exceed 500 characters");
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private CartSummaryResponse toSummary(CartSnapshot snapshot) {
+        Cart cart = snapshot.cart();
+        return new CartSummaryResponse(
+                cart.restaurantId(), cart.restaurantNameSnapshot(), cart.branchId(), cart.branchNameSnapshot(),
+                cart.items().stream().mapToInt(CartItem::quantity).sum(), subtotal(cart.items()), cart.currency(),
+                cart.version(), cart.updatedAt(), snapshot.expiresAt());
     }
 
     private CartResponse toResponse(CartSnapshot snapshot) {
@@ -383,107 +347,52 @@ public class CartServiceImpl implements CartService {
     }
 
     private CartResponse toResponse(Cart cart, Instant expiresAt) {
-        List<CartItemResponse> items =
-                cart.items().stream().map(this::toResponse).toList();
-        BigDecimal subtotal =
-                items.stream().map(CartItemResponse::lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-        int totalQuantity = items.stream().mapToInt(CartItemResponse::quantity).sum();
+        List<CartItemResponse> items = cart.items().stream().map(this::toResponse).toList();
         return new CartResponse(
-                cart.restaurantId(),
-                cart.restaurantNameSnapshot(),
-                cart.branchId(),
-                cart.branchNameSnapshot(),
-                cart.currency(),
-                items,
-                subtotal,
-                totalQuantity,
-                cart.version(),
-                cart.createdAt(),
-                cart.updatedAt(),
-                expiresAt);
+                cart.restaurantId(), cart.restaurantNameSnapshot(), cart.branchId(), cart.branchNameSnapshot(),
+                cart.currency(), items, items.stream().map(CartItemResponse::lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add),
+                items.stream().mapToInt(CartItemResponse::quantity).sum(), cart.version(), cart.createdAt(), cart.updatedAt(), expiresAt);
     }
 
     private CartItemResponse toResponse(CartItem item) {
         return new CartItemResponse(
-                item.id(),
-                item.catalogItemId(),
-                item.branchItemId(),
-                item.itemNameSnapshot(),
-                item.imageUrlSnapshot(),
-                item.quantity(),
-                item.note(),
-                item.selectedOptions().stream()
-                        .map(
-                                option ->
-                                        new SelectedOptionResponse(
-                                                option.optionGroupId(),
-                                                option.optionValueId(),
-                                                option.groupNameSnapshot(),
-                                                option.valueNameSnapshot(),
-                                                option.additionalPriceSnapshot()))
-                        .toList(),
-                item.baseUnitPriceSnapshot(),
-                item.optionUnitPriceSnapshot(),
-                item.unitPriceSnapshot(),
-                item.originalPriceSnapshot(),
-                item.lineTotal());
+                item.id(), item.catalogItemId(), item.branchItemId(), item.itemNameSnapshot(), item.imageUrlSnapshot(),
+                item.quantity(), item.note(), item.selectedOptions().stream().map(option -> new SelectedOptionResponse(
+                        option.optionGroupId(), option.optionValueId(), option.groupNameSnapshot(), option.valueNameSnapshot(), option.additionalPriceSnapshot())).toList(),
+                item.baseUnitPriceSnapshot(), item.optionUnitPriceSnapshot(), item.unitPriceSnapshot(), item.originalPriceSnapshot(), item.lineTotal());
     }
 
     private InternalCartSnapshotResponse toInternalSnapshot(Cart cart) {
         return new InternalCartSnapshotResponse(
-                cart.ownerUserId(),
-                cart.restaurantId(),
-                cart.branchId(),
-                cart.currency(),
-                cart.items().stream()
-                        .map(
-                                item ->
-                                        new InternalCartItemSnapshotResponse(
-                                                item.id(),
-                                                item.catalogItemId(),
-                                                item.branchItemId(),
-                                                item.quantity(),
-                                                item.note(),
-                                                item.selectedOptions().stream()
-                                                        .map(
-                                                                option ->
-                                                                        new InternalSelectedOptionSnapshotResponse(
-                                                                                option.optionGroupId(),
-                                                                                option.optionValueId(),
-                                                                                option.groupNameSnapshot(),
-                                                                                option.valueNameSnapshot(),
-                                                                                option.additionalPriceSnapshot()))
-                                                        .toList(),
-                                                item.itemNameSnapshot(),
-                                                item.imageUrlSnapshot(),
-                                                item.baseUnitPriceSnapshot(),
-                                                item.optionUnitPriceSnapshot(),
-                                                item.unitPriceSnapshot(),
-                                                item.originalPriceSnapshot()))
-                        .toList(),
-                cart.version(),
-                cart.createdAt(),
-                cart.updatedAt());
+                cart.ownerUserId(), cart.restaurantId(), cart.branchId(), cart.currency(), cart.items().stream().map(item ->
+                        new InternalCartItemSnapshotResponse(item.id(), item.catalogItemId(), item.branchItemId(), item.quantity(), item.note(),
+                                item.selectedOptions().stream().map(option -> new InternalSelectedOptionSnapshotResponse(
+                                        option.optionGroupId(), option.optionValueId(), option.groupNameSnapshot(), option.valueNameSnapshot(), option.additionalPriceSnapshot())).toList(),
+                                item.itemNameSnapshot(), item.imageUrlSnapshot(), item.baseUnitPriceSnapshot(), item.optionUnitPriceSnapshot(),
+                                item.unitPriceSnapshot(), item.originalPriceSnapshot())).toList(),
+                cart.version(), cart.createdAt(), cart.updatedAt());
     }
 
-    private static CartResponse emptyResponse() {
-        return new CartResponse(
-                null,
-                null,
-                null,
-                null,
-                null,
-                List.of(),
-                BigDecimal.ZERO,
-                0,
-                0,
-                null,
-                null,
-                null);
+    private BigDecimal subtotal(List<CartItem> items) {
+        return items.stream().map(CartItem::lineTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private record ValidatedAdd(
-            RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse restaurant,
+    private CartResponse emptyResponse(RestaurantServiceClient.RestaurantBranchOrderingContextResponse context) {
+        return new CartResponse(context.restaurantId(), context.restaurantName(), context.branchId(), context.branchName(),
+                null, List.of(), BigDecimal.ZERO, 0, 0, null, null, null);
+    }
+
+    private CartResponse emptyResponse(Cart cart) {
+        return new CartResponse(cart.restaurantId(), cart.restaurantNameSnapshot(), cart.branchId(), cart.branchNameSnapshot(),
+                cart.currency(), List.of(), BigDecimal.ZERO, 0, 0, null, null, null);
+    }
+
+    private CartResponse emptyResponse(UUID branchId) {
+        return new CartResponse(null, null, branchId, null, null, List.of(), BigDecimal.ZERO, 0, 0, null, null, null);
+    }
+
+    private record ValidatedItem(
             CatalogServiceClient.CartItemValidationResponse catalog,
-            String note) {}
+            String note,
+            List<UUID> optionIds) {}
 }

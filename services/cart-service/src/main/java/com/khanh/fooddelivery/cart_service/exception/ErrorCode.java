@@ -16,8 +16,6 @@ public enum ErrorCode {
     ITEM_UNAVAILABLE("CART_009", HttpStatus.CONFLICT, "Item is currently unavailable"),
     BRANCH_NOT_ACCEPTING_ORDERS(
             "CART_010", HttpStatus.CONFLICT, "Restaurant branch is not accepting orders"),
-    CART_DIFFERENT_BRANCH(
-            "CART_011", HttpStatus.CONFLICT, "Cart already contains items from another branch"),
     CART_VERSION_CONFLICT("CART_012", HttpStatus.CONFLICT, "Cart was changed by another request"),
     CATALOG_SERVICE_UNAVAILABLE(
             "CART_013", HttpStatus.SERVICE_UNAVAILABLE, "Catalog service is unavailable"),

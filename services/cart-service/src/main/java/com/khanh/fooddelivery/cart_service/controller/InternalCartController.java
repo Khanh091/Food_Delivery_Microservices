@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,9 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalCartController {
     private final CartService cartService;
 
-    @GetMapping("/me")
+    @GetMapping("/me/branches/{branchId}")
     public ApiResponse<InternalCartSnapshotResponse> getCurrentSnapshot(
-            @AuthenticationPrincipal Jwt jwt) {
-        return ApiResponse.success("Cart snapshot retrieved", cartService.getInternalSnapshot(jwt));
+            @AuthenticationPrincipal Jwt jwt, @PathVariable java.util.UUID branchId) {
+        return ApiResponse.success("Cart snapshot retrieved", cartService.getInternalSnapshot(jwt, branchId));
     }
 }

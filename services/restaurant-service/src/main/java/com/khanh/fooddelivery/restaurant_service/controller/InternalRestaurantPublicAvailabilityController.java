@@ -3,6 +3,7 @@ package com.khanh.fooddelivery.restaurant_service.controller;
 import com.khanh.fooddelivery.restaurant_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchPublicAvailabilityResponse;
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchCartAvailabilityResponse;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchOrderingContextResponse;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantPublicAvailabilityService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -31,5 +32,13 @@ public class InternalRestaurantPublicAvailabilityController {
         return ApiResponse.success(
                 "Restaurant branch cart availability resolved",
                 publicAvailabilityService.getBranchCartAvailability(restaurantId, branchId));
+    }
+
+    @GetMapping("/branches/{branchId}/ordering-context")
+    public ApiResponse<RestaurantBranchOrderingContextResponse> getOrderingContext(
+            @PathVariable UUID branchId) {
+        return ApiResponse.success(
+                "Restaurant branch ordering context resolved",
+                publicAvailabilityService.getBranchOrderingContext(branchId));
     }
 }

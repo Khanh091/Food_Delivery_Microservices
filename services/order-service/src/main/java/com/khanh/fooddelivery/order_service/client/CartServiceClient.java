@@ -9,12 +9,14 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @FeignClient(name = "cart-service")
 public interface CartServiceClient {
-    @GetMapping("/internal/v1/carts/me")
+    @GetMapping("/internal/v1/carts/me/branches/{branchId}")
     RemoteApiResponse<InternalCartSnapshotResponse> getCurrentSnapshot(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization);
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @PathVariable UUID branchId);
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record InternalCartSnapshotResponse(

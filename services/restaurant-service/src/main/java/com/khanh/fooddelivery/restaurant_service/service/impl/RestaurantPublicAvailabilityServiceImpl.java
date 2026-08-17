@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.restaurant_service.service.impl;
 
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchPublicAvailabilityResponse;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchOrderingContextResponse;
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchCartAvailabilityResponse;
 import com.khanh.fooddelivery.restaurant_service.entity.Restaurant;
 import com.khanh.fooddelivery.restaurant_service.entity.RestaurantBranch;
@@ -61,5 +62,22 @@ public class RestaurantPublicAvailabilityServiceImpl implements RestaurantPublic
                 branch.getName(),
                 branch.getStatus() == RestaurantBranchStatus.ACTIVE,
                 branch.isAcceptingOrders());
+    }
+
+    @Override
+    public RestaurantBranchOrderingContextResponse getBranchOrderingContext(UUID branchId) {
+        RestaurantBranch branch = branches.findByIdWithRestaurant(branchId)
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+        Restaurant restaurant = branch.getRestaurant();
+        return new RestaurantBranchOrderingContextResponse(
+                restaurant.getId(),
+                restaurant.getName(),
+                restaurant.getStatus() == RestaurantStatus.ACTIVE,
+                branch.getId(),
+                branch.getName(),
+                branch.getStatus() == RestaurantBranchStatus.ACTIVE,
+                branch.isAcceptingOrders(),
+                branch.getLatitude(),
+                branch.getLongitude());
     }
 }

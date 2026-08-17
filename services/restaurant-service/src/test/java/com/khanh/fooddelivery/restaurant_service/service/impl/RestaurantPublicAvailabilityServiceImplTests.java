@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchPublicAvailabilityResponse;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantBranchOrderingContextResponse;
 import com.khanh.fooddelivery.restaurant_service.entity.Restaurant;
 import com.khanh.fooddelivery.restaurant_service.entity.RestaurantBranch;
 import com.khanh.fooddelivery.restaurant_service.enums.RestaurantBranchStatus;
@@ -78,6 +79,26 @@ class RestaurantPublicAvailabilityServiceImplTests {
                         () -> service.getBranchPublicAvailability(restaurantId, branchId));
 
         assertEquals(ErrorCode.BRANCH_NOT_FOUND, error.getErrorCode());
+    }
+
+    @Test
+    void orderingContextResolvesRestaurantAndPickupCoordinatesFromBranchId() {
+        Restaurant restaurant = restaurant(RestaurantStatus.ACTIVE);
+        restaurant.setName("Restaurant");
+        RestaurantBranch branch = branch(RestaurantBranchStatus.ACTIVE);
+        branch.setRestaurant(restaurant);
+        branch.setName("Branch");
+        branch.setAcceptingOrders(true);
+        branch.setLatitude(java.math.BigDecimal.valueOf(10.75));
+        branch.setLongitude(java.math.BigDecimal.valueOf(106.66));
+        when(branchRepository.findByIdWithRestaurant(branchId)).thenReturn(Optional.of(branch));
+
+        RestaurantBranchOrderingContextResponse response = service.getBranchOrderingContext(branchId);
+
+        assertEquals(restaurantId, response.restaurantId());
+        assertEquals(branchId, response.branchId());
+        assertEquals(java.math.BigDecimal.valueOf(10.75), response.latitude());
+        assertTrue(response.acceptingOrders());
     }
 
     private Restaurant restaurant(RestaurantStatus status) {
