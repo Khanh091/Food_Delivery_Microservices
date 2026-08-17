@@ -7,7 +7,6 @@ import { AddressSelector } from '../features/address/components/AddressSelector'
 import { useAddressStore } from '../features/address/stores/addressStore'
 import { useCartStore } from '../features/cart/stores/cartStore'
 import { ChevronDownIcon } from '../components/icons/ChevronDownIcon'
-import { ToastHost } from '../features/toast/components/ToastHost'
 
 const profileName = (profile: { fullName: string | null; email: string | null } | null, fallback: string | null): string =>
   profile?.fullName?.trim() || fallback || profile?.email || 'Tài khoản'
@@ -103,7 +102,6 @@ export function MainLayout() {
         </div>
       </header>
       <Outlet />
-      <ToastHost />
     </div>
   )
 }
