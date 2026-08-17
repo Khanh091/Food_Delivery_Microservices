@@ -1,3 +1,52 @@
 spring:
   application:
     name: order-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/food-delivery}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:}
+  cloud:
+    openfeign:
+      client:
+        config:
+          cart-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+          user-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+          catalog-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+          restaurant-service:
+            connectTimeout: 3000
+            readTimeout: 5000
+
+server:
+  port: ${SERVER_PORT:8106}
+
+security:
+  jwt:
+    audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: false
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
