@@ -1,7 +1,13 @@
 import { isAxiosError, type AxiosResponse } from 'axios'
 import { httpClient } from '../../../api/httpClient'
 import type { ApiResponse } from '../../../types/api'
-import type { AddCartItemInput, Cart, ReplaceCartItemInput } from '../types/cart'
+import type {
+  AddCartItemInput,
+  Cart,
+  CartSummary,
+  UpdateCartItemConfigurationInput,
+  UpdateCartItemQuantityInput,
+} from '../types/cart'
 
 const basePath = '/api/v1/carts'
 
@@ -37,7 +43,7 @@ const toCartApiError = (error: unknown): CartApiError => {
   return new CartApiError('Không thể cập nhật giỏ hàng lúc này.', null, null)
 }
 
-const unwrap = async (request: Promise<AxiosResponse<ApiResponse<Cart>>>): Promise<Cart> => {
+const unwrap = async <T>(request: Promise<AxiosResponse<ApiResponse<T>>>): Promise<T> => {
   try {
     return (await request).data.data
   } catch (error) {
@@ -45,21 +51,31 @@ const unwrap = async (request: Promise<AxiosResponse<ApiResponse<Cart>>>): Promi
   }
 }
 
-export const getCart = () => unwrap(httpClient.get<ApiResponse<Cart>>(basePath))
+export const getCartSummaries = () => unwrap(httpClient.get<ApiResponse<CartSummary[]>>(basePath))
 
-export const addCartItem = (input: AddCartItemInput) =>
-  unwrap(httpClient.post<ApiResponse<Cart>>(`${basePath}/items`, input))
+export const getBranchCart = (branchId: string) =>
+  unwrap(httpClient.get<ApiResponse<Cart>>(`${basePath}/branches/${branchId}`))
 
-export const replaceCartItem = (input: ReplaceCartItemInput) =>
-  unwrap(httpClient.post<ApiResponse<Cart>>(`${basePath}/items/replace`, input))
+export const addCartItem = (branchId: string, input: AddCartItemInput) =>
+  unwrap(httpClient.post<ApiResponse<Cart>>(`${basePath}/branches/${branchId}/items`, input))
 
-export const updateCartItemQuantity = (cartItemId: string, quantity: number) =>
-  unwrap(httpClient.patch<ApiResponse<Cart>>(`${basePath}/items/${cartItemId}`, { quantity }))
+export const updateCartItemQuantity = (
+  branchId: string,
+  cartItemId: string,
+  input: UpdateCartItemQuantityInput,
+) => unwrap(httpClient.patch<ApiResponse<Cart>>(`${basePath}/branches/${branchId}/items/${cartItemId}`, input))
 
-export const removeCartItem = (cartItemId: string) =>
-  unwrap(httpClient.delete<ApiResponse<Cart>>(`${basePath}/items/${cartItemId}`))
+export const updateCartItemConfiguration = (
+  branchId: string,
+  cartItemId: string,
+  input: UpdateCartItemConfigurationInput,
+) => unwrap(httpClient.put<ApiResponse<Cart>>(`${basePath}/branches/${branchId}/items/${cartItemId}/configuration`, input))
 
-export const clearCart = () => unwrap(httpClient.delete<ApiResponse<Cart>>(basePath))
+export const removeCartItem = (branchId: string, cartItemId: string) =>
+  unwrap(httpClient.delete<ApiResponse<Cart>>(`${basePath}/branches/${branchId}/items/${cartItemId}`))
+
+export const clearBranchCart = (branchId: string) =>
+  unwrap(httpClient.delete<ApiResponse<Cart>>(`${basePath}/branches/${branchId}`))
 
 export const cartErrorCode = (error: unknown): string | null =>
   error instanceof CartApiError ? error.code : null
@@ -68,10 +84,10 @@ export const cartErrorMessage = (error: unknown): string => {
   switch (cartErrorCode(error)) {
     case 'CART_003': return 'Lựa chọn tùy chọn không còn hợp lệ. Vui lòng kiểm tra lại.'
     case 'CART_006':
-    case 'CART_007': return 'Sản phẩm không còn khả dụng tại chi nhánh này.'
+    case 'CART_007':
+    case 'CART_008': return 'Sản phẩm không còn khả dụng tại chi nhánh này.'
     case 'CART_009': return 'Món hiện không còn bán.'
     case 'CART_010': return 'Chi nhánh hiện không nhận đơn.'
-    case 'CART_011': return 'Giỏ hàng hiện tại thuộc một chi nhánh khác.'
     case 'CART_012': return 'Giỏ hàng đã thay đổi ở nơi khác. Vui lòng kiểm tra lại.'
     case 'CART_013':
     case 'CART_014':

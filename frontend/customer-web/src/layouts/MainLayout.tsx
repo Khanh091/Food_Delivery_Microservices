@@ -18,8 +18,8 @@ export function MainLayout() {
   const profile = useCurrentUserStore((state) => state.profile)
   const loadProfile = useCurrentUserStore((state) => state.loadProfile)
   const clearProfile = useCurrentUserStore((state) => state.clearProfile)
-  const cart = useCartStore((state) => state.cart)
-  const loadCart = useCartStore((state) => state.loadCart)
+  const summaries = useCartStore((state) => state.summaries)
+  const loadCartSummaries = useCartStore((state) => state.loadCartSummaries)
   const resetCart = useCartStore((state) => state.resetCart)
 
   useEffect(() => {
@@ -30,8 +30,8 @@ export function MainLayout() {
       return
     }
     void loadProfile().catch(() => undefined)
-    void loadCart().catch(() => undefined)
-  }, [clearAddresses, clearProfile, loadCart, loadProfile, resetCart, status])
+    void loadCartSummaries().catch(() => undefined)
+  }, [clearAddresses, clearProfile, loadCartSummaries, loadProfile, resetCart, status])
 
   const handleLogout = async () => {
     clearAddresses()
@@ -42,6 +42,7 @@ export function MainLayout() {
   }
 
   const visibleName = profileName(profile, displayName)
+  const totalCartQuantity = summaries.reduce((total, summary) => total + summary.totalQuantity, 0)
 
   return (
     <div className="app-shell">
@@ -55,10 +56,10 @@ export function MainLayout() {
           <nav className="header-actions" aria-label="Điều hướng tài khoản">
             {status === 'authenticated' ? (
               <>
-              <Link className="header-cart-link" to="/cart" aria-label={`Giỏ hàng, ${cart?.totalQuantity ?? 0} món`}>
+              <Link className="header-cart-link" to="/carts" aria-label={`Các giỏ hàng, ${totalCartQuantity} món`}>
                 <svg className="header-cart-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" aria-hidden="true"><path d="M3.5 4.5h2l1.8 10.2a2 2 0 0 0 2 1.65h7.95a2 2 0 0 0 1.94-1.48L21 8H7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M9.5 20a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1Zm7 0a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1Z" stroke="currentColor" strokeWidth="1.8"/></svg>
                 <span>Giỏ hàng</span>
-                {(cart?.totalQuantity ?? 0) > 0 && <b>{(cart?.totalQuantity ?? 0) > 99 ? '99+' : cart?.totalQuantity}</b>}
+                {totalCartQuantity > 0 && <b>{totalCartQuantity > 99 ? '99+' : totalCartQuantity}</b>}
               </Link>
               <details className="account-menu">
                 <summary>

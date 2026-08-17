@@ -37,31 +37,32 @@ export interface Cart {
   expiresAt: string | null
 }
 
-export interface AddCartItemInput {
+export interface CartSummary {
   restaurantId: string
+  restaurantName: string
   branchId: string
+  branchName: string
+  totalQuantity: number
+  subtotal: number
+  currency: string
+  version: number
+  updatedAt: string
+  expiresAt: string
+}
+
+export interface AddCartItemInput {
   catalogItemId: string
   quantity: number
   selectedOptionValueIds: string[]
   note: string | null
 }
 
-export interface ReplaceCartItemInput {
-  expectedCartVersion: number
-  item: AddCartItemInput
+export interface UpdateCartItemQuantityInput {
+  quantity: number
 }
 
-export const emptyCart = (): Cart => ({
-  restaurantId: null,
-  restaurantName: null,
-  branchId: null,
-  branchName: null,
-  currency: null,
-  items: [],
-  subtotal: 0,
-  totalQuantity: 0,
-  version: 0,
-  createdAt: null,
-  updatedAt: null,
-  expiresAt: null,
-})
+export interface UpdateCartItemConfigurationInput {
+  quantity: number
+  selectedOptionValueIds: string[]
+  note: string | null
+}
