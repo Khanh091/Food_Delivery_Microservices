@@ -1,6 +1,10 @@
 spring:
   application:
     name: delivery-service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
@@ -28,7 +32,7 @@ eureka:
 management:
   health:
     redis:
-      enabled: false
+      enabled: true
   endpoints:
     web:
       exposure:
@@ -39,3 +43,15 @@ delivery:
     provider: ${DELIVERY_GEOCODING_PROVIDER:google}
     api-key: ${DELIVERY_GEOCODING_API_KEY:}
     google-base-url: ${DELIVERY_GOOGLE_GEOCODING_BASE_URL:https://maps.googleapis.com}
+  routing:
+    provider: ${DELIVERY_ROUTING_PROVIDER:google}
+    google-base-url: ${DELIVERY_GOOGLE_ROUTES_BASE_URL:https://routes.googleapis.com}
+  quote:
+    ttl: ${DELIVERY_QUOTE_TTL:5m}
+    currency: ${DELIVERY_QUOTE_CURRENCY:VND}
+    # Explicit global DEV/MVP policy; replace with managed rule storage later.
+    base-fee: ${DELIVERY_BASE_FEE:15000}
+    included-distance-meters: ${DELIVERY_INCLUDED_DISTANCE_METERS:3000}
+    fee-per-km: ${DELIVERY_FEE_PER_KM:5000}
+    maximum-service-distance-meters: ${DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS:10000}
+    pricing-policy-version: ${DELIVERY_PRICING_POLICY_VERSION:dev-v1}

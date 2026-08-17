@@ -24,7 +24,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
-@EnableConfigurationProperties(DeliveryGeocodingProperties.class)
+@EnableConfigurationProperties({DeliveryGeocodingProperties.class, DeliveryRoutingProperties.class, DeliveryQuoteProperties.class})
 public class SecurityConfig {
     private final KeycloakRealmRoleConverter roleConverter;
 

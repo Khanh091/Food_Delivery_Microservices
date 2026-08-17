@@ -444,6 +444,8 @@ services:
         condition: service_healthy
       catalog-service:
         condition: service_healthy
+      delivery-service:
+        condition: service_healthy
     networks:
       - food-delivery-network
     healthcheck:
@@ -466,12 +468,25 @@ services:
       KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       DELIVERY_GEOCODING_PROVIDER: ${DELIVERY_GEOCODING_PROVIDER:-google}
       DELIVERY_GEOCODING_API_KEY: ${DELIVERY_GEOCODING_API_KEY:-}
       DELIVERY_GOOGLE_GEOCODING_BASE_URL: ${DELIVERY_GOOGLE_GEOCODING_BASE_URL:-https://maps.googleapis.com}
+      DELIVERY_ROUTING_PROVIDER: ${DELIVERY_ROUTING_PROVIDER:-google}
+      DELIVERY_GOOGLE_ROUTES_BASE_URL: ${DELIVERY_GOOGLE_ROUTES_BASE_URL:-https://routes.googleapis.com}
+      DELIVERY_QUOTE_TTL: ${DELIVERY_QUOTE_TTL:-5m}
+      DELIVERY_QUOTE_CURRENCY: ${DELIVERY_QUOTE_CURRENCY:-VND}
+      DELIVERY_BASE_FEE: ${DELIVERY_BASE_FEE:-15000}
+      DELIVERY_INCLUDED_DISTANCE_METERS: ${DELIVERY_INCLUDED_DISTANCE_METERS:-3000}
+      DELIVERY_FEE_PER_KM: ${DELIVERY_FEE_PER_KM:-5000}
+      DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS: ${DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS:-10000}
+      DELIVERY_PRICING_POLICY_VERSION: ${DELIVERY_PRICING_POLICY_VERSION:-dev-v1}
     ports:
       - "${DELIVERY_SERVICE_PORT:-8107}:8107"
     depends_on:
+      redis:
+        condition: service_healthy
       discovery-service:
         condition: service_healthy
       keycloak:

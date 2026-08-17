@@ -11,7 +11,11 @@ public enum ErrorCode {
     GEOCODING_NOT_CONFIGURED("DELIVERY_004", HttpStatus.SERVICE_UNAVAILABLE, "Location lookup is not configured"),
     GEOCODING_PROVIDER_UNAVAILABLE("DELIVERY_005", HttpStatus.SERVICE_UNAVAILABLE, "Location lookup is temporarily unavailable"),
     LOCATION_NOT_FOUND("DELIVERY_006", HttpStatus.UNPROCESSABLE_ENTITY, "No address was found for this location"),
-    INTERNAL_SERVER_ERROR("DELIVERY_007", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+    ADDRESS_COORDINATES_MISSING("DELIVERY_007", HttpStatus.UNPROCESSABLE_ENTITY, "Delivery address coordinates are required"),
+    DELIVERY_NOT_SERVICEABLE("DELIVERY_008", HttpStatus.CONFLICT, "Delivery is unavailable for this address"),
+    ROUTE_NOT_FOUND("DELIVERY_009", HttpStatus.CONFLICT, "No delivery route was found"),
+    DELIVERY_PROVIDER_UNAVAILABLE("DELIVERY_010", HttpStatus.SERVICE_UNAVAILABLE, "Delivery routing is temporarily unavailable"),
+    INTERNAL_SERVER_ERROR("DELIVERY_011", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
 
     private final String code;
     private final HttpStatus httpStatus;
