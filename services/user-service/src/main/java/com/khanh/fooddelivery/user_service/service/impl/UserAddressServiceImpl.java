@@ -4,6 +4,7 @@ import com.khanh.fooddelivery.user_service.dto.request.UserAddressCreateRequest;
 import com.khanh.fooddelivery.user_service.dto.request.UserAddressUpdateRequest;
 import com.khanh.fooddelivery.user_service.dto.response.CurrentUserResponse;
 import com.khanh.fooddelivery.user_service.dto.response.UserAddressResponse;
+import com.khanh.fooddelivery.user_service.dto.response.internal.InternalUserAddressResponse;
 import com.khanh.fooddelivery.user_service.entity.User;
 import com.khanh.fooddelivery.user_service.entity.UserAddress;
 import com.khanh.fooddelivery.user_service.enums.AddressLabelType;
@@ -41,6 +42,30 @@ public class UserAddressServiceImpl implements UserAddressService {
                                 userId
                         )
         );
+    }
+
+    @Override
+    public InternalUserAddressResponse getMyAddressForCheckout(Jwt jwt, UUID addressId) {
+        UserAddress address = ownedAddress(addressId, currentUserId(jwt));
+        UserAddressResponse response = addressMapper.toResponse(address);
+        return new InternalUserAddressResponse(
+                response.id(),
+                response.labelType(),
+                response.customLabel(),
+                response.displayLabel(),
+                response.recipientName(),
+                response.recipientPhone(),
+                response.addressLine(),
+                response.ward(),
+                response.district(),
+                response.city(),
+                response.latitude(),
+                response.longitude(),
+                response.buildingName(),
+                response.floor(),
+                response.entrance(),
+                response.deliveryNote(),
+                response.version());
     }
 
     @Override

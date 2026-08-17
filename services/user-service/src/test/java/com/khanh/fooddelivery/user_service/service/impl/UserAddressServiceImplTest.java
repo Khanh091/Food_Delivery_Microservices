@@ -176,6 +176,23 @@ class UserAddressServiceImplTest {
         )).isInstanceOf(AppException.class);
     }
 
+    @Test
+    void checkoutLookupReturnsOnlyTheCurrentUsersAddressSnapshot() {
+        UserAddress address = address(AddressLabelType.HOME);
+        address.setRecipientName("Nguyen Khanh");
+        address.setRecipientPhone("84912345678");
+        address.setAddressLine("1 Nguyen Trai");
+        address.setCity("Ho Chi Minh City");
+        when(addressRepository.findByIdAndUserId(address.getId(), userId)).thenReturn(Optional.of(address));
+
+        var response = service.getMyAddressForCheckout(null, address.getId());
+
+        assertThat(response.id()).isEqualTo(address.getId());
+        assertThat(response.recipientName()).isEqualTo("Nguyen Khanh");
+        assertThat(response.addressLine()).isEqualTo("1 Nguyen Trai");
+        verify(addressRepository).findByIdAndUserId(address.getId(), userId);
+    }
+
     private UserAddressCreateRequest createRequest(
             AddressLabelType labelType,
             String customLabel,

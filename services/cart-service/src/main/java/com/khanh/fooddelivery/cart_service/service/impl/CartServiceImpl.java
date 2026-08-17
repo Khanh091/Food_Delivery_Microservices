@@ -9,6 +9,9 @@ import com.khanh.fooddelivery.cart_service.dto.request.UpdateCartItemQuantityReq
 import com.khanh.fooddelivery.cart_service.dto.response.CartItemResponse;
 import com.khanh.fooddelivery.cart_service.dto.response.CartResponse;
 import com.khanh.fooddelivery.cart_service.dto.response.SelectedOptionResponse;
+import com.khanh.fooddelivery.cart_service.dto.response.internal.InternalCartItemSnapshotResponse;
+import com.khanh.fooddelivery.cart_service.dto.response.internal.InternalCartSnapshotResponse;
+import com.khanh.fooddelivery.cart_service.dto.response.internal.InternalSelectedOptionSnapshotResponse;
 import com.khanh.fooddelivery.cart_service.exception.AppException;
 import com.khanh.fooddelivery.cart_service.exception.ErrorCode;
 import com.khanh.fooddelivery.cart_service.model.Cart;
@@ -49,6 +52,16 @@ public class CartServiceImpl implements CartService {
     public CartResponse get(Jwt jwt) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
         return carts.find(ownerUserId).map(this::toResponse).orElseGet(CartServiceImpl::emptyResponse);
+    }
+
+    @Override
+    public InternalCartSnapshotResponse getInternalSnapshot(Jwt jwt) {
+        UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
+        return carts.find(ownerUserId)
+                .map(CartSnapshot::cart)
+                .map(this::toInternalSnapshot)
+                .orElseGet(() -> new InternalCartSnapshotResponse(
+                        ownerUserId, null, null, null, List.of(), 0, null, null));
     }
 
     @Override
@@ -414,6 +427,43 @@ public class CartServiceImpl implements CartService {
                 item.unitPriceSnapshot(),
                 item.originalPriceSnapshot(),
                 item.lineTotal());
+    }
+
+    private InternalCartSnapshotResponse toInternalSnapshot(Cart cart) {
+        return new InternalCartSnapshotResponse(
+                cart.ownerUserId(),
+                cart.restaurantId(),
+                cart.branchId(),
+                cart.currency(),
+                cart.items().stream()
+                        .map(
+                                item ->
+                                        new InternalCartItemSnapshotResponse(
+                                                item.id(),
+                                                item.catalogItemId(),
+                                                item.branchItemId(),
+                                                item.quantity(),
+                                                item.note(),
+                                                item.selectedOptions().stream()
+                                                        .map(
+                                                                option ->
+                                                                        new InternalSelectedOptionSnapshotResponse(
+                                                                                option.optionGroupId(),
+                                                                                option.optionValueId(),
+                                                                                option.groupNameSnapshot(),
+                                                                                option.valueNameSnapshot(),
+                                                                                option.additionalPriceSnapshot()))
+                                                        .toList(),
+                                                item.itemNameSnapshot(),
+                                                item.imageUrlSnapshot(),
+                                                item.baseUnitPriceSnapshot(),
+                                                item.optionUnitPriceSnapshot(),
+                                                item.unitPriceSnapshot(),
+                                                item.originalPriceSnapshot()))
+                        .toList(),
+                cart.version(),
+                cart.createdAt(),
+                cart.updatedAt());
     }
 
     private static CartResponse emptyResponse() {

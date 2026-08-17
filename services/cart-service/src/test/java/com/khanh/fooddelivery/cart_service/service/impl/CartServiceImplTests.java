@@ -13,6 +13,7 @@ import com.khanh.fooddelivery.cart_service.config.CartProperties;
 import com.khanh.fooddelivery.cart_service.dto.request.AddCartItemRequest;
 import com.khanh.fooddelivery.cart_service.dto.request.ReplaceCartItemRequest;
 import com.khanh.fooddelivery.cart_service.dto.response.CartResponse;
+import com.khanh.fooddelivery.cart_service.dto.response.internal.InternalCartSnapshotResponse;
 import com.khanh.fooddelivery.cart_service.exception.AppException;
 import com.khanh.fooddelivery.cart_service.exception.ErrorCode;
 import com.khanh.fooddelivery.cart_service.model.Cart;
@@ -188,6 +189,21 @@ class CartServiceImplTests {
 
         assertThat(empty.items()).isEmpty();
         assertThat(carts.cart).isNull();
+    }
+
+    @Test
+    void internalSnapshotIsScopedToCurrentOwnerAndPreservesCheckoutFields() {
+        service.add(jwt, request(2, List.of(optionA), "no onion"));
+
+        InternalCartSnapshotResponse snapshot = service.getInternalSnapshot(jwt);
+
+        assertThat(snapshot.ownerUserId()).isEqualTo(ownerId);
+        assertThat(snapshot.version()).isEqualTo(1);
+        assertThat(snapshot.items()).singleElement().satisfies(item -> {
+            assertThat(item.catalogItemId()).isEqualTo(itemId);
+            assertThat(item.quantity()).isEqualTo(2);
+            assertThat(item.selectedOptions()).extracting(option -> option.optionValueId()).containsExactly(optionA);
+        });
     }
 
     private AddCartItemRequest request(int quantity, List<UUID> options, String note) {
