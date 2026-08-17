@@ -5,7 +5,12 @@ import java.math.BigDecimal;
 public interface GeocodingProvider {
     GeocodedLocation reverseGeocode(BigDecimal latitude, BigDecimal longitude);
 
+    java.util.List<GeocodedLocation> search(String query, BigDecimal latitude, BigDecimal longitude, int limit);
+
+    GeocodedLocation place(String providerRefId);
+
     record GeocodedLocation(
+            String providerRefId,
             String formattedAddress,
             String addressLine,
             String ward,

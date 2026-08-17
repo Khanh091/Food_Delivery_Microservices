@@ -39,13 +39,12 @@ management:
         include: health,info
 
 delivery:
-  geocoding:
-    provider: ${DELIVERY_GEOCODING_PROVIDER:google}
-    api-key: ${DELIVERY_GEOCODING_API_KEY:}
-    google-base-url: ${DELIVERY_GOOGLE_GEOCODING_BASE_URL:https://maps.googleapis.com}
+  vietmap:
+    service-key: ${DELIVERY_VIETMAP_SERVICE_KEY:}
+    api-base-url: ${DELIVERY_VIETMAP_API_BASE_URL:https://maps.vietmap.vn}
+    display-type: ${DELIVERY_VIETMAP_DISPLAY_TYPE:5}
   routing:
-    provider: ${DELIVERY_ROUTING_PROVIDER:google}
-    google-base-url: ${DELIVERY_GOOGLE_ROUTES_BASE_URL:https://routes.googleapis.com}
+    vehicle: ${DELIVERY_VIETMAP_ROUTE_VEHICLE:car}
   quote:
     ttl: ${DELIVERY_QUOTE_TTL:5m}
     currency: ${DELIVERY_QUOTE_CURRENCY:VND}

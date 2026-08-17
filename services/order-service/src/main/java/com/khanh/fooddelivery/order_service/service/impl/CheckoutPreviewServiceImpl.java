@@ -67,21 +67,17 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         CheckoutPreviewResponse.CheckoutBranchSnapshot branchSnapshot =
                 new CheckoutPreviewResponse.CheckoutBranchSnapshot(branch.branchId(), branch.branchName());
         BigDecimal discountAmount = BigDecimal.ZERO;
-        DeliveryServiceClient.DeliveryQuoteResponse deliveryQuote = requireDeliveryQuote(bearer, cart.branchId(), address.addressId());
-        if (!currency.equals(deliveryQuote.currency()) || !deliveryQuote.serviceable() || deliveryQuote.deliveryFee() == null
-                || deliveryQuote.quoteId() == null || deliveryQuote.expiresAt() == null) {
-            throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
-        }
-        BigDecimal totalAmount = subtotal.subtract(discountAmount).add(deliveryQuote.deliveryFee());
+        DeliveryResolution delivery = resolveDelivery(bearer, cart.branchId(), address, currency);
+        BigDecimal totalAmount = delivery.quote() == null ? null : subtotal.subtract(discountAmount).add(delivery.quote().deliveryFee());
         String previewFingerprint = fingerprint.of(
                 ownerUserId, cart.version(), address, restaurant, branchSnapshot, items, currency, subtotal,
-                discountAmount, DeliveryQuoteStatus.AVAILABLE, deliveryQuote.quoteId(), deliveryQuote.deliveryFee(),
-                deliveryQuote.expiresAt(), deliveryQuote.pricingPolicyVersion());
+                discountAmount, delivery.status(), delivery.quoteId(), delivery.deliveryFee(),
+                delivery.expiresAt(), delivery.pricingPolicyVersion());
         return new CheckoutPreviewResponse(
                 cart.version(), address, restaurant, branchSnapshot, items, currency, subtotal, discountAmount,
-                DeliveryQuoteStatus.AVAILABLE, deliveryQuote.quoteId(), deliveryQuote.expiresAt(),
-                deliveryQuote.pricingPolicyVersion(), deliveryQuote.deliveryFee(), totalAmount, priceChanges,
-                previewFingerprint, Instant.now(), true);
+                delivery.status(), delivery.quoteId(), delivery.expiresAt(), delivery.pricingPolicyVersion(),
+                delivery.deliveryFee(), totalAmount, priceChanges, previewFingerprint, Instant.now(),
+                delivery.status() == DeliveryQuoteStatus.AVAILABLE);
     }
 
     private CartServiceClient.InternalCartSnapshotResponse requireCart(String bearer, UUID branchId) {
@@ -177,19 +173,39 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         return new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
     }
 
-    private DeliveryServiceClient.DeliveryQuoteResponse requireDeliveryQuote(String bearer, UUID branchId, UUID addressId) {
+    private DeliveryResolution resolveDelivery(
+            String bearer, UUID branchId, CheckoutPreviewResponse.CheckoutAddressSnapshot address, String currency) {
+        if (address.latitude() == null || address.longitude() == null) {
+            return DeliveryResolution.of(DeliveryQuoteStatus.LOCATION_REQUIRED);
+        }
         try {
             RemoteApiResponse<DeliveryServiceClient.DeliveryQuoteResponse> response =
-                    deliveryServiceClient.createQuote(bearer, new DeliveryServiceClient.DeliveryQuoteRequest(branchId, addressId));
+                    deliveryServiceClient.createQuote(bearer, new DeliveryServiceClient.DeliveryQuoteRequest(branchId, address.addressId()));
             if (response == null || !response.success() || response.data() == null) {
-                throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
+                return DeliveryResolution.of(DeliveryQuoteStatus.TEMPORARILY_UNAVAILABLE);
             }
-            return response.data();
+            DeliveryServiceClient.DeliveryQuoteResponse quote = response.data();
+            if (!currency.equals(quote.currency()) || !quote.serviceable() || quote.deliveryFee() == null
+                    || quote.quoteId() == null || quote.expiresAt() == null) {
+                return DeliveryResolution.of(DeliveryQuoteStatus.TEMPORARILY_UNAVAILABLE);
+            }
+            return DeliveryResolution.available(quote);
         } catch (FeignException exception) {
-            if (exception.status() == 422) throw new AppException(ErrorCode.ADDRESS_COORDINATES_MISSING);
-            if (exception.status() == 409) throw new AppException(ErrorCode.DELIVERY_NOT_SERVICEABLE);
-            throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
+            if (exception.status() == 409) return DeliveryResolution.of(DeliveryQuoteStatus.NOT_SERVICEABLE);
+            if (exception.status() == 422) return DeliveryResolution.of(DeliveryQuoteStatus.LOCATION_REQUIRED);
+            return DeliveryResolution.of(DeliveryQuoteStatus.TEMPORARILY_UNAVAILABLE);
         }
+    }
+
+    private record DeliveryResolution(DeliveryQuoteStatus status, DeliveryServiceClient.DeliveryQuoteResponse quote) {
+        static DeliveryResolution of(DeliveryQuoteStatus status) { return new DeliveryResolution(status, null); }
+        static DeliveryResolution available(DeliveryServiceClient.DeliveryQuoteResponse quote) {
+            return new DeliveryResolution(DeliveryQuoteStatus.AVAILABLE, quote);
+        }
+        UUID quoteId() { return quote == null ? null : quote.quoteId(); }
+        BigDecimal deliveryFee() { return quote == null ? null : quote.deliveryFee(); }
+        Instant expiresAt() { return quote == null ? null : quote.expiresAt(); }
+        String pricingPolicyVersion() { return quote == null ? null : quote.pricingPolicyVersion(); }
     }
 
     private Map<UUID, CatalogServiceClient.ValidatedCheckoutItemResponse> indexValidated(

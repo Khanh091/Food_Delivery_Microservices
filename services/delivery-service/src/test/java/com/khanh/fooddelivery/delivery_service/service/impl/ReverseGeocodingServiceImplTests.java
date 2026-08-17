@@ -23,7 +23,7 @@ class ReverseGeocodingServiceImplTests {
     @Test
     void mapsProviderResultWithoutExposingProviderShape() {
         when(provider.reverseGeocode(new BigDecimal("10.776889"), new BigDecimal("106.700806")))
-                .thenReturn(new GeocodingProvider.GeocodedLocation("12 Nguyen Trai, Ha Noi", "12 Nguyen Trai",
+                .thenReturn(new GeocodingProvider.GeocodedLocation(null, "12 Nguyen Trai, Ha Noi", "12 Nguyen Trai",
                         "Thanh Xuan Trung", "Thanh Xuan", "Ha Noi", null, null));
 
         ReverseGeocodeResponse response = new ReverseGeocodingServiceImpl(provider)

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -25,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -104,6 +106,50 @@ class CheckoutPreviewServiceImplTests {
         when(catalog.validateCheckoutItems(anyString(), any())).thenReturn(null);
 
         assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId)), ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void addressWithoutCoordinatesReturnsPartialLocationRequiredPreviewWithoutCallingDelivery() {
+        when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new UserServiceClient.InternalUserAddressResponse(
+                addressId, "HOME", null, "Home", "Customer", "84912345678", "1 Nguyen Trai", null,
+                "District 1", "Ho Chi Minh City", null, null, null, null, null, null, 2L)));
+
+        var preview = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
+
+        assertThat(preview.deliveryQuoteStatus()).isEqualTo(com.khanh.fooddelivery.order_service.dto.response.DeliveryQuoteStatus.LOCATION_REQUIRED);
+        assertThat(preview.items()).hasSize(1);
+        assertThat(preview.itemsSubtotal()).isEqualByComparingTo("110");
+        assertThat(preview.deliveryFee()).isNull();
+        assertThat(preview.totalAmount()).isNull();
+        assertThat(preview.canPlaceOrder()).isFalse();
+        verify(delivery, never()).createQuote(anyString(), any());
+    }
+
+    @Test
+    void unavailableDeliveryProviderReturnsPartialPreview() {
+        when(delivery.createQuote(anyString(), any())).thenReturn(null);
+
+        var preview = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
+
+        assertThat(preview.deliveryQuoteStatus()).isEqualTo(com.khanh.fooddelivery.order_service.dto.response.DeliveryQuoteStatus.TEMPORARILY_UNAVAILABLE);
+        assertThat(preview.items()).hasSize(1);
+        assertThat(preview.itemsSubtotal()).isEqualByComparingTo("110");
+        assertThat(preview.canPlaceOrder()).isFalse();
+    }
+
+    @Test
+    void notServiceableDeliveryKeepsAuthoritativePreviewData() {
+        FeignException conflict = org.mockito.Mockito.mock(FeignException.class);
+        when(conflict.status()).thenReturn(409);
+        when(delivery.createQuote(anyString(), any())).thenThrow(conflict);
+
+        var preview = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
+
+        assertThat(preview.deliveryQuoteStatus()).isEqualTo(com.khanh.fooddelivery.order_service.dto.response.DeliveryQuoteStatus.NOT_SERVICEABLE);
+        assertThat(preview.items()).hasSize(1);
+        assertThat(preview.itemsSubtotal()).isEqualByComparingTo("110");
+        assertThat(preview.deliveryFee()).isNull();
+        assertThat(preview.canPlaceOrder()).isFalse();
     }
 
     @Test
