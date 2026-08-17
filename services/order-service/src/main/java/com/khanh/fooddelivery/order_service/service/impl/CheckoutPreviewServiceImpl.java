@@ -2,6 +2,7 @@ package com.khanh.fooddelivery.order_service.service.impl;
 
 import com.khanh.fooddelivery.order_service.client.CartServiceClient;
 import com.khanh.fooddelivery.order_service.client.CatalogServiceClient;
+import com.khanh.fooddelivery.order_service.client.DeliveryServiceClient;
 import com.khanh.fooddelivery.order_service.client.RemoteApiResponse;
 import com.khanh.fooddelivery.order_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.order_service.client.UserServiceClient;
@@ -33,6 +34,7 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     private final UserServiceClient userServiceClient;
     private final RestaurantServiceClient restaurantServiceClient;
     private final CatalogServiceClient catalogServiceClient;
+    private final DeliveryServiceClient deliveryServiceClient;
     private final CurrentUserProvider currentUserProvider;
     private final CurrentBearerTokenProvider bearerTokenProvider;
     private final CheckoutPreviewFingerprint fingerprint;
@@ -65,12 +67,21 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         CheckoutPreviewResponse.CheckoutBranchSnapshot branchSnapshot =
                 new CheckoutPreviewResponse.CheckoutBranchSnapshot(branch.branchId(), branch.branchName());
         BigDecimal discountAmount = BigDecimal.ZERO;
+        DeliveryServiceClient.DeliveryQuoteResponse deliveryQuote = requireDeliveryQuote(bearer, cart.branchId(), address.addressId());
+        if (!currency.equals(deliveryQuote.currency()) || !deliveryQuote.serviceable() || deliveryQuote.deliveryFee() == null
+                || deliveryQuote.quoteId() == null || deliveryQuote.expiresAt() == null) {
+            throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
+        }
+        BigDecimal totalAmount = subtotal.subtract(discountAmount).add(deliveryQuote.deliveryFee());
         String previewFingerprint = fingerprint.of(
                 ownerUserId, cart.version(), address, restaurant, branchSnapshot, items, currency, subtotal,
-                discountAmount, DeliveryQuoteStatus.NOT_AVAILABLE);
+                discountAmount, DeliveryQuoteStatus.AVAILABLE, deliveryQuote.quoteId(), deliveryQuote.deliveryFee(),
+                deliveryQuote.expiresAt(), deliveryQuote.pricingPolicyVersion());
         return new CheckoutPreviewResponse(
                 cart.version(), address, restaurant, branchSnapshot, items, currency, subtotal, discountAmount,
-                DeliveryQuoteStatus.NOT_AVAILABLE, null, null, priceChanges, previewFingerprint, Instant.now(), false);
+                DeliveryQuoteStatus.AVAILABLE, deliveryQuote.quoteId(), deliveryQuote.expiresAt(),
+                deliveryQuote.pricingPolicyVersion(), deliveryQuote.deliveryFee(), totalAmount, priceChanges,
+                previewFingerprint, Instant.now(), true);
     }
 
     private CartServiceClient.InternalCartSnapshotResponse requireCart(String bearer, UUID branchId) {
@@ -164,6 +175,21 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         if (exception.status() == 400) return new AppException(ErrorCode.INVALID_OPTION_SELECTION);
         if (exception.status() == 404 || exception.status() == 409) return new AppException(ErrorCode.ITEM_UNAVAILABLE);
         return new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
+    }
+
+    private DeliveryServiceClient.DeliveryQuoteResponse requireDeliveryQuote(String bearer, UUID branchId, UUID addressId) {
+        try {
+            RemoteApiResponse<DeliveryServiceClient.DeliveryQuoteResponse> response =
+                    deliveryServiceClient.createQuote(bearer, new DeliveryServiceClient.DeliveryQuoteRequest(branchId, addressId));
+            if (response == null || !response.success() || response.data() == null) {
+                throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
+            }
+            return response.data();
+        } catch (FeignException exception) {
+            if (exception.status() == 422) throw new AppException(ErrorCode.ADDRESS_COORDINATES_MISSING);
+            if (exception.status() == 409) throw new AppException(ErrorCode.DELIVERY_NOT_SERVICEABLE);
+            throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
+        }
     }
 
     private Map<UUID, CatalogServiceClient.ValidatedCheckoutItemResponse> indexValidated(

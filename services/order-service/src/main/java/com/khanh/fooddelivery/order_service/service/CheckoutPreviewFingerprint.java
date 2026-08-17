@@ -23,7 +23,11 @@ public class CheckoutPreviewFingerprint {
             String currency,
             BigDecimal itemsSubtotal,
             BigDecimal discountAmount,
-            DeliveryQuoteStatus deliveryQuoteStatus) {
+            DeliveryQuoteStatus deliveryQuoteStatus,
+            UUID deliveryQuoteId,
+            BigDecimal deliveryFee,
+            java.time.Instant deliveryQuoteExpiresAt,
+            String deliveryPricingPolicyVersion) {
         String canonical = String.join("|",
                 ownerUserId.toString(),
                 Long.toString(cartVersion),
@@ -35,6 +39,8 @@ public class CheckoutPreviewFingerprint {
                 text(address.floor()), text(address.entrance()), text(address.deliveryNote()),
                 restaurant.restaurantId().toString(), branch.branchId().toString(), text(currency),
                 money(itemsSubtotal), money(discountAmount), deliveryQuoteStatus.name(),
+                deliveryQuoteId == null ? "" : deliveryQuoteId.toString(), money(deliveryFee),
+                deliveryQuoteExpiresAt == null ? "" : deliveryQuoteExpiresAt.toString(), text(deliveryPricingPolicyVersion),
                 items.stream().sorted(Comparator.comparing(CheckoutPreviewResponse.CheckoutItemResponse::cartItemId))
                         .map(this::line).reduce((left, right) -> left + "|" + right).orElse(""));
         try {

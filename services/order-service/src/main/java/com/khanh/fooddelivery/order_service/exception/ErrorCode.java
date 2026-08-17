@@ -19,7 +19,10 @@ public enum ErrorCode {
     USER_SERVICE_UNAVAILABLE("CHECKOUT_012", HttpStatus.SERVICE_UNAVAILABLE, "User service is unavailable"),
     CATALOG_SERVICE_UNAVAILABLE("CHECKOUT_013", HttpStatus.SERVICE_UNAVAILABLE, "Catalog service is unavailable"),
     RESTAURANT_SERVICE_UNAVAILABLE("CHECKOUT_014", HttpStatus.SERVICE_UNAVAILABLE, "Restaurant service is unavailable"),
-    INTERNAL_SERVER_ERROR("CHECKOUT_015", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
+    INTERNAL_SERVER_ERROR("CHECKOUT_015", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
+    ADDRESS_COORDINATES_MISSING("CHECKOUT_016", HttpStatus.UNPROCESSABLE_ENTITY, "Delivery address coordinates are required"),
+    DELIVERY_NOT_SERVICEABLE("CHECKOUT_017", HttpStatus.CONFLICT, "Delivery is unavailable for this address"),
+    DELIVERY_PROVIDER_UNAVAILABLE("CHECKOUT_018", HttpStatus.SERVICE_UNAVAILABLE, "Delivery quote is temporarily unavailable");
 
     private final String code;
     private final HttpStatus httpStatus;

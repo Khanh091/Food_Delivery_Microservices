@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.khanh.fooddelivery.order_service.client.CartServiceClient;
 import com.khanh.fooddelivery.order_service.client.CatalogServiceClient;
+import com.khanh.fooddelivery.order_service.client.DeliveryServiceClient;
 import com.khanh.fooddelivery.order_service.client.RemoteApiResponse;
 import com.khanh.fooddelivery.order_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.order_service.client.UserServiceClient;
@@ -44,6 +45,7 @@ class CheckoutPreviewServiceImplTests {
     @Mock private UserServiceClient users;
     @Mock private RestaurantServiceClient restaurants;
     @Mock private CatalogServiceClient catalog;
+    @Mock private DeliveryServiceClient delivery;
     @Mock private CurrentUserProvider currentUser;
     @Mock private CurrentBearerTokenProvider bearer;
     @Mock private Jwt jwt;
@@ -53,13 +55,14 @@ class CheckoutPreviewServiceImplTests {
     @BeforeEach
     void setUp() {
         service = new CheckoutPreviewServiceImpl(
-                carts, users, restaurants, catalog, currentUser, bearer, new CheckoutPreviewFingerprint());
+                carts, users, restaurants, catalog, delivery, currentUser, bearer, new CheckoutPreviewFingerprint());
         when(currentUser.getCurrentUserId(jwt)).thenReturn(ownerId);
         when(bearer.getBearerToken()).thenReturn("Bearer token");
         happyCart(3L);
         happyAddress();
         happyRestaurant(true);
         happyCatalog(BigDecimal.valueOf(55));
+        happyDeliveryQuote();
     }
 
     @Test
@@ -67,10 +70,10 @@ class CheckoutPreviewServiceImplTests {
         var preview = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L, addressId));
 
         assertThat(preview.itemsSubtotal()).isEqualByComparingTo("110");
-        assertThat(preview.deliveryFee()).isNull();
-        assertThat(preview.totalAmount()).isNull();
+        assertThat(preview.deliveryFee()).isEqualByComparingTo("15000");
+        assertThat(preview.totalAmount()).isEqualByComparingTo("15110");
         assertThat(preview.discountAmount()).isEqualByComparingTo(BigDecimal.ZERO);
-        assertThat(preview.canPlaceOrder()).isFalse();
+        assertThat(preview.canPlaceOrder()).isTrue();
         assertThat(preview.priceChanges()).singleElement()
                 .satisfies(change -> assertThat(change.currentUnitPrice()).isEqualByComparingTo("55"));
         verify(catalog, times(1)).validateCheckoutItems(anyString(), any());
@@ -129,7 +132,7 @@ class CheckoutPreviewServiceImplTests {
     private void happyAddress() {
         lenient().when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new UserServiceClient.InternalUserAddressResponse(
                 addressId, "HOME", null, "Nhà", "Nguyen Khanh", "84912345678", "1 Nguyen Trai", null,
-                "District 1", "Ho Chi Minh City", null, null, null, null, null, "Call first", 2L)));
+                "District 1", "Ho Chi Minh City", BigDecimal.valueOf(10.7), BigDecimal.valueOf(106.7), null, null, null, "Call first", 2L)));
     }
 
     private void happyRestaurant(boolean acceptingOrders) {
@@ -147,6 +150,13 @@ class CheckoutPreviewServiceImplTests {
                                 cartItemId, catalogItemId, UUID.randomUUID(), "Burger", null,
                                 finalUnitPrice.subtract(BigDecimal.TEN), null, "VND", List.of(option), BigDecimal.TEN,
                                 finalUnitPrice)))));
+    }
+
+    private void happyDeliveryQuote() {
+        UUID quoteId = UUID.nameUUIDFromBytes("quote".getBytes());
+        lenient().when(delivery.createQuote(anyString(), any())).thenReturn(success(new DeliveryServiceClient.DeliveryQuoteResponse(
+                quoteId, true, "VND", BigDecimal.valueOf(15000), 4000, 12, "dev-v1",
+                Instant.parse("2026-08-17T00:00:00Z"), Instant.parse("2026-08-17T00:05:00Z"))));
     }
 
     private static <T> RemoteApiResponse<T> success(T data) {
