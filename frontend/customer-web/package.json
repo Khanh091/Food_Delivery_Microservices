@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vietmap/vietmap-gl-js": "^6.0.1",
     "axios": "^1.19.0",
     "keycloak-js": "^26.2.4",
-    "maplibre-gl": "^6.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2",

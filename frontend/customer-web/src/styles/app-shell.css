@@ -30,7 +30,8 @@
 .delivery-selector:hover { background: #e6f1ff; border-color: #94bceb; box-shadow: var(--shadow-sm); }
 .delivery-selector-label { color: var(--color-text-secondary); font-size: 0.7rem; font-weight: 780; grid-column: 1; grid-row: 1; letter-spacing: 0.08em; text-transform: uppercase; }
 .delivery-selector strong { font-size: 0.88rem; grid-column: 1 / 3; grid-row: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.delivery-selector-chevron { color: var(--color-primary); font-size: 1rem; grid-column: 3; grid-row: 1 / 3; }
+.delivery-selector-chevron { color: var(--color-primary); flex: 0 0 18px; grid-column: 3; grid-row: 1 / 3; height: 18px; transition: transform 180ms ease; width: 18px; }
+.delivery-selector-chevron.open { transform: rotate(180deg); }
 .delivery-selector.guest { background: var(--color-surface); }
 .address-popover { left: 0; padding: 10px; right: auto; top: calc(100% + 10px); width: min(440px, calc(100vw - 32px)); }
 .address-popover header { padding: 8px 8px 11px; }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../auth/stores/authStore'
 import { useAddressStore } from '../stores/addressStore'
 import { addressLabel, addressSummary } from '../types/address'
+import { ChevronDownIcon } from '../../../components/icons/ChevronDownIcon'
 
 export function AddressSelector() {
   const navigate = useNavigate()
@@ -40,7 +41,7 @@ export function AddressSelector() {
   }, [])
 
   if (status !== 'authenticated') {
-    return <button type="button" className="delivery-selector guest" onClick={() => navigate('/login')}><span className="delivery-selector-label">Giao đến</span><strong>Chọn địa chỉ giao hàng</strong><span className="delivery-selector-chevron" aria-hidden="true">⌄</span></button>
+    return <button type="button" className="delivery-selector guest" onClick={() => navigate('/login')}><span className="delivery-selector-label">Giao đến</span><strong>Chọn địa chỉ giao hàng</strong><ChevronDownIcon className="delivery-selector-chevron" /></button>
   }
 
   if (!loading && addresses.length === 0) {
@@ -52,7 +53,7 @@ export function AddressSelector() {
       <button ref={triggerRef} type="button" className="delivery-selector" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-haspopup="dialog" aria-controls="delivery-address-menu">
         <span className="delivery-selector-label">Giao đến</span>
         <strong title={selectedAddress ? addressSummary(selectedAddress) : undefined}>{loading ? 'Đang tải địa chỉ…' : selectedAddress ? `${addressLabel(selectedAddress)} · ${addressSummary(selectedAddress)}` : 'Chọn địa chỉ giao hàng'}</strong>
-        <span className="delivery-selector-chevron" aria-hidden="true">⌄</span>
+        <ChevronDownIcon className={`delivery-selector-chevron${open ? ' open' : ''}`} />
       </button>
       {open && (
         <section id="delivery-address-menu" className="address-popover" role="dialog" aria-label="Chọn địa chỉ giao hàng">

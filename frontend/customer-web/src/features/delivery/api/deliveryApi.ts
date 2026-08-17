@@ -30,9 +30,11 @@ const unwrap = async (request: Promise<AxiosResponse<ApiResponse<ReverseGeocodeC
 export const reverseGeocode = (input: ReverseGeocodeInput, signal?: AbortSignal) =>
   unwrap(httpClient.post<ApiResponse<ReverseGeocodeCandidate>>('/api/v1/delivery/locations/reverse-geocode', input, { signal }))
 
-export const searchLocations = async (query: string, signal?: AbortSignal): Promise<LocationSearchCandidate[]> => {
+export const searchLocations = async (query: string, focus?: { latitude: number; longitude: number }, signal?: AbortSignal): Promise<LocationSearchCandidate[]> => {
   try {
-    const response = await httpClient.get<ApiResponse<LocationSearchCandidate[]>>('/api/v1/delivery/locations/search', { params: { query, limit: 6 }, signal })
+    const response = await httpClient.get<ApiResponse<LocationSearchCandidate[]>>('/api/v1/delivery/locations/search', {
+      params: { query, limit: 6, latitude: focus?.latitude, longitude: focus?.longitude }, signal,
+    })
     return response.data.data
   } catch (error) {
     if (isAxiosError<DeliveryErrorBody>(error)) throw new DeliveryApiError(error.response?.data?.code ?? null, error.response?.status ?? null, error.response?.data?.message ?? 'KhÃ´ng thá»ƒ tÃ¬m Ä‘á»‹a Ä‘iá»ƒm.')

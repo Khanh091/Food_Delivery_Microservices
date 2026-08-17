@@ -37,6 +37,27 @@ class VietMapProviderMappingTests {
     }
 
     @Test
+    void retainsTheAutocompleteReferenceWhenPlaceV4OmitsIt() {
+        var result = VietMapGeocodingProvider.mapDetail("""
+                {"display":"136 Nguyễn Phong Sắc, Phường Dịch Vọng, Hà Nội","name":"136 Nguyễn Phong Sắc","lat":21.0412956,"lng":105.7906442}
+                """, objectMapper, "v4-ref-id");
+        assertThat(result.providerRefId()).isEqualTo("v4-ref-id");
+    }
+
+    @Test
+    void mapsReverseV4ListAndKeepsAValidTwoLevelAddressWithoutDistrict() {
+        var result = VietMapGeocodingProvider.mapDetail("""
+                [{"lat":21.0283,"lng":105.8540,"display":"79 Đinh Tiên Hoàng, Phường Lý Thái Tổ, Hà Nội","name":"79 Đinh Tiên Hoàng","boundaries":[{"type":2,"full_name":"Phường Lý Thái Tổ"},{"type":0,"full_name":"Hà Nội"}],"data_old":{"district":"Quận Hoàn Kiếm","city":"Thành Phố Hà Nội"}}]
+                """, objectMapper, null);
+
+        assertThat(result.formattedAddress()).contains("Đinh Tiên Hoàng");
+        assertThat(result.ward()).isEqualTo("Phường Lý Thái Tổ");
+        assertThat(result.district()).isEqualTo("Quận Hoàn Kiếm");
+        assertThat(result.latitude()).isEqualByComparingTo("21.0283");
+        assertThat(result.longitude()).isEqualByComparingTo("105.8540");
+    }
+
+    @Test
     void acceptsEmptyAutocompleteAsNoSuggestions() {
         assertThat(VietMapGeocodingProvider.mapAutocomplete("[]", objectMapper)).isEmpty();
     }
@@ -47,6 +68,24 @@ class VietMapProviderMappingTests {
                 .isInstanceOf(AppException.class)
                 .extracting(error -> ((AppException) error).getErrorCode())
                 .isEqualTo(ErrorCode.LOCATION_NOT_FOUND);
+    }
+
+    @Test
+    void treatsAnEmptyReverseV4ListAsLocationNotFound() {
+        assertThatThrownBy(() -> VietMapGeocodingProvider.mapDetail("[]", objectMapper, null))
+                .isInstanceOf(AppException.class)
+                .extracting(error -> ((AppException) error).getErrorCode())
+                .isEqualTo(ErrorCode.LOCATION_NOT_FOUND);
+    }
+
+    @Test
+    void mapsVietMapAuthRateLimitAndServerFailuresSafely() {
+        for (int status : new int[] {401, 403, 429, 500}) {
+            assertThat(VietMapGeocodingProvider.providerError(status).getErrorCode())
+                    .as("status %s", status)
+                    .isEqualTo(ErrorCode.GEOCODING_PROVIDER_UNAVAILABLE);
+        }
+        assertThat(VietMapGeocodingProvider.providerError(404).getErrorCode()).isEqualTo(ErrorCode.LOCATION_NOT_FOUND);
     }
 
     @Test
