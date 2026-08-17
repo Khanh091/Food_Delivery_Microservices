@@ -1,7 +1,7 @@
 import { isAxiosError, type AxiosResponse } from 'axios'
 import { httpClient } from '../../../api/httpClient'
 import type { ApiResponse } from '../../../types/api'
-import type { LocationSearchCandidate, ReverseGeocodeCandidate, ReverseGeocodeInput } from '../types/delivery'
+import type { CheckoutTemporaryLocation, LocationSearchCandidate, ReverseGeocodeCandidate, ReverseGeocodeInput } from '../types/delivery'
 
 interface DeliveryErrorBody { code?: string; message?: string }
 
@@ -16,7 +16,7 @@ export class DeliveryApiError extends Error {
   }
 }
 
-const unwrap = async (request: Promise<AxiosResponse<ApiResponse<ReverseGeocodeCandidate>>>): Promise<ReverseGeocodeCandidate> => {
+const unwrap = async <T>(request: Promise<AxiosResponse<ApiResponse<T>>>): Promise<T> => {
   try { return (await request).data.data }
   catch (error) {
     if (isAxiosError<DeliveryErrorBody>(error)) {
@@ -44,6 +44,12 @@ export const searchLocations = async (query: string, focus?: { latitude: number;
 
 export const getLocationPlace = (providerRefId: string, signal?: AbortSignal) =>
   unwrap(httpClient.get<ApiResponse<ReverseGeocodeCandidate>>('/api/v1/delivery/locations/place', { params: { providerRefId }, signal }))
+
+export const saveCheckoutTemporaryLocation = (branchId: string, input: ReverseGeocodeInput) =>
+  unwrap(httpClient.put<ApiResponse<CheckoutTemporaryLocation>>(`/api/v1/delivery/checkout-locations/branches/${branchId}/current`, input))
+
+export const getCheckoutTemporaryLocation = (branchId: string, signal?: AbortSignal) =>
+  unwrap<CheckoutTemporaryLocation | null>(httpClient.get<ApiResponse<CheckoutTemporaryLocation | null>>(`/api/v1/delivery/checkout-locations/branches/${branchId}/current`, { signal }))
 
 export const deliveryErrorMessage = (error: unknown): string => {
   if (error instanceof DeliveryApiError && error.code === 'DELIVERY_004') {

@@ -1,13 +1,19 @@
 export interface CheckoutPreviewRequest {
   branchId: string
   cartVersion: number
-  addressId: string
+  target: CheckoutDeliveryTargetRequest
 }
+
+export type CheckoutDeliveryTargetRequest =
+  | { type: 'SAVED_ADDRESS'; addressId: string; temporaryLocationId?: never }
+  | { type: 'TEMPORARY_LOCATION'; temporaryLocationId: string; addressId?: never }
 
 export type DeliveryQuoteStatus = 'AVAILABLE' | 'LOCATION_REQUIRED' | 'NOT_SERVICEABLE' | 'TEMPORARILY_UNAVAILABLE'
 
 export interface CheckoutAddressSnapshot {
-  addressId: string
+  targetType: 'SAVED_ADDRESS' | 'TEMPORARY_LOCATION'
+  addressId: string | null
+  temporaryLocationId: string | null
   labelType: string
   customLabel: string | null
   displayLabel: string

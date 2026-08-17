@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { updateAddress } from '../../address/api/addressApi'
 import { useAddressStore } from '../../address/stores/addressStore'
 import { addressLabel, addressSummary } from '../../address/types/address'
 import { useCartStore } from '../../cart/stores/cartStore'
 import { ChevronDownIcon } from '../../../components/icons/ChevronDownIcon'
 import { CrosshairIcon } from '../../../components/icons/CrosshairIcon'
 import { DeliveryLocationPicker } from '../../delivery/components/DeliveryLocationPicker'
-import type { ReverseGeocodeCandidate } from '../../delivery/types/delivery'
+import { getCheckoutTemporaryLocation, saveCheckoutTemporaryLocation } from '../../delivery/api/deliveryApi'
+import type { CheckoutTemporaryLocation, ReverseGeocodeCandidate } from '../../delivery/types/delivery'
+import { useToastStore } from '../../toast/stores/toastStore'
 import { CheckoutApiError, checkoutErrorMessage, getCheckoutPreview } from '../api/checkoutApi'
-import type { CheckoutPreview, CheckoutPreviewItem } from '../types/checkout'
+import type { CheckoutDeliveryTargetRequest, CheckoutPreview, CheckoutPreviewItem } from '../types/checkout'
 
 const isUuid = (value: string | undefined) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value))
 const money = (amount: number, currency: string | null) => {
@@ -33,8 +34,8 @@ export function CheckoutReviewPage() {
   const addressesLoading = useAddressStore((state) => state.loading)
   const addressesError = useAddressStore((state) => state.error)
   const loadAddresses = useAddressStore((state) => state.loadAddresses)
-  const replaceAddress = useAddressStore((state) => state.replaceAddress)
-  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [deliveryTarget, setDeliveryTarget] = useState<CheckoutDeliveryTargetRequest | null>(null)
+  const [temporaryLocation, setTemporaryLocation] = useState<CheckoutTemporaryLocation | null>(null)
   const [addressMenuOpen, setAddressMenuOpen] = useState(false)
   const [preview, setPreview] = useState<CheckoutPreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
@@ -45,11 +46,16 @@ export function CheckoutReviewPage() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [locationSaving, setLocationSaving] = useState(false)
-  const [locationSuccess, setLocationSuccess] = useState<string | null>(null)
+  const pushToast = useToastStore((state) => state.push)
   const requestGeneration = useRef(0)
   const addressMenuRef = useRef<HTMLDivElement>(null)
   const validBranchId = isUuid(branchId)
-  const selectedAddress = addresses.find((address) => address.id === selectedAddressId) ?? null
+  const selectedAddress = deliveryTarget?.type === 'SAVED_ADDRESS'
+    ? addresses.find((address) => address.id === deliveryTarget.addressId) ?? null
+    : null
+  const pickerInitialLocation: ReverseGeocodeCandidate | null = temporaryLocation ?? (selectedAddress?.latitude !== null && selectedAddress?.latitude !== undefined && selectedAddress.longitude !== null && selectedAddress.longitude !== undefined
+    ? { formattedAddress: addressSummary(selectedAddress), addressLine: selectedAddress.addressLine, ward: selectedAddress.ward, district: selectedAddress.district, city: selectedAddress.city, latitude: selectedAddress.latitude, longitude: selectedAddress.longitude }
+    : null)
   const menuUrl = cart?.restaurantId && branchId ? `/restaurants/${cart.restaurantId}/branches/${branchId}` : '/carts'
 
   useEffect(() => {
@@ -58,11 +64,30 @@ export function CheckoutReviewPage() {
   }, [branchId, loadBranchCart, validBranchId])
   useEffect(() => { void loadAddresses() }, [loadAddresses])
   useEffect(() => {
-    if (addresses.length === 0) { setSelectedAddressId(null); return }
-    setSelectedAddressId((current) => current && addresses.some((address) => address.id === current)
+    if (addresses.length === 0) { setDeliveryTarget((current) => current?.type === 'TEMPORARY_LOCATION' ? current : null); return }
+    setDeliveryTarget((current) => current?.type === 'TEMPORARY_LOCATION' || (current?.type === 'SAVED_ADDRESS' && addresses.some((address) => address.id === current.addressId))
       ? current
-      : addresses.find((address) => address.isDefault)?.id ?? addresses[0].id)
+      : { type: 'SAVED_ADDRESS', addressId: addresses.find((address) => address.isDefault)?.id ?? addresses[0].id })
   }, [addresses])
+  useEffect(() => {
+    if (!validBranchId || !branchId) return undefined
+    const controller = new AbortController()
+    setTemporaryLocation(null)
+    setDeliveryTarget((current) => {
+      if (current?.type !== 'TEMPORARY_LOCATION') return current
+      const fallback = addresses.find((address) => address.isDefault) ?? addresses[0]
+      return fallback ? { type: 'SAVED_ADDRESS', addressId: fallback.id } : null
+    })
+    void getCheckoutTemporaryLocation(branchId, controller.signal)
+      .then((location) => {
+        if (!controller.signal.aborted && location) {
+          setTemporaryLocation(location)
+          setDeliveryTarget({ type: 'TEMPORARY_LOCATION', temporaryLocationId: location.id })
+        }
+    })
+      .catch(() => undefined)
+    return () => controller.abort()
+  }, [addresses, branchId, validBranchId])
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
       if (!addressMenuRef.current?.contains(event.target as Node)) setAddressMenuOpen(false)
@@ -84,11 +109,14 @@ export function CheckoutReviewPage() {
     setPreview(null)
     setPreviewError(null)
     setPreviewErrorCode(null)
-    if (!validBranchId || !branchId || !cart || cart.items.length === 0 || !selectedAddressId || previewBlocked) return undefined
+    if (!validBranchId || !branchId || !cart || cart.items.length === 0 || !deliveryTarget || previewBlocked) {
+      setPreviewLoading(false)
+      return undefined
+    }
     const controller = new AbortController()
     const generation = ++requestGeneration.current
     setPreviewLoading(true)
-    void getCheckoutPreview({ branchId, cartVersion: cart.version, addressId: selectedAddressId }, controller.signal)
+    void getCheckoutPreview({ branchId, cartVersion: cart.version, target: deliveryTarget }, controller.signal)
       .then((result) => { if (generation === requestGeneration.current) setPreview(result) })
       .catch((error: unknown) => {
         if (controller.signal.aborted || generation !== requestGeneration.current) return
@@ -99,36 +127,42 @@ export function CheckoutReviewPage() {
           setPreviewBlocked(true)
           void loadBranchCart(branchId).catch(() => undefined)
         }
-        if (error instanceof CheckoutApiError && error.code === 'CHECKOUT_006') void loadAddresses()
+        if (error instanceof CheckoutApiError && error.code === 'CHECKOUT_006') {
+          if (deliveryTarget?.type === 'TEMPORARY_LOCATION') {
+            setTemporaryLocation(null)
+            const fallback = addresses.find((address) => address.isDefault) ?? addresses[0]
+            setDeliveryTarget(fallback ? { type: 'SAVED_ADDRESS', addressId: fallback.id } : null)
+          } else void loadAddresses()
+        }
       })
       .finally(() => { if (!controller.signal.aborted && generation === requestGeneration.current) setPreviewLoading(false) })
     return () => controller.abort()
-  }, [branchId, cart, loadAddresses, loadBranchCart, previewBlocked, previewRetry, selectedAddressId, validBranchId])
+  }, [addresses, branchId, cart, deliveryTarget, loadAddresses, loadBranchCart, previewBlocked, previewRetry, validBranchId])
 
   const priceChanges = useMemo(() => new Map(preview?.priceChanges.map((change) => [change.cartItemId, change]) ?? []), [preview])
   const retryPreview = () => { setPreviewBlocked(false); setPreviewRetry((value) => value + 1) }
   const selectAddress = (addressId: string) => {
-    setSelectedAddressId(addressId)
+    setDeliveryTarget({ type: 'SAVED_ADDRESS', addressId })
     setPreviewBlocked(false)
     setAddressMenuOpen(false)
     setLocationError(null)
-    setLocationSuccess(null)
   }
   const confirmLocation = async (location: ReverseGeocodeCandidate) => {
-    if (!selectedAddress || locationSaving) return
+    if (!branchId || locationSaving) return
     setLocationSaving(true)
     setLocationError(null)
     try {
-      const updatedAddress = await updateAddress(selectedAddress.id, {
+      const nextTemporaryLocation = await saveCheckoutTemporaryLocation(branchId, {
         latitude: location.latitude,
         longitude: location.longitude,
       })
-      replaceAddress(updatedAddress)
+      setTemporaryLocation(nextTemporaryLocation)
+      setDeliveryTarget({ type: 'TEMPORARY_LOCATION', temporaryLocationId: nextTemporaryLocation.id })
       setLocationPickerOpen(false)
-      setLocationSuccess(`Đã cập nhật vị trí cho địa chỉ ${addressLabel(updatedAddress)}.`)
+      pushToast('success', 'Đã chọn vị trí giao hàng.')
       retryPreview()
     } catch {
-      setLocationError('Không thể lưu vị trí cho địa chỉ này. Vui lòng thử lại.')
+      setLocationError('Không thể lưu vị trí giao hàng tạm thời. Vui lòng thử lại.')
     } finally {
       setLocationSaving(false)
     }
@@ -156,31 +190,37 @@ export function CheckoutReviewPage() {
             </div>
             {addressesLoading && addresses.length === 0 ? <p className="checkout-waiting">Đang tải địa chỉ…</p>
               : addressesError ? <div className="checkout-inline-error"><p>{addressesError}</p><button type="button" className="button secondary" onClick={() => void loadAddresses()}>Thử lại</button></div>
-                : addresses.length === 0 ? <div className="checkout-empty-address"><p>Bạn chưa có địa chỉ giao hàng.</p><Link className="button primary" to="/account/addresses?new=1">Thêm địa chỉ</Link></div>
+                : addresses.length === 0 && !temporaryLocation ? <div className="checkout-empty-address"><p>Bạn chưa có địa chỉ giao hàng.</p><div className="form-actions"><Link className="button primary" to="/account/addresses?new=1">Thêm địa chỉ</Link><button type="button" className="button secondary" onClick={() => setLocationPickerOpen(true)}>Chọn vị trí tạm thời</button></div></div>
                   : <>
                     <div className="checkout-address-control-row">
                       <div className="checkout-address-select" ref={addressMenuRef}>
                         <button type="button" className="checkout-address-trigger" aria-expanded={addressMenuOpen} aria-controls="checkout-address-list" onClick={() => setAddressMenuOpen((open) => !open)}>
                           <span className="checkout-address-pin" aria-hidden="true"><CrosshairIcon /></span>
-                          <span>{selectedAddress && <><strong>{addressLabel(selectedAddress)}</strong><small>{selectedAddress.recipientName} · {selectedAddress.recipientPhone}</small><b>{addressSummary(selectedAddress)}</b></>}</span>
+                          <span>{temporaryLocation && deliveryTarget?.type === 'TEMPORARY_LOCATION'
+                            ? <><strong>Vị trí hiện tại</strong><small>Vị trí tạm thời cho đơn hàng này</small><b>{temporaryLocation.formattedAddress}</b></>
+                            : selectedAddress && <><strong>{addressLabel(selectedAddress)}</strong><small>{selectedAddress.recipientName} · {selectedAddress.recipientPhone}</small><b>{addressSummary(selectedAddress)}</b></>}</span>
                           <ChevronDownIcon className={`checkout-address-chevron${addressMenuOpen ? ' open' : ''}`} />
                         </button>
                         {addressMenuOpen && <div id="checkout-address-list" className="checkout-address-menu" role="listbox" aria-label="Chọn địa chỉ giao hàng">
-                          {addresses.map((address) => <button key={address.id} type="button" role="option" aria-selected={address.id === selectedAddressId} className={address.id === selectedAddressId ? 'selected' : ''} onClick={() => selectAddress(address.id)}>
+                          {temporaryLocation && <button type="button" role="option" aria-selected={deliveryTarget?.type === 'TEMPORARY_LOCATION'} className={deliveryTarget?.type === 'TEMPORARY_LOCATION' ? 'selected' : ''} onClick={() => { setDeliveryTarget({ type: 'TEMPORARY_LOCATION', temporaryLocationId: temporaryLocation.id }); setAddressMenuOpen(false); setPreviewBlocked(false) }}>
+                            <span><strong>Vị trí hiện tại <em>Tạm thời</em></strong><small>Chỉ dùng cho đơn hàng này</small><b>{temporaryLocation.formattedAddress}</b><i>Đã xác nhận vị trí</i></span>
+                            <span className="checkout-address-selected" aria-hidden="true">{deliveryTarget?.type === 'TEMPORARY_LOCATION' ? '✓' : ''}</span>
+                          </button>}
+                          {addresses.map((address) => <button key={address.id} type="button" role="option" aria-selected={deliveryTarget?.type === 'SAVED_ADDRESS' && address.id === deliveryTarget.addressId} className={deliveryTarget?.type === 'SAVED_ADDRESS' && address.id === deliveryTarget.addressId ? 'selected' : ''} onClick={() => selectAddress(address.id)}>
                             <span><strong>{addressLabel(address)} {address.isDefault && <em>Mặc định</em>}</strong><small>{address.recipientName} · {address.recipientPhone}</small><b>{addressSummary(address)}</b><i>{address.latitude !== null && address.longitude !== null ? 'Đã xác nhận vị trí' : 'Chưa có vị trí'}</i></span>
-                            <span className="checkout-address-selected" aria-hidden="true">{address.id === selectedAddressId ? '✓' : ''}</span>
+                            <span className="checkout-address-selected" aria-hidden="true">{deliveryTarget?.type === 'SAVED_ADDRESS' && address.id === deliveryTarget.addressId ? '✓' : ''}</span>
                           </button>)}
                           <div className="checkout-address-menu-footer"><Link to="/account/addresses">Quản lý địa chỉ</Link><Link to="/account/addresses?new=1">+ Thêm địa chỉ</Link></div>
                         </div>}
                       </div>
                       <button type="button" className="checkout-location-button" aria-label="Chọn vị trí trên bản đồ" title="Chọn vị trí trên bản đồ" disabled={locationSaving} onClick={() => setLocationPickerOpen(true)}><CrosshairIcon /></button>
                     </div>
-                    {selectedAddress && <p className={`checkout-location-status ${selectedAddress.latitude !== null && selectedAddress.longitude !== null ? 'confirmed' : ''}`}>{selectedAddress.latitude !== null && selectedAddress.longitude !== null ? 'Vị trí của địa chỉ này đã được xác nhận.' : 'Địa chỉ này chưa xác nhận vị trí.'}</p>}
+                    {temporaryLocation && deliveryTarget?.type === 'TEMPORARY_LOCATION' ? <p className="checkout-location-status confirmed">Vị trí tạm thời đã được xác nhận cho đơn hàng này.</p>
+                      : selectedAddress && <p className={`checkout-location-status ${selectedAddress.latitude !== null && selectedAddress.longitude !== null ? 'confirmed' : ''}`}>{selectedAddress.latitude !== null && selectedAddress.longitude !== null ? 'Vị trí của địa chỉ này đã được xác nhận.' : 'Địa chỉ này chưa xác nhận vị trí.'}</p>}
                     {preview?.deliveryQuoteStatus === 'LOCATION_REQUIRED' && <div className="checkout-delivery-state"><p>Địa chỉ này chưa xác nhận vị trí.</p><button type="button" className="button secondary" onClick={() => setLocationPickerOpen(true)} disabled={locationSaving}>Xác nhận vị trí</button></div>}
                     {preview?.deliveryQuoteStatus === 'NOT_SERVICEABLE' && <p className="checkout-location-error" role="status">Địa chỉ này nằm ngoài phạm vi giao hàng. Hãy chọn một địa chỉ khác.</p>}
                     {preview?.deliveryQuoteStatus === 'TEMPORARILY_UNAVAILABLE' && <div className="checkout-delivery-state"><p>Chưa thể tính phí giao hàng lúc này.</p><button type="button" className="button secondary" onClick={retryPreview}>Thử lại</button></div>}
                     {locationError && <p className="checkout-location-error" role="alert">{locationError}</p>}
-                    {locationSuccess && <p className="checkout-location-success" role="status">{locationSuccess}</p>}
                   </>}
           </section>
           <section className="checkout-card">
@@ -188,12 +228,12 @@ export function CheckoutReviewPage() {
             {previewLoading && <span className="checkout-loading-label">Đang cập nhật…</span>}
             {previewError && <div className="checkout-inline-error" role="alert"><p>{previewError}</p>{previewErrorCode === 'CHECKOUT_016' ? <button type="button" className="button secondary" onClick={() => setLocationPickerOpen(true)}>Xác nhận vị trí</button> : ['CHECKOUT_004', 'CHECKOUT_007', 'CHECKOUT_008', 'CHECKOUT_009'].includes(previewErrorCode ?? '') ? <Link className="button secondary" to={menuUrl}>Quay lại thực đơn</Link> : <button type="button" className="button secondary" onClick={retryPreview}>Kiểm tra lại</button>}</div>}
             {preview?.priceChanges.length ? <p className="checkout-price-notice" role="status">Giá của một số món đã được cập nhật.</p> : null}
-            {!selectedAddressId && addresses.length > 0 ? <p className="checkout-waiting">Chọn một địa chỉ để kiểm tra đơn hàng.</p> : preview ? <div className="checkout-item-list">{preview.items.map((item) => { const change = priceChanges.get(item.cartItemId); const options = groupedOptions(item); return <article key={item.cartItemId} className="checkout-item">{item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <span className="checkout-item-placeholder" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>}<div><h3>{item.name}</h3>{Object.entries(options).map(([group, values]) => <p key={group}><strong>{group}:</strong> {values.join(', ')}</p>)}{item.note && <p className="checkout-item-note">{item.note}</p>}<span>{item.quantity} × {change ? <><del>{money(change.previousUnitPrice, preview.currency)}</del> {money(change.currentUnitPrice, preview.currency)}</> : money(item.unitPrice, preview.currency)}</span></div><strong>{money(item.lineTotal, preview.currency)}</strong></article> })}</div> : <p className="checkout-waiting">Đang chờ dữ liệu kiểm tra đơn hàng.</p>}
+            {!deliveryTarget && addresses.length > 0 ? <p className="checkout-waiting">Chọn một địa chỉ để kiểm tra đơn hàng.</p> : preview ? <div className="checkout-item-list">{preview.items.map((item) => { const change = priceChanges.get(item.cartItemId); const options = groupedOptions(item); return <article key={item.cartItemId} className="checkout-item">{item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <span className="checkout-item-placeholder" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>}<div><h3>{item.name}</h3>{Object.entries(options).map(([group, values]) => <p key={group}><strong>{group}:</strong> {values.join(', ')}</p>)}{item.note && <p className="checkout-item-note">{item.note}</p>}<span>{item.quantity} × {change ? <><del>{money(change.previousUnitPrice, preview.currency)}</del> {money(change.currentUnitPrice, preview.currency)}</> : money(item.unitPrice, preview.currency)}</span></div><strong>{money(item.lineTotal, preview.currency)}</strong></article> })}</div> : <p className="checkout-waiting">Đang chờ dữ liệu kiểm tra đơn hàng.</p>}
           </section>
         </div>
-        <aside className="checkout-summary"><h2>Thanh toán</h2>{preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Khuyến mãi</span><span>{preview.discountAmount === 0 ? 'Chưa áp dụng' : `−${money(preview.discountAmount, preview.currency)}`}</span></div><div><span>Phí giao hàng</span><span>{deliveryFeeLabel(preview)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div>{preview.deliveryQuoteExpiresAt ? <p className="checkout-delivery-note">Phí giao hàng được giữ đến {new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date(preview.deliveryQuoteExpiresAt))}.</p> : <p className="checkout-delivery-note">{preview.deliveryQuoteStatus === 'LOCATION_REQUIRED' ? 'Xác nhận vị trí giao hàng để tính phí.' : preview.deliveryQuoteStatus === 'NOT_SERVICEABLE' ? 'Hãy chọn địa chỉ khác trong phạm vi giao hàng.' : 'Phí giao hàng chưa thể được xác định.'}</p>}<button type="button" className="button primary" disabled>Đặt món — Sắp có</button><p className="checkout-place-disabled">Đơn hàng đã được kiểm tra, nhưng chức năng đặt món chưa khả dụng.</p></> : <p className="checkout-waiting">{selectedAddress ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}</aside>
+        <aside className="checkout-summary"><h2>Thanh toán</h2>{preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Khuyến mãi</span><span>{preview.discountAmount === 0 ? 'Chưa áp dụng' : `−${money(preview.discountAmount, preview.currency)}`}</span></div><div><span>Phí giao hàng</span><span>{deliveryFeeLabel(preview)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div>{preview.deliveryQuoteExpiresAt ? <p className="checkout-delivery-note">Phí giao hàng được giữ đến {new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date(preview.deliveryQuoteExpiresAt))}.</p> : <p className="checkout-delivery-note">{preview.deliveryQuoteStatus === 'LOCATION_REQUIRED' ? 'Xác nhận vị trí giao hàng để tính phí.' : preview.deliveryQuoteStatus === 'NOT_SERVICEABLE' ? 'Hãy chọn địa chỉ khác trong phạm vi giao hàng.' : 'Phí giao hàng chưa thể được xác định.'}</p>}<button type="button" className="button primary" disabled>Đặt món — Sắp có</button><p className="checkout-place-disabled">Đơn hàng đã được kiểm tra, nhưng chức năng đặt món chưa khả dụng.</p></> : <p className="checkout-waiting">{deliveryTarget ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}</aside>
       </div>
     </div>
-    {locationPickerOpen && selectedAddress && <DeliveryLocationPicker initialLocation={selectedAddress.latitude !== null && selectedAddress.longitude !== null ? { formattedAddress: addressSummary(selectedAddress), addressLine: selectedAddress.addressLine, ward: selectedAddress.ward, district: selectedAddress.district, city: selectedAddress.city, latitude: selectedAddress.latitude, longitude: selectedAddress.longitude } : null} onConfirm={(location) => void confirmLocation(location)} onClose={() => setLocationPickerOpen(false)} />}
+    {locationPickerOpen && <DeliveryLocationPicker initialLocation={pickerInitialLocation} onConfirm={(location) => void confirmLocation(location)} onClose={() => setLocationPickerOpen(false)} />}
   </main>
 }

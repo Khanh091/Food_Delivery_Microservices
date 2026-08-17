@@ -6,6 +6,7 @@ import { AddressForm } from '../components/AddressForm'
 import { AddressList } from '../components/AddressList'
 import { useAddressStore } from '../stores/addressStore'
 import type { AddressCreateInput, AddressUpdateInput, DeliveryAddress } from '../types/address'
+import { useToastStore } from '../../toast/stores/toastStore'
 
 const friendlyError = (error: unknown, fallback: string): string => {
   const axiosError = error as AxiosError<{ message?: string }>
@@ -26,7 +27,7 @@ export function AddressesPage() {
   const [formOpen, setFormOpen] = useState(searchParams.get('new') === '1')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<string | null>(null)
+  const pushToast = useToastStore((state) => state.push)
   const [busyAddressId, setBusyAddressId] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeliveryAddress | null>(null)
 
@@ -66,7 +67,7 @@ export function AddressesPage() {
       if (editingAddress) await updateAddress(editingAddress.id, input as AddressUpdateInput)
       else await createAddress(input as AddressCreateInput)
       await refreshAddresses()
-      setFeedback(updated ? 'Địa chỉ đã được cập nhật.' : 'Địa chỉ giao hàng đã được thêm.')
+      pushToast('success', updated ? 'Đã cập nhật địa chỉ.' : 'Đã thêm địa chỉ.')
       closeForm(true)
     } catch (saveError) {
       setSubmitError(friendlyError(saveError, 'Chưa thể lưu địa chỉ. Vui lòng thử lại.'))
@@ -81,7 +82,7 @@ export function AddressesPage() {
     try {
       await setDefaultAddress(address.id)
       await refreshAddresses()
-      setFeedback(`Đã đặt “${address.displayLabel}” làm địa chỉ mặc định.`)
+      pushToast('success', 'Đã đặt địa chỉ mặc định.')
     } catch (defaultError) {
       setSubmitError(friendlyError(defaultError, 'Chưa thể đặt địa chỉ mặc định. Vui lòng thử lại.'))
       await refreshAddresses()
@@ -95,7 +96,7 @@ export function AddressesPage() {
     try {
       await deleteAddress(deleteTarget.id)
       await refreshAddresses()
-      setFeedback('Địa chỉ đã được xóa.')
+      pushToast('success', 'Đã xóa địa chỉ.')
       setDeleteTarget(null)
     } catch (deleteError) {
       setSubmitError(friendlyError(deleteError, 'Chưa thể xóa địa chỉ. Vui lòng thử lại.'))
@@ -109,7 +110,6 @@ export function AddressesPage() {
         <div><p className="eyebrow">Tài khoản</p><h1>Địa chỉ giao hàng</h1><p>Quản lý các địa chỉ dùng cho đơn hàng. Địa chỉ mặc định và địa chỉ đang chọn để giao có thể khác nhau.</p></div>
         <button type="button" className="button primary" onClick={openCreate}>+ Thêm địa chỉ</button>
       </div>
-      {feedback && <p className="operation-feedback" role="status">{feedback}</p>}
       {submitError && <p className="form-error" role="alert">{submitError}</p>}
       {loading && addresses.length === 0 ? <div className="empty-state"><p>Đang tải địa chỉ giao hàng…</p></div> : error ? <div className="empty-state"><p>{error}</p><button className="button secondary" onClick={() => void loadAddresses()}>Thử lại</button></div> : addresses.length === 0 ? <div className="empty-state"><h2>Chưa có địa chỉ giao hàng</h2><p>Thêm một địa chỉ để Food Delivery biết nơi gửi đơn hàng của bạn.</p><button type="button" className="button primary" onClick={openCreate}>Thêm địa chỉ</button></div> : <AddressList addresses={addresses} busy={busyAddressId !== null} onEdit={(address) => { setEditingAddress(address); setSubmitError(null); setFormOpen(true) }} onSetDefault={(address) => void makeDefault(address)} onDelete={setDeleteTarget} />}
 

@@ -24,7 +24,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
-@EnableConfigurationProperties({DeliveryVietMapProperties.class, DeliveryRoutingProperties.class, DeliveryQuoteProperties.class})
+@EnableConfigurationProperties({DeliveryVietMapProperties.class, DeliveryRoutingProperties.class, DeliveryQuoteProperties.class, DeliveryCheckoutLocationProperties.class})
 public class SecurityConfig {
     private final KeycloakRealmRoleConverter roleConverter;
 

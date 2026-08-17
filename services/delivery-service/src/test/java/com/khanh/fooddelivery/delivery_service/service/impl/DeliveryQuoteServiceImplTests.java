@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -13,9 +14,11 @@ import com.khanh.fooddelivery.delivery_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.UserServiceClient;
 import com.khanh.fooddelivery.delivery_service.config.DeliveryQuoteProperties;
 import com.khanh.fooddelivery.delivery_service.dto.request.CreateDeliveryQuoteRequest;
+import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryTargetRequest;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryQuoteRepository;
+import com.khanh.fooddelivery.delivery_service.repository.CheckoutTemporaryLocationRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.delivery_service.security.CurrentUserProvider;
 import com.khanh.fooddelivery.delivery_service.service.RoutingProvider;
@@ -23,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +46,7 @@ class DeliveryQuoteServiceImplTests {
     @Mock private CurrentBearerTokenProvider bearer;
     @Mock private RoutingProvider routing;
     @Mock private DeliveryQuoteRepository quotes;
+    @Mock private CheckoutTemporaryLocationRepository checkoutLocations;
     @Mock private Jwt jwt;
     private DeliveryQuoteServiceImpl service;
 
@@ -55,13 +60,13 @@ class DeliveryQuoteServiceImplTests {
         properties.setMaximumServiceDistanceMeters(10000);
         properties.setCurrency("VND");
         properties.setPricingPolicyVersion("test-v1");
-        service = new DeliveryQuoteServiceImpl(restaurants, users, currentUser, bearer, routing, quotes, properties);
+        service = new DeliveryQuoteServiceImpl(restaurants, users, currentUser, bearer, routing, quotes, checkoutLocations, properties);
         when(currentUser.getCurrentUserId(jwt)).thenReturn(ownerId);
         when(bearer.getBearerToken()).thenReturn("Bearer token");
         when(restaurants.getOrderingContext(anyString(), any())).thenReturn(success(new RestaurantServiceClient.RestaurantBranchOrderingContextResponse(
                 UUID.randomUUID(), "Restaurant", true, branchId, "Branch", true, true,
                 BigDecimal.valueOf(10.7), BigDecimal.valueOf(106.7))));
-        when(users.getOwnedAddress(anyString(), any())).thenReturn(success(
+        lenient().when(users.getOwnedAddress(anyString(), any())).thenReturn(success(
                 new UserServiceClient.InternalUserAddressResponse(addressId, BigDecimal.valueOf(10.8), BigDecimal.valueOf(106.8))));
     }
 
@@ -80,6 +85,22 @@ class DeliveryQuoteServiceImplTests {
         assertThat(quote.getValue().ownerUserId()).isEqualTo(ownerId);
         assertThat(quote.getValue().branchId()).isEqualTo(branchId);
         assertThat(quote.getValue().addressId()).isEqualTo(addressId);
+    }
+
+    @Test
+    void temporaryCheckoutTargetUsesOnlyServerStoredLocationAndNeverMutatesOrLoadsSavedAddress() {
+        UUID temporaryLocationId = UUID.randomUUID();
+        when(checkoutLocations.findCurrent(ownerId, branchId)).thenReturn(Optional.of(
+                new com.khanh.fooddelivery.delivery_service.model.CheckoutTemporaryLocation(
+                        temporaryLocationId, ownerId, branchId, "Temporary", "Temporary", null, null, null,
+                        BigDecimal.valueOf(10.8), BigDecimal.valueOf(106.8), Instant.now(), Instant.now(), Instant.now().plusSeconds(2700))));
+        when(routing.calculateRoute(any(), any(), any(), any())).thenReturn(new RoutingProvider.Route(3000, 180));
+
+        var response = service.createQuote(jwt, new CreateDeliveryQuoteRequest(branchId,
+                new DeliveryTargetRequest(com.khanh.fooddelivery.delivery_service.model.DeliveryTargetType.TEMPORARY_LOCATION, null, temporaryLocationId)));
+
+        assertThat(response.deliveryFee()).isEqualByComparingTo("15000");
+        verify(users, never()).getOwnedAddress(anyString(), any());
     }
 
     @Test

@@ -117,7 +117,8 @@ public class VietMapGeocodingProvider implements GeocodingProvider {
             BigDecimal latitude = decimal(row, oldFormat, "lat");
             BigDecimal longitude = decimal(row, oldFormat, "lng");
             if (!StringUtils.hasText(display) || latitude == null || longitude == null) throw new AppException(ErrorCode.LOCATION_NOT_FOUND);
-            return location(first(row, oldFormat, "ref_id", refId), display,
+            String providerRefId = first(row, oldFormat, "ref_id");
+            return location(StringUtils.hasText(providerRefId) ? providerRefId : refId, display,
                     first(row, oldFormat, "name", "address", "street"), row, oldFormat, latitude, longitude);
         } catch (AppException exception) {
             throw exception;

@@ -7,6 +7,7 @@ import com.khanh.fooddelivery.order_service.client.RemoteApiResponse;
 import com.khanh.fooddelivery.order_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.order_service.client.UserServiceClient;
 import com.khanh.fooddelivery.order_service.dto.request.CheckoutPreviewRequest;
+import com.khanh.fooddelivery.order_service.dto.request.CheckoutDeliveryTargetRequest;
 import com.khanh.fooddelivery.order_service.dto.response.CheckoutPreviewResponse;
 import com.khanh.fooddelivery.order_service.dto.response.DeliveryQuoteStatus;
 import com.khanh.fooddelivery.order_service.exception.AppException;
@@ -45,7 +46,7 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         String bearer = bearerTokenProvider.getBearerToken();
         CartServiceClient.InternalCartSnapshotResponse cart = requireCart(bearer, request.branchId());
         validateCart(ownerUserId, cart, request.branchId(), request.cartVersion());
-        CheckoutPreviewResponse.CheckoutAddressSnapshot address = requireAddress(bearer, request.addressId());
+        CheckoutPreviewResponse.CheckoutAddressSnapshot address = requireDeliveryTarget(bearer, request.branchId(), request.target());
         RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse branch =
                 requireRestaurant(bearer, cart.restaurantId(), cart.branchId());
         List<CatalogServiceClient.ValidatedCheckoutItemResponse> validated =
@@ -102,6 +103,12 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         if (cart.restaurantId() == null || cart.branchId() == null) throw new AppException(ErrorCode.CART_EMPTY);
     }
 
+    private CheckoutPreviewResponse.CheckoutAddressSnapshot requireDeliveryTarget(
+            String bearer, UUID branchId, CheckoutDeliveryTargetRequest target) {
+        if ("TEMPORARY_LOCATION".equals(target.type())) return requireTemporaryLocation(bearer, branchId, target.temporaryLocationId());
+        return requireAddress(bearer, target.addressId());
+    }
+
     private CheckoutPreviewResponse.CheckoutAddressSnapshot requireAddress(String bearer, UUID addressId) {
         try {
             RemoteApiResponse<UserServiceClient.InternalUserAddressResponse> response =
@@ -111,10 +118,31 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
             }
             UserServiceClient.InternalUserAddressResponse address = response.data();
             return new CheckoutPreviewResponse.CheckoutAddressSnapshot(
-                    address.id(), address.labelType(), address.customLabel(), address.displayLabel(),
+                    "SAVED_ADDRESS", address.id(), null, address.labelType(), address.customLabel(), address.displayLabel(),
                     address.recipientName(), address.recipientPhone(), address.addressLine(), address.ward(),
                     address.district(), address.city(), address.latitude(), address.longitude(), address.buildingName(),
                     address.floor(), address.entrance(), address.deliveryNote(), address.version());
+        } catch (FeignException.NotFound exception) {
+            throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
+        } catch (FeignException exception) {
+            throw new AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
+        }
+    }
+
+    private CheckoutPreviewResponse.CheckoutAddressSnapshot requireTemporaryLocation(
+            String bearer, UUID branchId, UUID temporaryLocationId) {
+        try {
+            RemoteApiResponse<DeliveryServiceClient.CheckoutTemporaryLocationResponse> response =
+                    deliveryServiceClient.getCurrentCheckoutLocation(bearer, branchId);
+            if (response == null || !response.success() || response.data() == null
+                    || !temporaryLocationId.equals(response.data().id())) {
+                throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
+            }
+            DeliveryServiceClient.CheckoutTemporaryLocationResponse location = response.data();
+            return new CheckoutPreviewResponse.CheckoutAddressSnapshot(
+                    "TEMPORARY_LOCATION", null, location.id(), "TEMPORARY", null, "Vị trí hiện tại",
+                    null, null, location.addressLine(), location.ward(), location.district(), location.city(),
+                    location.latitude(), location.longitude(), null, null, null, null, null);
         } catch (FeignException.NotFound exception) {
             throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
         } catch (FeignException exception) {
@@ -180,7 +208,8 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         }
         try {
             RemoteApiResponse<DeliveryServiceClient.DeliveryQuoteResponse> response =
-                    deliveryServiceClient.createQuote(bearer, new DeliveryServiceClient.DeliveryQuoteRequest(branchId, address.addressId()));
+                    deliveryServiceClient.createQuote(bearer, new DeliveryServiceClient.DeliveryQuoteRequest(branchId,
+                            new DeliveryServiceClient.DeliveryTargetRequest(address.targetType(), address.addressId(), address.temporaryLocationId())));
             if (response == null || !response.success() || response.data() == null) {
                 return DeliveryResolution.of(DeliveryQuoteStatus.TEMPORARILY_UNAVAILABLE);
             }

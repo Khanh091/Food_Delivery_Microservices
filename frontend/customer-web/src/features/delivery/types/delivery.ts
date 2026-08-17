@@ -23,3 +23,9 @@ export interface LocationSearchCandidate {
   district: string | null
   city: string | null
 }
+
+export interface CheckoutTemporaryLocation extends ReverseGeocodeCandidate {
+  id: string
+  branchId: string
+  expiresAt: string
+}

@@ -17,6 +17,7 @@ import com.khanh.fooddelivery.order_service.client.RemoteApiResponse;
 import com.khanh.fooddelivery.order_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.order_service.client.UserServiceClient;
 import com.khanh.fooddelivery.order_service.dto.request.CheckoutPreviewRequest;
+import com.khanh.fooddelivery.order_service.dto.request.CheckoutDeliveryTargetRequest;
 import com.khanh.fooddelivery.order_service.exception.AppException;
 import com.khanh.fooddelivery.order_service.exception.ErrorCode;
 import com.khanh.fooddelivery.order_service.security.CurrentBearerTokenProvider;
@@ -123,6 +124,25 @@ class CheckoutPreviewServiceImplTests {
         assertThat(preview.totalAmount()).isNull();
         assertThat(preview.canPlaceOrder()).isFalse();
         verify(delivery, never()).createQuote(anyString(), any());
+    }
+
+    @Test
+    void temporaryTargetUsesItsServerOwnedReferenceWithoutLoadingAnySavedAddress() {
+        UUID temporaryLocationId = UUID.randomUUID();
+        when(delivery.getCurrentCheckoutLocation("Bearer token", branchId)).thenReturn(success(
+                new DeliveryServiceClient.CheckoutTemporaryLocationResponse(
+                        temporaryLocationId, branchId, "Temporary location", "Temporary location", null, null, null,
+                        BigDecimal.valueOf(10.8), BigDecimal.valueOf(106.8), Instant.now().plusSeconds(2700))));
+
+        var preview = service.preview(jwt, new CheckoutPreviewRequest(branchId, 3L,
+                new CheckoutDeliveryTargetRequest("TEMPORARY_LOCATION", null, temporaryLocationId)));
+
+        assertThat(preview.address().targetType()).isEqualTo("TEMPORARY_LOCATION");
+        assertThat(preview.address().addressId()).isNull();
+        assertThat(preview.address().temporaryLocationId()).isEqualTo(temporaryLocationId);
+        assertThat(preview.deliveryQuoteStatus())
+                .isEqualTo(com.khanh.fooddelivery.order_service.dto.response.DeliveryQuoteStatus.AVAILABLE);
+        verify(users, never()).getOwnedAddress(anyString(), any());
     }
 
     @Test

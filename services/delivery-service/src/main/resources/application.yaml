@@ -54,3 +54,5 @@ delivery:
     fee-per-km: ${DELIVERY_FEE_PER_KM:5000}
     maximum-service-distance-meters: ${DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS:10000}
     pricing-policy-version: ${DELIVERY_PRICING_POLICY_VERSION:dev-v1}
+  checkout-location:
+    ttl: ${DELIVERY_CHECKOUT_LOCATION_TTL:45m}

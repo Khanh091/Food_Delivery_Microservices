@@ -26,7 +26,7 @@ public record CheckoutPreviewResponse(
         boolean canPlaceOrder) {
 
     public record CheckoutAddressSnapshot(
-            UUID addressId, String labelType, String customLabel, String displayLabel,
+            String targetType, UUID addressId, UUID temporaryLocationId, String labelType, String customLabel, String displayLabel,
             String recipientName, String recipientPhone, String addressLine, String ward, String district,
             String city, BigDecimal latitude, BigDecimal longitude, String buildingName, String floor,
             String entrance, String deliveryNote, Long version) {}

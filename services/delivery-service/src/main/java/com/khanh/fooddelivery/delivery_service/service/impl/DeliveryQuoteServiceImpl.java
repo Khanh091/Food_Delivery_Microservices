@@ -5,10 +5,14 @@ import com.khanh.fooddelivery.delivery_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.UserServiceClient;
 import com.khanh.fooddelivery.delivery_service.config.DeliveryQuoteProperties;
 import com.khanh.fooddelivery.delivery_service.dto.request.CreateDeliveryQuoteRequest;
+import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryTargetRequest;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryQuoteResponse;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
 import com.khanh.fooddelivery.delivery_service.model.DeliveryQuote;
+import com.khanh.fooddelivery.delivery_service.model.DeliveryTargetType;
+import com.khanh.fooddelivery.delivery_service.model.CheckoutTemporaryLocation;
+import com.khanh.fooddelivery.delivery_service.repository.CheckoutTemporaryLocationRepository;
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryQuoteRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.delivery_service.security.CurrentUserProvider;
@@ -32,6 +36,7 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
     private final CurrentBearerTokenProvider bearerTokenProvider;
     private final RoutingProvider routingProvider;
     private final DeliveryQuoteRepository quoteRepository;
+    private final CheckoutTemporaryLocationRepository checkoutTemporaryLocationRepository;
     private final DeliveryQuoteProperties properties;
 
     @Override
@@ -39,14 +44,11 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
         String bearer = bearerTokenProvider.getBearerToken();
         RestaurantServiceClient.RestaurantBranchOrderingContextResponse branch = requireBranch(bearer, request.branchId());
-        UserServiceClient.InternalUserAddressResponse address = requireAddress(bearer, request.addressId());
-        if (address.latitude() == null || address.longitude() == null) {
-            throw new AppException(ErrorCode.ADDRESS_COORDINATES_MISSING);
-        }
+        TargetLocation target = resolveTarget(ownerUserId, bearer, request.branchId(), request.target());
         validateCoordinates(branch.latitude(), branch.longitude());
-        validateCoordinates(address.latitude(), address.longitude());
+        validateCoordinates(target.latitude(), target.longitude());
         RoutingProvider.Route route = routingProvider.calculateRoute(
-                branch.latitude(), branch.longitude(), address.latitude(), address.longitude());
+                branch.latitude(), branch.longitude(), target.latitude(), target.longitude());
         if (route.distanceMeters() > properties.getMaximumServiceDistanceMeters()) {
             throw new AppException(ErrorCode.DELIVERY_NOT_SERVICEABLE);
         }
@@ -54,7 +56,8 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
         Instant calculatedAt = Instant.now();
         Instant expiresAt = calculatedAt.plus(properties.getTtl());
         DeliveryQuote quote = new DeliveryQuote(
-                UUID.randomUUID(), ownerUserId, request.branchId(), request.addressId(), properties.getCurrency(), fee,
+                UUID.randomUUID(), ownerUserId, request.branchId(), target.type(), target.addressId(), target.temporaryLocationId(),
+                properties.getCurrency(), fee,
                 route.distanceMeters(), durationMinutes(route.durationSeconds()), properties.getPricingPolicyVersion(),
                 calculatedAt, expiresAt);
         quoteRepository.save(quote, properties.getTtl());
@@ -102,6 +105,20 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
         }
     }
 
+    private TargetLocation resolveTarget(UUID ownerUserId, String bearer, UUID branchId, DeliveryTargetRequest target) {
+        if (target.type() == DeliveryTargetType.SAVED_ADDRESS) {
+            UserServiceClient.InternalUserAddressResponse address = requireAddress(bearer, target.addressId());
+            if (address.latitude() == null || address.longitude() == null) {
+                throw new AppException(ErrorCode.ADDRESS_COORDINATES_MISSING);
+            }
+            return new TargetLocation(DeliveryTargetType.SAVED_ADDRESS, address.id(), null, address.latitude(), address.longitude());
+        }
+        CheckoutTemporaryLocation location = checkoutTemporaryLocationRepository.findCurrent(ownerUserId, branchId)
+                .filter(current -> current.id().equals(target.temporaryLocationId()))
+                .orElseThrow(() -> new AppException(ErrorCode.CHECKOUT_LOCATION_NOT_FOUND));
+        return new TargetLocation(DeliveryTargetType.TEMPORARY_LOCATION, null, location.id(), location.latitude(), location.longitude());
+    }
+
     private void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
         if (latitude == null || longitude == null || latitude.compareTo(BigDecimal.valueOf(-90)) < 0
                 || latitude.compareTo(BigDecimal.valueOf(90)) > 0 || longitude.compareTo(BigDecimal.valueOf(-180)) < 0
@@ -116,4 +133,7 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
         return new DeliveryQuoteResponse(quote.quoteId(), true, quote.currency(), quote.deliveryFee(), quote.distanceMeters(),
                 quote.estimatedDurationMinutes(), quote.pricingPolicyVersion(), quote.calculatedAt(), quote.expiresAt());
     }
+
+    private record TargetLocation(DeliveryTargetType type, UUID addressId, UUID temporaryLocationId,
+                                  BigDecimal latitude, BigDecimal longitude) {}
 }

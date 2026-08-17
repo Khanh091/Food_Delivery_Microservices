@@ -6,6 +6,7 @@ import { logout } from '../features/auth/authService'
 import { useAuthStore } from '../features/auth/stores/authStore'
 import { useCurrentUserStore } from '../features/auth/stores/currentUserStore'
 import { useAddressStore } from '../features/address/stores/addressStore'
+import { useToastStore } from '../features/toast/stores/toastStore'
 
 const valueOrPending = (value: string | null | undefined) => value?.trim() || 'Chưa cập nhật'
 
@@ -44,7 +45,7 @@ export function AccountPage() {
   const [values, setValues] = useState<ProfileFormValues>({ fullName: '', phoneNumber: '', avatarUrl: '' })
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [feedback, setFeedback] = useState<string | null>(null)
+  const pushToast = useToastStore((state) => state.push)
 
   useEffect(() => {
     void loadProfile().catch(() => undefined)
@@ -60,7 +61,6 @@ export function AccountPage() {
     if (!profile) return
     setValues(toFormValues(profile))
     setSubmitError(null)
-    setFeedback(null)
     setEditing(true)
   }
 
@@ -87,7 +87,7 @@ export function AccountPage() {
       })
       setProfile(saved)
       setValues(toFormValues(saved))
-      setFeedback('Thông tin tài khoản đã được cập nhật.')
+      pushToast('success', 'Đã cập nhật hồ sơ.')
       setEditing(false)
     } catch (requestError) {
       setSubmitError(updateErrorMessage(requestError))
@@ -122,7 +122,6 @@ export function AccountPage() {
             <span className="avatar large" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
             <div><p className="account-identity-label">Tài khoản Food Delivery</p><h3>{displayName}</h3><p>{valueOrPending(profile?.email)}</p></div>
           </div>
-          {feedback && <p className="operation-feedback" role="status">{feedback}</p>}
           <section className="account-section" aria-labelledby="personal-information-title">
             <div className="account-section-heading">
               <h3 id="personal-information-title">Thông tin cá nhân</h3>
