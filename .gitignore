@@ -52,3 +52,6 @@ volumes/
 
 # Maven Wrapper must be committed
 !.mvn/wrapper/maven-wrapper.jar
+
+# Local database backups
+backup/
