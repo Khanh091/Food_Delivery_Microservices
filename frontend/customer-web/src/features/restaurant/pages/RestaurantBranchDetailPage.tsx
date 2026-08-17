@@ -1,7 +1,10 @@
 import { isAxiosError } from 'axios'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
+import { useAuthStore } from '../../auth/stores/authStore'
+import { useCartStore } from '../../cart/stores/cartStore'
 import { getPublicBranchCatalog, getPublicRestaurantBranch } from '../api/restaurantApi'
+import { BranchCartPanel } from '../components/BranchCartPanel'
 import { BranchHeader } from '../components/BranchHeader'
 import { BusinessHours } from '../components/BusinessHours'
 import { MenuSection } from '../components/MenuSection'
@@ -27,6 +30,11 @@ export function RestaurantBranchDetailPage() {
   const [menuError, setMenuError] = useState<string | null>(null)
   const [retryKey, setRetryKey] = useState(0)
   const [menuRetryKey, setMenuRetryKey] = useState(0)
+  const [mobileCartOpen, setMobileCartOpen] = useState(false)
+  const mobileDrawerRef = useRef<HTMLDivElement>(null)
+  const authStatus = useAuthStore((state) => state.status)
+  const currentBranchCart = useCartStore((state) => state.currentBranchId === branchId ? state.currentBranchCart : null)
+  const loadBranchCart = useCartStore((state) => state.loadBranchCart)
 
   const validRoute = Boolean(restaurantId && branchId)
   const validTargetItemId = targetItemId !== null && isUuid(targetItemId)
@@ -81,6 +89,21 @@ export function RestaurantBranchDetailPage() {
 
   useEffect(() => loadMenu(), [loadMenu, menuRetryKey])
 
+  useEffect(() => {
+    setMobileCartOpen(false)
+    if (authStatus !== 'authenticated' || !branchId) return undefined
+    void loadBranchCart(branchId).catch(() => undefined)
+    return undefined
+  }, [authStatus, branchId, loadBranchCart])
+
+  useEffect(() => {
+    if (!mobileCartOpen) return undefined
+    mobileDrawerRef.current?.focus()
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') setMobileCartOpen(false) }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [mobileCartOpen])
+
   if (!validRoute || notFound) {
     return <main className="page-shell branch-detail-page"><section className="branch-detail-state"><p className="eyebrow">Không tìm thấy</p><h1>Không tìm thấy cửa hàng</h1><p>Cửa hàng có thể đã ngừng hoạt động hoặc đường dẫn không còn hợp lệ.</p><Link className="button primary" to="/search">Quay lại tìm kiếm</Link></section></main>
   }
@@ -102,7 +125,15 @@ export function RestaurantBranchDetailPage() {
       {menuError && <section className="menu-empty"><h2>Chưa thể tải thực đơn</h2><p>{menuError}</p><button type="button" className="button secondary" onClick={() => setMenuRetryKey((value) => value + 1)}>Thử lại</button></section>}
       {catalog && !menuLoading && !menuError && targetItemId && !validTargetItemId && <section className="menu-empty"><h2>Đường dẫn món ăn không hợp lệ</h2><p>Hãy quay lại kết quả tìm kiếm hoặc mở thực đơn của cửa hàng để chọn món.</p></section>}
       {catalog && !menuLoading && !menuError && validTargetItemId && !targetItemInCatalog && itemDetailUrl && <section className="menu-empty"><h2>Món này chưa có trong thực đơn hiện tại</h2><p>Món có thể vẫn được bán tại chi nhánh, nhưng chưa được xếp vào danh mục thực đơn.</p><Link className="button secondary" to={itemDetailUrl} state={{ searchOrigin }}>Xem chi tiết món</Link></section>}
-      {catalog && !menuLoading && !menuError && (!validTargetItemId || targetItemInCatalog || catalogHasVisibleItems) && <MenuSection catalog={catalog} targetItemId={targetItemId} searchOrigin={searchOrigin} />}
+      {catalog && !menuLoading && !menuError && (!validTargetItemId || targetItemInCatalog || catalogHasVisibleItems) && <>
+        {!branch.acceptingOrders && <p className="branch-ordering-paused" role="status">Chi nhánh hiện không nhận đơn. Bạn vẫn có thể xem thực đơn.</p>}
+        <div className={`branch-ordering-layout${authStatus === 'authenticated' ? '' : ' guest'}`}>
+          <MenuSection catalog={catalog} targetItemId={targetItemId} orderingEnabled={branch.acceptingOrders} />
+          {authStatus === 'authenticated' && <div className="branch-cart-desktop"><BranchCartPanel branchId={branchId!} catalog={catalog} orderingEnabled={branch.acceptingOrders} /></div>}
+        </div>
+        {authStatus === 'authenticated' && currentBranchCart && currentBranchCart.items.length > 0 && <button type="button" className="branch-cart-mobile-bar" onClick={() => setMobileCartOpen(true)}><span>{currentBranchCart.totalQuantity} món · {currentBranchCart.subtotal.toLocaleString('vi-VN')} {currentBranchCart.currency ?? ''}</span><strong>Xem giỏ hàng</strong></button>}
+        {authStatus === 'authenticated' && mobileCartOpen && <div className="branch-cart-drawer-backdrop" role="presentation" onMouseDown={() => setMobileCartOpen(false)}><div ref={mobileDrawerRef} tabIndex={-1} className="branch-cart-drawer" role="dialog" aria-modal="true" aria-label="Giỏ hàng của tôi" onMouseDown={(event) => event.stopPropagation()}><BranchCartPanel branchId={branchId!} catalog={catalog} orderingEnabled={branch.acceptingOrders} onClose={() => setMobileCartOpen(false)} /></div></div>}
+      </>}
     </main>
   )
 }
