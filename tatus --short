@@ -1,0 +1,27 @@
+ .../components/account/AccountSectionHeader.tsx    |  22 [32m+++[m
+ .../customer-web/src/components/media/Avatar.tsx   |  25 [32m++++[m
+ .../src/components/media/FileUpload.tsx            |  18 [32m+++[m
+ .../src/components/media/ImageUpload.tsx           |  63 [32m++++++++[m
+ .../customer-web/src/features/address/address.css  |   1 [31m-[m
+ .../src/features/address/pages/AddressesPage.tsx   |  19 [32m+[m[31m--[m
+ .../src/features/auth/api/currentUserApi.ts        |  13 [32m+[m[31m-[m
+ .../customer-web/src/layouts/AccountLayout.tsx     |  17 [32m+++[m
+ frontend/customer-web/src/pages/AccountPage.tsx    | 160 [32m+++++++++[m[31m------------[m
+ frontend/customer-web/src/pages/account.css        |  16 [32m++[m[31m-[m
+ frontend/customer-web/src/styles/app-shell.css     |  17 [32m++[m[31m-[m
+ frontend/customer-web/src/styles/global.css        |   2 [32m+[m[31m-[m
+ services/user-service/pom.xml                      |   6 [32m+[m
+ .../user_service/controller/UserController.java    |  22 [32m+++[m
+ .../dto/request/UserProfileUpdateRequest.java      |   3 [32m+[m[31m-[m
+ .../fooddelivery/user_service/entity/User.java     |   3 [32m+[m
+ .../user_service/exception/ErrorCode.java          |   9 [32m++[m
+ .../user_service/mapper/UserMapper.java            |   2 [32m+[m
+ .../user_service/service/UserService.java          |   5 [32m+[m
+ .../user_service/service/impl/UserServiceImpl.java |  34 [32m++++[m[31m-[m
+ .../storage/AvatarStorageProperties.java           |  27 [32m++++[m
+ .../user_service/storage/AvatarStorageService.java |   8 [32m++[m
+ .../user_service/storage/AvatarUploadResult.java   |   3 [32m+[m
+ .../storage/CloudinaryAvatarStorageService.java    |  83 [32m+++++++++++[m
+ .../src/main/resources/application.yaml            |  25 [32m++++[m
+ .../migration/V4__add_user_avatar_storage_key.sql  |   2 [32m+[m
+ 26 files changed, 492 insertions(+), 113 deletions(-)
