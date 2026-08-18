@@ -40,6 +40,10 @@ public class SecurityConfig {
                                 "/api/v1/users/me/**"
                         )
                         .authenticated()
+                        .requestMatchers(
+                                "/internal/v1/users/*/system-roles/**"
+                        )
+                        .permitAll()
                         .anyRequest()
                         .authenticated()
                 )

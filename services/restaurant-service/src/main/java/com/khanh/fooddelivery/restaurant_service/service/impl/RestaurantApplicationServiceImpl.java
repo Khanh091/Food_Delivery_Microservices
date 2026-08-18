@@ -18,6 +18,7 @@ import com.khanh.fooddelivery.restaurant_service.enums.RestaurantMemberRole;
 import com.khanh.fooddelivery.restaurant_service.enums.RestaurantMemberStatus;
 import com.khanh.fooddelivery.restaurant_service.enums.RestaurantStatus;
 import com.khanh.fooddelivery.restaurant_service.enums.RestaurantVerificationStatus;
+import com.khanh.fooddelivery.restaurant_service.identity.SystemRole;
 import com.khanh.fooddelivery.restaurant_service.exception.AppException;
 import com.khanh.fooddelivery.restaurant_service.exception.ErrorCode;
 import com.khanh.fooddelivery.restaurant_service.mapper.RestaurantApplicationMapper;
@@ -32,6 +33,7 @@ import com.khanh.fooddelivery.restaurant_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventData;
 import com.khanh.fooddelivery.restaurant_service.outbox.RestaurantEventType;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantApplicationService;
+import com.khanh.fooddelivery.restaurant_service.service.SystemRoleSyncService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Arrays;
@@ -63,6 +65,7 @@ public class RestaurantApplicationServiceImpl implements RestaurantApplicationSe
     private final RestaurantMapper restaurantMapper;
     private final CurrentUserProvider currentUser;
     private final OutboxEventService outbox;
+    private final SystemRoleSyncService systemRoleSync;
 
     public RestaurantApplicationResponse create(Jwt jwt, RestaurantApplicationCreateRequest r) {
         RestaurantPartnerApplication e = applicationMapper.toEntity(r);
@@ -180,6 +183,7 @@ public class RestaurantApplicationServiceImpl implements RestaurantApplicationSe
         owner.setStatus(RestaurantMemberStatus.ACTIVE);
         owner.setJoinedAt(Instant.now());
         members.save(owner);
+        systemRoleSync.enqueueGrant(owner.getUserId(), SystemRole.RESTAURANT_OWNER);
         RestaurantStatusHistory h = new RestaurantStatusHistory();
         h.setRestaurant(restaurant);
         h.setNewStatus(RestaurantStatus.PENDING);

@@ -47,6 +47,14 @@ security:
   jwt:
     audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
 app:
+  internal-api:
+    key: ${INTERNAL_API_KEY:}
+  system-role-sync:
+    enabled: ${SYSTEM_ROLE_SYNC_ENABLED:true}
+    fixed-delay-ms: ${SYSTEM_ROLE_SYNC_FIXED_DELAY_MS:5000}
+    max-retries: ${SYSTEM_ROLE_SYNC_MAX_RETRIES:10}
+    initial-retry-delay-ms: ${SYSTEM_ROLE_SYNC_INITIAL_RETRY_DELAY_MS:5000}
+    max-retry-delay-ms: ${SYSTEM_ROLE_SYNC_MAX_RETRY_DELAY_MS:60000}
   outbox:
     topic: ${RESTAURANT_EVENTS_TOPIC:restaurant.events}
     topic-partitions: ${RESTAURANT_EVENTS_TOPIC_PARTITIONS:3}
