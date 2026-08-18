@@ -7,6 +7,7 @@ import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantSummaryR
 import com.khanh.fooddelivery.restaurant_service.entity.Restaurant;
 import com.khanh.fooddelivery.restaurant_service.entity.RestaurantStatusHistory;
 import com.khanh.fooddelivery.restaurant_service.enums.RestaurantMemberRole;
+import com.khanh.fooddelivery.restaurant_service.enums.RestaurantMemberStatus;
 import com.khanh.fooddelivery.restaurant_service.enums.RestaurantStatus;
 import com.khanh.fooddelivery.restaurant_service.exception.AppException;
 import com.khanh.fooddelivery.restaurant_service.exception.ErrorCode;
@@ -48,8 +49,8 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Transactional(readOnly = true)
     public List<RestaurantSummaryResponse> mine(Jwt jwt) {
         return mapper.toSummaries(
-                repository.findAllByOwnerUserIdOrderByCreatedAtDesc(
-                        currentUser.getCurrentUserId(jwt)));
+                repository.findAllManageableByUserIdOrderByCreatedAtDesc(
+                        currentUser.getCurrentUserId(jwt), RestaurantMemberStatus.ACTIVE));
     }
 
     @Transactional(readOnly = true)

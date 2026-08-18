@@ -51,16 +51,12 @@ public class SecurityConfig {
                                                 "/api/v1/restaurants/*/suspend",
                                                 "/api/v1/restaurants/*/restore")
                                         .authenticated()
-                                        .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/*")
-                                        .hasAnyRole(
-                                                "RESTAURANT_OWNER",
-                                                "RESTAURANT_STAFF",
-                                                "ADMIN",
-                                                "SUPPORT")
+                                        .requestMatchers(HttpMethod.GET, "/api/v1/restaurants/me")
+                                        .authenticated()
                                         .requestMatchers(
                                                 "/api/v1/restaurants/**",
                                                 "/api/v1/restaurant-branches/**")
-                                        .hasAnyRole("RESTAURANT_OWNER", "RESTAURANT_STAFF", "ADMIN")
+                                        .authenticated()
                                         .anyRequest()
                                         .authenticated())
                 .oauth2ResourceServer(o -> o.jwt(j -> j.jwtAuthenticationConverter(c)))

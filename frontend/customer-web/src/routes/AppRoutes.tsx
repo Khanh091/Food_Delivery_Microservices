@@ -2,6 +2,9 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from '../features/auth/components/ProtectedRoute'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { MainLayout } from '../layouts/MainLayout'
+import { AccountLayout } from '../layouts/AccountLayout'
+import { PartnerOnboardingLayout } from '../layouts/PartnerOnboardingLayout'
+import { RestaurantOwnerLayout } from '../layouts/RestaurantOwnerLayout'
 import { AccountPage } from '../pages/AccountPage'
 import { AddressesPage } from '../features/address/pages/AddressesPage'
 import { HomePage } from '../pages/HomePage'
@@ -10,6 +13,9 @@ import { RestaurantBranchDetailPage } from '../features/restaurant/pages/Restaur
 import { RestaurantItemDetailPage } from '../features/restaurant/pages/RestaurantItemDetailPage'
 import { CartListPage } from '../features/cart/pages/CartListPage'
 import { CheckoutReviewPage } from '../features/checkout/pages/CheckoutReviewPage'
+import { RestaurantPartnerPortalPage } from '../features/partner/pages/RestaurantPartnerPortalPage'
+import { RestaurantOwnerDashboardPage } from '../features/partner/pages/RestaurantOwnerDashboardPage'
+import { RestaurantBankAccountsPage, RestaurantBranchesPage, RestaurantCatalogPage, RestaurantDetailsPage, RestaurantLegalPage, RestaurantMembersPage } from '../features/partner/pages/RestaurantOwnerManagementPages'
 
 export function AppRoutes() {
   return (
@@ -22,11 +28,28 @@ export function AppRoutes() {
           <Route path="restaurants/:restaurantId/branches/:branchId/items/:itemId" element={<RestaurantItemDetailPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route element={<ProtectedRoute />}>
-            <Route path="account" element={<AccountPage />} />
-            <Route path="account/addresses" element={<AddressesPage />} />
+            <Route path="account" element={<AccountLayout />}>
+              <Route index element={<AccountPage />} />
+              <Route path="addresses" element={<AddressesPage />} />
+            </Route>
             <Route path="carts" element={<CartListPage />} />
             <Route path="cart" element={<Navigate to="/carts" replace />} />
             <Route path="checkout/:branchId" element={<CheckoutReviewPage />} />
+          </Route>
+        </Route>
+        <Route element={<ProtectedRoute />}>
+          <Route path="partner/restaurant" element={<PartnerOnboardingLayout />}>
+            <Route index element={<RestaurantPartnerPortalPage />} />
+            <Route path="applications/:applicationId" element={<RestaurantPartnerPortalPage />} />
+          </Route>
+          <Route path="restaurant" element={<RestaurantOwnerLayout />}>
+            <Route index element={<RestaurantOwnerDashboardPage />} />
+            <Route path="details" element={<RestaurantDetailsPage />} />
+            <Route path="branches" element={<RestaurantBranchesPage />} />
+            <Route path="catalog" element={<RestaurantCatalogPage />} />
+            <Route path="members" element={<RestaurantMembersPage />} />
+            <Route path="bank-accounts" element={<RestaurantBankAccountsPage />} />
+            <Route path="legal" element={<RestaurantLegalPage />} />
           </Route>
         </Route>
       </Routes>

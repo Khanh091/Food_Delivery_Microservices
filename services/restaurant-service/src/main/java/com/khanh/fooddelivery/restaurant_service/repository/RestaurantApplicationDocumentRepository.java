@@ -15,6 +15,9 @@ public interface RestaurantApplicationDocumentRepository
 
     Optional<RestaurantApplicationDocument> findByIdAndApplicationId(UUID id, UUID applicationId);
 
+    Optional<RestaurantApplicationDocument> findFirstByApplicationIdAndDocumentTypeOrderByCreatedAtAsc(
+            UUID applicationId, ApplicationDocumentType type);
+
     boolean existsByApplicationIdAndDocumentType(UUID id, ApplicationDocumentType type);
 
     boolean existsByApplicationIdAndDocumentTypeAndVerificationStatus(

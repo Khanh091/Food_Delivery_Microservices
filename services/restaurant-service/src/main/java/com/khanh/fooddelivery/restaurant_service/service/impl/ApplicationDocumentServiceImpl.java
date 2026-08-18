@@ -54,6 +54,10 @@ public class ApplicationDocumentServiceImpl implements ApplicationDocumentServic
         requireEditable(application);
         validateDates(request.issuedAt(), request.expiresAt());
         String sanitizedFilename = fileUploadValidator.validateAndSanitize(file);
+        RestaurantApplicationDocument replaced = documentRepository
+                .findFirstByApplicationIdAndDocumentTypeOrderByCreatedAtAsc(
+                        applicationId, request.documentType())
+                .orElse(null);
 
         UUID documentId = UUID.randomUUID();
         String resourceName = documentId + "-" + UUID.randomUUID();
@@ -76,7 +80,12 @@ public class ApplicationDocumentServiceImpl implements ApplicationDocumentServic
         document.setExpiresAt(request.expiresAt());
 
         try {
-            return documentMapper.toResponse(documentRepository.saveAndFlush(document));
+            ApplicationDocumentResponse response =
+                    documentMapper.toResponse(documentRepository.saveAndFlush(document));
+            if (replaced != null) {
+                deleteReplacedDocument(replaced);
+            }
+            return response;
         } catch (RuntimeException databaseException) {
             compensateUpload(documentId, uploadResult);
             throw databaseException;
@@ -218,5 +227,12 @@ public class ApplicationDocumentServiceImpl implements ApplicationDocumentServic
                     ErrorCode.FILE_STORAGE_NOT_CONFIGURED,
                     "The document storage provider is not active");
         }
+    }
+
+    private void deleteReplacedDocument(RestaurantApplicationDocument document) {
+        requireActiveProvider(document);
+        fileStorageService.delete(document.getStorageKey());
+        documentRepository.delete(document);
+        documentRepository.flush();
     }
 }
