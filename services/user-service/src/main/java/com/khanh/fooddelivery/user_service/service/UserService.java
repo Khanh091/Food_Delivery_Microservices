@@ -3,6 +3,7 @@ package com.khanh.fooddelivery.user_service.service;
 import com.khanh.fooddelivery.user_service.dto.request.UserProfileUpdateRequest;
 import com.khanh.fooddelivery.user_service.dto.response.CurrentUserResponse;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface UserService {
 
@@ -12,4 +13,8 @@ public interface UserService {
             Jwt jwt,
             UserProfileUpdateRequest request
     );
+
+    CurrentUserResponse updateAvatar(Jwt jwt, MultipartFile file);
+
+    CurrentUserResponse deleteAvatar(Jwt jwt);
 }

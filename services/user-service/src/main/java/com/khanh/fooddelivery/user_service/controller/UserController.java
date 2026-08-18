@@ -7,13 +7,18 @@ import com.khanh.fooddelivery.user_service.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -45,5 +50,22 @@ public class UserController {
                         response
                 )
         );
+    }
+
+    @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<CurrentUserResponse>> updateAvatar(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Avatar updated successfully", userService.updateAvatar(jwt, file)));
+    }
+
+    @DeleteMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<CurrentUserResponse>> deleteAvatar(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                "Avatar deleted successfully", userService.deleteAvatar(jwt)));
     }
 }

@@ -28,6 +28,8 @@ public interface UserMapper {
     @Mapping(target = "updatedAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "avatarUrl", ignore = true)
+    @Mapping(target = "avatarStorageKey", ignore = true)
     void updateEntity(
             UserProfileUpdateRequest request,
             @MappingTarget User entity

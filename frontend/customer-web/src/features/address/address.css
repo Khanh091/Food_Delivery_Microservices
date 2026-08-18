@@ -1,4 +1,3 @@
-.addresses-page { max-width: 1040px; }
 .address-list { display: grid; gap: var(--space-4); }
 .address-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; padding: 0; }
 .address-card.is-default { border-color: #a9caee; box-shadow: 0 12px 30px rgba(7, 91, 216, 0.09); }

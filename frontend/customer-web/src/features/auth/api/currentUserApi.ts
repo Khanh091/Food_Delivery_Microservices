@@ -17,7 +17,6 @@ export interface CurrentUserProfile {
 export interface UserProfileUpdateInput {
   fullName: string
   phoneNumber: string
-  avatarUrl: string
 }
 
 export const getCurrentUser = async (): Promise<CurrentUserProfile> => {
@@ -25,6 +24,18 @@ export const getCurrentUser = async (): Promise<CurrentUserProfile> => {
     '/api/v1/users/me',
   )
 
+  return response.data.data
+}
+
+export const uploadCurrentUserAvatar = async (file: File): Promise<CurrentUserProfile> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await httpClient.post<ApiResponse<CurrentUserProfile>>('/api/v1/users/me/avatar', formData)
+  return response.data.data
+}
+
+export const deleteCurrentUserAvatar = async (): Promise<CurrentUserProfile> => {
+  const response = await httpClient.delete<ApiResponse<CurrentUserProfile>>('/api/v1/users/me/avatar')
   return response.data.data
 }
 

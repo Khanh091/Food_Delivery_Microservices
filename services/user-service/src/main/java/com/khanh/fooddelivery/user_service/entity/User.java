@@ -45,6 +45,9 @@ public class User extends BaseAuditEntity {
     @Column(name = "avatar_url", length = 1000)
     private String avatarUrl;
 
+    @Column(name = "avatar_storage_key", length = 1000)
+    private String avatarStorageKey;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private UserStatus status = UserStatus.ACTIVE;

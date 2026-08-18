@@ -16,6 +16,15 @@ public enum ErrorCode {
             HttpStatus.CONFLICT,
             "Phone number already exists"
     ),
+    AVATAR_FILE_INVALID("USR_004", HttpStatus.BAD_REQUEST, "Avatar file must be an image"),
+    AVATAR_FILE_TOO_LARGE("USR_005", HttpStatus.PAYLOAD_TOO_LARGE, "Avatar file is too large"),
+    AVATAR_STORAGE_NOT_CONFIGURED("USR_006", HttpStatus.SERVICE_UNAVAILABLE, "Avatar storage is not configured"),
+    AVATAR_UPLOAD_FAILED("USR_007", HttpStatus.BAD_GATEWAY, "Avatar upload failed"),
+    AVATAR_DELETE_FAILED("USR_008", HttpStatus.BAD_GATEWAY, "Avatar deletion failed"),
+    SYSTEM_ROLE_PROVISIONING_FAILED(
+            "USR_009", HttpStatus.BAD_GATEWAY, "System role provisioning is temporarily unavailable"),
+    SYSTEM_ROLE_NOT_GRANTABLE(
+            "USR_010", HttpStatus.FORBIDDEN, "System role is not grantable through partner flows"),
     ADDRESS_NOT_FOUND("ADDR_001", HttpStatus.NOT_FOUND, "Address not found"),
     INVALID_REQUEST(
             "COMMON_001",

@@ -1,12 +1,13 @@
 import { type AxiosError } from 'axios'
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { createAddress, deleteAddress, setDefaultAddress, updateAddress } from '../api/addressApi'
 import { AddressForm } from '../components/AddressForm'
 import { AddressList } from '../components/AddressList'
 import { useAddressStore } from '../stores/addressStore'
 import type { AddressCreateInput, AddressUpdateInput, DeliveryAddress } from '../types/address'
 import { useToastStore } from '../../toast/stores/toastStore'
+import { AccountSectionHeader } from '../../../components/account/AccountSectionHeader'
 
 const friendlyError = (error: unknown, fallback: string): string => {
   const axiosError = error as AxiosError<{ message?: string }>
@@ -16,7 +17,6 @@ const friendlyError = (error: unknown, fallback: string): string => {
 }
 
 export function AddressesPage() {
-  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const addresses = useAddressStore((state) => state.addresses)
   const loading = useAddressStore((state) => state.loading)
@@ -105,17 +105,18 @@ export function AddressesPage() {
   }
 
   return (
-    <main className="page-shell addresses-page">
-      <div className="page-heading">
-        <div><p className="eyebrow">Tài khoản</p><h1>Địa chỉ giao hàng</h1><p>Quản lý các địa chỉ dùng cho đơn hàng. Địa chỉ mặc định và địa chỉ đang chọn để giao có thể khác nhau.</p></div>
-        <button type="button" className="button primary" onClick={openCreate}>+ Thêm địa chỉ</button>
-      </div>
+    <section className="account-card addresses-page">
+      <AccountSectionHeader
+        eyebrow="Tài khoản"
+        title="Địa chỉ giao hàng"
+        description="Quản lý các địa chỉ dùng cho đơn hàng. Địa chỉ mặc định và địa chỉ đang chọn để giao có thể khác nhau."
+        action={<button type="button" className="button primary" onClick={openCreate}>+ Thêm địa chỉ</button>}
+      />
       {submitError && <p className="form-error" role="alert">{submitError}</p>}
       {loading && addresses.length === 0 ? <div className="empty-state"><p>Đang tải địa chỉ giao hàng…</p></div> : error ? <div className="empty-state"><p>{error}</p><button className="button secondary" onClick={() => void loadAddresses()}>Thử lại</button></div> : addresses.length === 0 ? <div className="empty-state"><h2>Chưa có địa chỉ giao hàng</h2><p>Thêm một địa chỉ để Food Delivery biết nơi gửi đơn hàng của bạn.</p><button type="button" className="button primary" onClick={openCreate}>Thêm địa chỉ</button></div> : <AddressList addresses={addresses} busy={busyAddressId !== null} onEdit={(address) => { setEditingAddress(address); setSubmitError(null); setFormOpen(true) }} onSetDefault={(address) => void makeDefault(address)} onDelete={setDeleteTarget} />}
 
       {formOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeForm() }}><section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="address-form-title"><header><div><p className="eyebrow">Địa chỉ giao hàng</p><h2 id="address-form-title">{editingAddress ? 'Sửa địa chỉ' : 'Thêm địa chỉ mới'}</h2></div><button type="button" className="icon-button" aria-label="Đóng" onClick={() => closeForm()} disabled={submitting}>×</button></header><AddressForm address={editingAddress} submitting={submitting} submitError={submitError} onSubmit={save} onCancel={() => closeForm()} /></section></div>}
       {deleteTarget && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busyAddressId) setDeleteTarget(null) }}><section className="confirm-card" role="dialog" aria-modal="true" aria-labelledby="delete-address-title"><h2 id="delete-address-title">Xóa địa chỉ?</h2><p>Địa chỉ “{deleteTarget.displayLabel}” sẽ bị xóa. Thao tác này không thể hoàn tác.</p><div className="form-actions"><button type="button" className="button secondary" onClick={() => setDeleteTarget(null)} disabled={busyAddressId !== null}>Hủy</button><button type="button" className="button danger-button" onClick={() => void confirmDelete()} disabled={busyAddressId !== null}>{busyAddressId ? 'Đang xóa…' : 'Xóa địa chỉ'}</button></div></section></div>}
-      <button type="button" className="back-link" onClick={() => navigate('/account')}>← Quay lại tài khoản</button>
-    </main>
+    </section>
   )
 }

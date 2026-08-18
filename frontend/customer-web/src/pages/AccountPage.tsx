@@ -1,35 +1,27 @@
 import { isAxiosError } from 'axios'
 import { type FormEvent, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { updateCurrentUser, type CurrentUserProfile, type UserProfileUpdateInput } from '../features/auth/api/currentUserApi'
+import { deleteCurrentUserAvatar, updateCurrentUser, uploadCurrentUserAvatar, type CurrentUserProfile, type UserProfileUpdateInput } from '../features/auth/api/currentUserApi'
 import { logout } from '../features/auth/authService'
 import { useAuthStore } from '../features/auth/stores/authStore'
 import { useCurrentUserStore } from '../features/auth/stores/currentUserStore'
 import { useAddressStore } from '../features/address/stores/addressStore'
 import { useToastStore } from '../features/toast/stores/toastStore'
+import { AccountSectionHeader } from '../components/account/AccountSectionHeader'
+import { ImageUpload } from '../components/media/ImageUpload'
 
 const valueOrPending = (value: string | null | undefined) => value?.trim() || 'Chưa cập nhật'
-
 type ProfileFormValues = UserProfileUpdateInput
-
-const toFormValues = (profile: CurrentUserProfile): ProfileFormValues => ({
-  fullName: profile.fullName ?? '',
-  phoneNumber: profile.phoneNumber ?? '',
-  avatarUrl: profile.avatarUrl ?? '',
-})
+const toFormValues = (profile: CurrentUserProfile): ProfileFormValues => ({ fullName: profile.fullName ?? '', phoneNumber: profile.phoneNumber ?? '' })
 
 const validateProfile = (values: ProfileFormValues): string | null => {
   if (values.fullName.trim().length > 255) return 'Họ tên không được quá 255 ký tự.'
   if (values.phoneNumber.trim().length > 20) return 'Số điện thoại không được quá 20 ký tự.'
-  if (values.avatarUrl.trim().length > 1000) return 'Đường dẫn ảnh đại diện không được quá 1000 ký tự.'
   return null
 }
 
 const updateErrorMessage = (error: unknown): string => {
-  if (isAxiosError<{ message?: string }>(error)) {
-    return error.response?.data?.message ?? 'Chưa thể lưu thông tin tài khoản. Vui lòng thử lại.'
-  }
-  return 'Chưa thể lưu thông tin tài khoản. Vui lòng thử lại.'
+  if (isAxiosError<{ message?: string }>(error)) return error.response?.data?.message ?? 'Chưa thể lưu thông tin tài khoản lúc này. Vui lòng thử lại.'
+  return 'Chưa thể lưu thông tin tài khoản lúc này. Vui lòng thử lại.'
 }
 
 export function AccountPage() {
@@ -42,14 +34,13 @@ export function AccountPage() {
   const setProfile = useCurrentUserStore((state) => state.setProfile)
   const clearProfile = useCurrentUserStore((state) => state.clearProfile)
   const [editing, setEditing] = useState(false)
-  const [values, setValues] = useState<ProfileFormValues>({ fullName: '', phoneNumber: '', avatarUrl: '' })
+  const [values, setValues] = useState<ProfileFormValues>({ fullName: '', phoneNumber: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [avatarUploading, setAvatarUploading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const pushToast = useToastStore((state) => state.push)
 
-  useEffect(() => {
-    void loadProfile().catch(() => undefined)
-  }, [loadProfile])
+  useEffect(() => { void loadProfile().catch(() => undefined) }, [loadProfile])
 
   const signOut = async () => {
     clearAddresses()
@@ -57,34 +48,14 @@ export function AccountPage() {
     await logout()
   }
 
-  const startEditing = () => {
-    if (!profile) return
-    setValues(toFormValues(profile))
-    setSubmitError(null)
-    setEditing(true)
-  }
-
-  const cancelEditing = () => {
-    setEditing(false)
-    setSubmitError(null)
-  }
-
   const submitProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const validationError = validateProfile(values)
-    if (validationError) {
-      setSubmitError(validationError)
-      return
-    }
-
+    if (validationError) { setSubmitError(validationError); return }
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const saved = await updateCurrentUser({
-        fullName: values.fullName.trim(),
-        phoneNumber: values.phoneNumber.trim(),
-        avatarUrl: values.avatarUrl.trim(),
-      })
+      const saved = await updateCurrentUser({ fullName: values.fullName.trim(), phoneNumber: values.phoneNumber.trim() })
       setProfile(saved)
       setValues(toFormValues(saved))
       pushToast('success', 'Đã cập nhật hồ sơ.')
@@ -96,63 +67,66 @@ export function AccountPage() {
     }
   }
 
-  if (loading && !profile) return <main className="page-shell account-page" aria-live="polite"><section className="account-loading" aria-label="Đang tải thông tin tài khoản"><div /><div /><div /></section></main>
-  if (error && !profile) return <main className="page-shell account-page"><div className="empty-state"><p className="eyebrow">Có lỗi xảy ra</p><h1>Tài khoản của tôi</h1><p>Không thể tải thông tin tài khoản lúc này. Vui lòng thử lại.</p><button type="button" className="button primary" onClick={() => void loadProfile().catch(() => undefined)}>Thử lại</button></div></main>
+  const uploadAvatar = async (file: File) => {
+    setAvatarUploading(true)
+    setSubmitError(null)
+    try {
+      setProfile(await uploadCurrentUserAvatar(file))
+      pushToast('success', 'Đã cập nhật ảnh đại diện.')
+    } catch (requestError) {
+      setSubmitError(updateErrorMessage(requestError))
+      throw requestError
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  const removeAvatar = async () => {
+    setAvatarUploading(true)
+    setSubmitError(null)
+    try {
+      setProfile(await deleteCurrentUserAvatar())
+      pushToast('success', 'Đã xóa ảnh đại diện.')
+    } catch (requestError) {
+      setSubmitError(updateErrorMessage(requestError))
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  if (loading && !profile) return <section className="account-route-state" aria-live="polite"><div className="account-loading" aria-label="Đang tải thông tin tài khoản"><div /><div /><div /></div></section>
+  if (error && !profile) return <section className="account-route-state"><div className="empty-state"><p className="eyebrow">Có lỗi xảy ra</p><h1>Tài khoản của tôi</h1><p>Không thể tải thông tin tài khoản lúc này. Vui lòng thử lại.</p><button type="button" className="button primary" onClick={() => void loadProfile().catch(() => undefined)}>Thử lại</button></div></section>
 
   const displayName = profile?.fullName?.trim() || authDisplayName || profile?.email || 'Tài khoản của tôi'
 
   return (
-    <main className="page-shell account-page">
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">Tài khoản</p>
-          <h1>Thông tin của tôi</h1>
-          <p>Quản lý thông tin cá nhân và các tùy chọn giao hàng của bạn.</p>
+    <section className="account-card" aria-labelledby="account-profile-title">
+      <AccountSectionHeader titleId="account-profile-title" eyebrow="Hồ sơ" title="Tài khoản của tôi" description="Quản lý thông tin cá nhân và các tùy chọn giao hàng của bạn." />
+      <div className="account-identity">
+        <ImageUpload src={profile?.avatarUrl} name={displayName} loading={avatarUploading} onUpload={uploadAvatar} onRemove={removeAvatar} />
+        <div><p className="account-identity-label">Tài khoản Food Delivery</p><h3>{displayName}</h3><p>{valueOrPending(profile?.email)}</p></div>
+      </div>
+      {submitError ? <p className="form-error" role="alert">{submitError}</p> : null}
+      <section className="account-section" aria-labelledby="personal-information-title">
+        <div className="account-section-heading">
+          <h3 id="personal-information-title">Thông tin cá nhân</h3>
+          {!editing && <button type="button" className="button text" onClick={() => { if (profile) { setValues(toFormValues(profile)); setSubmitError(null); setEditing(true) } }}>Chỉnh sửa</button>}
         </div>
-      </div>
-      <div className="account-overview">
-        <nav className="account-navigation" aria-label="Điều hướng tài khoản">
-          <Link className="active" to="/account">Hồ sơ</Link>
-          <Link to="/account/addresses">Địa chỉ giao hàng</Link>
-        </nav>
-        <section className="account-card" aria-labelledby="account-profile-title">
-          <p className="eyebrow">Hồ sơ</p>
-          <h2 id="account-profile-title">Tài khoản của tôi</h2>
-          <div className="account-identity">
-            <span className="avatar large" aria-hidden="true">{displayName.slice(0, 1).toUpperCase()}</span>
-            <div><p className="account-identity-label">Tài khoản Food Delivery</p><h3>{displayName}</h3><p>{valueOrPending(profile?.email)}</p></div>
-          </div>
-          <section className="account-section" aria-labelledby="personal-information-title">
-            <div className="account-section-heading">
-              <h3 id="personal-information-title">Thông tin cá nhân</h3>
-              {!editing && <button type="button" className="button text" onClick={startEditing}>Chỉnh sửa</button>}
-            </div>
-            {editing ? (
-              <form className="account-edit-form" onSubmit={(event) => void submitProfile(event)} noValidate>
-                <label>Họ tên<input value={values.fullName} onChange={(event) => setValues((current) => ({ ...current, fullName: event.target.value }))} maxLength={255} autoComplete="name" /></label>
-                <label>Số điện thoại<input value={values.phoneNumber} onChange={(event) => setValues((current) => ({ ...current, phoneNumber: event.target.value }))} maxLength={20} inputMode="tel" autoComplete="tel" /></label>
-                <label>Ảnh đại diện (URL)<input value={values.avatarUrl} onChange={(event) => setValues((current) => ({ ...current, avatarUrl: event.target.value }))} maxLength={1000} inputMode="url" autoComplete="url" /></label>
-                {submitError && <p className="form-error" role="alert">{submitError}</p>}
-                <div className="form-actions">
-                  <button type="button" className="button secondary" onClick={cancelEditing} disabled={submitting}>Hủy</button>
-                  <button type="submit" className="button primary" disabled={submitting}>{submitting ? 'Đang lưu…' : 'Lưu thay đổi'}</button>
-                </div>
-              </form>
-            ) : (
-              <dl>
-                <div><dt>Họ tên</dt><dd>{valueOrPending(profile?.fullName)}</dd></div>
-                <div><dt>Email</dt><dd>{valueOrPending(profile?.email)}</dd></div>
-                <div><dt>Điện thoại</dt><dd>{valueOrPending(profile?.phoneNumber)}</dd></div>
-                <div><dt>Ảnh đại diện</dt><dd>{valueOrPending(profile?.avatarUrl)}</dd></div>
-              </dl>
-            )}
-          </section>
-          <div className="account-links">
-            <Link className="button primary" to="/account/addresses">Quản lý địa chỉ</Link>
-            <button type="button" className="button secondary" onClick={() => void signOut()}>Đăng xuất</button>
-          </div>
-        </section>
-      </div>
-    </main>
+        {editing ? (
+          <form className="account-edit-form" onSubmit={(event) => void submitProfile(event)} noValidate>
+            <label>Họ tên<input value={values.fullName} onChange={(event) => setValues((current) => ({ ...current, fullName: event.target.value }))} maxLength={255} autoComplete="name" /></label>
+            <label>Số điện thoại<input value={values.phoneNumber} onChange={(event) => setValues((current) => ({ ...current, phoneNumber: event.target.value }))} maxLength={20} inputMode="tel" autoComplete="tel" /></label>
+            <div className="form-actions"><button type="button" className="button secondary" onClick={() => { setEditing(false); setSubmitError(null) }} disabled={submitting}>Hủy</button><button type="submit" className="button primary" disabled={submitting}>{submitting ? 'Đang lưu…' : 'Lưu thay đổi'}</button></div>
+          </form>
+        ) : (
+          <dl>
+            <div><dt>Họ tên</dt><dd>{valueOrPending(profile?.fullName)}</dd></div>
+            <div><dt>Email</dt><dd>{valueOrPending(profile?.email)}</dd></div>
+            <div><dt>Điện thoại</dt><dd>{valueOrPending(profile?.phoneNumber)}</dd></div>
+          </dl>
+        )}
+      </section>
+      <div className="account-links"><button type="button" className="button secondary" onClick={() => void signOut()}>Đăng xuất</button></div>
+    </section>
   )
 }

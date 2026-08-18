@@ -8,11 +8,14 @@ import com.khanh.fooddelivery.user_service.exception.ErrorCode;
 import com.khanh.fooddelivery.user_service.mapper.UserMapper;
 import com.khanh.fooddelivery.user_service.repository.UserRepository;
 import com.khanh.fooddelivery.user_service.service.UserService;
+import com.khanh.fooddelivery.user_service.storage.AvatarStorageService;
+import com.khanh.fooddelivery.user_service.storage.AvatarUploadResult;
 import com.khanh.fooddelivery.user_service.util.JwtClaimUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Objects;
 
@@ -24,6 +27,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final JwtClaimUtils jwtClaimUtils;
+    private final AvatarStorageService avatarStorageService;
 
     @Override
     public CurrentUserResponse getCurrentUser(Jwt jwt) {
@@ -53,6 +57,29 @@ public class UserServiceImpl implements UserService {
         userMapper.updateEntity(request, user);
         normalizeUpdatedProfile(request, user);
         userRepository.flush();
+        return userMapper.toResponse(user);
+    }
+
+    @Override
+    public CurrentUserResponse updateAvatar(Jwt jwt, MultipartFile file) {
+        User user = getOrCreateUser(jwt);
+        AvatarUploadResult uploaded = avatarStorageService.upload(file, user.getId().toString());
+        String previousStorageKey = user.getAvatarStorageKey();
+        user.setAvatarUrl(uploaded.secureUrl());
+        user.setAvatarStorageKey(uploaded.storageKey());
+        userRepository.flush();
+        deletePreviousAvatar(previousStorageKey);
+        return userMapper.toResponse(user);
+    }
+
+    @Override
+    public CurrentUserResponse deleteAvatar(Jwt jwt) {
+        User user = getOrCreateUser(jwt);
+        String previousStorageKey = user.getAvatarStorageKey();
+        user.setAvatarUrl(null);
+        user.setAvatarStorageKey(null);
+        userRepository.flush();
+        deletePreviousAvatar(previousStorageKey);
         return userMapper.toResponse(user);
     }
 
@@ -128,8 +155,11 @@ public class UserServiceImpl implements UserService {
         if (request.phoneNumber() != null) {
             user.setPhoneNumber(trimToNull(request.phoneNumber()));
         }
-        if (request.avatarUrl() != null) {
-            user.setAvatarUrl(trimToNull(request.avatarUrl()));
+    }
+
+    private void deletePreviousAvatar(String storageKey) {
+        if (storageKey != null && !storageKey.isBlank()) {
+            avatarStorageService.delete(storageKey);
         }
     }
 

@@ -26,6 +26,11 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: false
 
+  servlet:
+    multipart:
+      max-file-size: ${USER_AVATAR_MAX_FILE_SIZE:5242880}
+      max-request-size: ${USER_AVATAR_MAX_FILE_SIZE:5242880}
+
   security:
     oauth2:
       resourceserver:
@@ -46,6 +51,26 @@ eureka:
 security:
   jwt:
     audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
+
+app:
+  internal-api:
+    key: ${INTERNAL_API_KEY:}
+  keycloak-admin:
+    base-url: ${KEYCLOAK_ADMIN_BASE_URL:http://localhost:8180}
+    realm: ${KEYCLOAK_ADMIN_REALM:food-delivery}
+    client-id: ${KEYCLOAK_ADMIN_CLIENT_ID:}
+    client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET:}
+  avatar-storage:
+    max-file-size: ${USER_AVATAR_MAX_FILE_SIZE:5242880}
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/webp
+    cloudinary:
+      cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+      api-key: ${CLOUDINARY_API_KEY:}
+      api-secret: ${CLOUDINARY_API_SECRET:}
+      base-folder: ${USER_AVATAR_CLOUDINARY_BASE_FOLDER:food-delivery/avatars}
 
 management:
   endpoints:
