@@ -3,7 +3,7 @@ package com.khanh.fooddelivery.restaurant_service.controller;
 import com.khanh.fooddelivery.restaurant_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.restaurant_service.dto.request.RestaurantMemberCreateRequest;
 import com.khanh.fooddelivery.restaurant_service.dto.request.RestaurantMemberUpdateRequest;
-import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantMemberResponse;
+import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantMemberManagementResponse;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantMemberService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -31,18 +31,18 @@ public class RestaurantMemberController {
     private final RestaurantMemberService service;
 
     @PostMapping
-    public ResponseEntity<ApiResponse<RestaurantMemberResponse>> create(
+    public ResponseEntity<ApiResponse<RestaurantMemberManagementResponse>> create(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID restaurantId,
             @Valid @RequestBody RestaurantMemberCreateRequest r) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(
                         ApiResponse.success(
-                                "Restaurant member invited", service.create(jwt, restaurantId, r)));
+                                "Restaurant member added", service.create(jwt, restaurantId, r)));
     }
 
     @GetMapping
-    public ApiResponse<Page<RestaurantMemberResponse>> list(
+    public ApiResponse<Page<RestaurantMemberManagementResponse>> list(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID restaurantId,
             @PageableDefault(size = 20) Pageable p) {
@@ -51,7 +51,7 @@ public class RestaurantMemberController {
     }
 
     @PatchMapping("/{memberId}")
-    public ApiResponse<RestaurantMemberResponse> update(
+    public ApiResponse<RestaurantMemberManagementResponse> update(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID restaurantId,
             @PathVariable UUID memberId,

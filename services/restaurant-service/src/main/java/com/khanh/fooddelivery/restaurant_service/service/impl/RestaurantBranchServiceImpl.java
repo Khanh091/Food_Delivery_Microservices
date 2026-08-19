@@ -67,7 +67,7 @@ public class RestaurantBranchServiceImpl implements RestaurantBranchService {
             throw new AppException(ErrorCode.BRANCH_CODE_ALREADY_EXISTS);
         RestaurantBranch b = branchMapper.toEntity(r);
         b.setRestaurant(restaurant);
-        b.setStatus(RestaurantBranchStatus.PENDING);
+        b.setStatus(RestaurantBranchStatus.ACTIVE);
         b.setAcceptingOrders(false);
         RestaurantBranch saved = branches.save(b);
         enqueueUpsert(saved, "CREATE");

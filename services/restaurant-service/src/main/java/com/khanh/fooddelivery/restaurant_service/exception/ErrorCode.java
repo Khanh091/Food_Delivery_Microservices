@@ -33,6 +33,10 @@ public enum ErrorCode {
     OWNER_MEMBER_CANNOT_BE_REMOVED(
             "MEMBER_003", HttpStatus.CONFLICT, "Owner member cannot be removed"),
     INVALID_MEMBER_SCOPE("MEMBER_004", HttpStatus.BAD_REQUEST, "Invalid restaurant member scope"),
+    RESTAURANT_MEMBER_USER_NOT_FOUND(
+            "MEMBER_005", HttpStatus.BAD_REQUEST, "User account was not found"),
+    OWNER_MEMBER_CANNOT_BE_CHANGED(
+            "MEMBER_006", HttpStatus.CONFLICT, "Owner member cannot be changed"),
     BANK_ACCOUNT_NOT_FOUND("BANK_001", HttpStatus.NOT_FOUND, "Bank account not found"),
     BANK_ACCOUNT_ALREADY_EXISTS("BANK_002", HttpStatus.CONFLICT, "Bank account already exists"),
     BANK_ACCOUNT_NOT_VERIFIED("BANK_003", HttpStatus.CONFLICT, "Bank account is not verified"),

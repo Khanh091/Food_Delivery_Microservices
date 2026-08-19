@@ -5,11 +5,16 @@ import com.khanh.fooddelivery.restaurant_service.enums.RestaurantMemberStatus;
 import java.time.Instant;
 import java.util.UUID;
 
-public record RestaurantMemberResponse(
+public record RestaurantMemberManagementResponse(
         UUID id,
         UUID restaurantId,
         UUID branchId,
+        String branchName,
         UUID userId,
+        String fullName,
+        String email,
+        String phoneNumber,
+        String avatarUrl,
         RestaurantMemberRole role,
         RestaurantMemberStatus status,
         UUID invitedByUserId,
