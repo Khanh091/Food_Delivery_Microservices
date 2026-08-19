@@ -76,6 +76,7 @@ app:
     allowed-content-types:
       - image/jpeg
       - image/png
+      - image/webp
       - application/pdf
     cloudinary:
       cloud-name: ${CLOUDINARY_CLOUD_NAME:}

@@ -48,6 +48,8 @@ public class Restaurant extends BaseAuditEntity {
 
     private String logoUrl;
     private String coverImageUrl;
+    private String logoStorageKey;
+    private String coverImageStorageKey;
     private String phoneNumber;
     private String email;
     private String taxCode;

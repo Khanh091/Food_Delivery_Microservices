@@ -5,6 +5,7 @@ import com.khanh.fooddelivery.restaurant_service.dto.request.RestaurantUpdateReq
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantResponse;
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantStatusHistoryResponse;
 import com.khanh.fooddelivery.restaurant_service.dto.response.RestaurantSummaryResponse;
+import com.khanh.fooddelivery.restaurant_service.service.RestaurantMediaService;
 import com.khanh.fooddelivery.restaurant_service.service.RestaurantService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,13 +26,16 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/restaurants")
 @RequiredArgsConstructor
 public class RestaurantController {
     private final RestaurantService service;
+    private final RestaurantMediaService mediaService;
 
     @GetMapping("/me")
     public ApiResponse<List<RestaurantSummaryResponse>> mine(@AuthenticationPrincipal Jwt jwt) {
@@ -50,6 +55,24 @@ public class RestaurantController {
             @PathVariable UUID id,
             @Valid @RequestBody RestaurantUpdateRequest r) {
         return ApiResponse.success("Restaurant updated successfully", service.update(jwt, id, r));
+    }
+
+    @PostMapping(value = "/{id}/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<RestaurantResponse> updateLogo(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @RequestPart("file") MultipartFile file) {
+        return ApiResponse.success(
+                "Restaurant logo updated successfully", mediaService.updateLogo(jwt, id, file));
+    }
+
+    @PostMapping(value = "/{id}/cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<RestaurantResponse> updateCover(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID id,
+            @RequestPart("file") MultipartFile file) {
+        return ApiResponse.success(
+                "Restaurant cover updated successfully", mediaService.updateCover(jwt, id, file));
     }
 
     @PostMapping("/{id}/activate")
