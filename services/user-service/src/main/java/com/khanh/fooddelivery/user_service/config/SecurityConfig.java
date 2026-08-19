@@ -44,6 +44,11 @@ public class SecurityConfig {
                                 "/internal/v1/users/*/system-roles/**"
                         )
                         .permitAll()
+                        .requestMatchers(
+                                "/internal/v1/users/batch-profile",
+                                "/internal/v1/users/resolve-email"
+                        )
+                        .permitAll()
                         .anyRequest()
                         .authenticated()
                 )

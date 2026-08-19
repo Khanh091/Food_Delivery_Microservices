@@ -8,12 +8,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import jakarta.persistence.LockModeType;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByKeycloakUserId(String keycloakUserId);
+
+    Optional<User> findByEmailIgnoreCase(String email);
+
+    @Query("select user from User user where user.id in :userIds or user.keycloakUserId in :keycloakUserIds")
+    List<User> findAllByIdOrKeycloakUserIdIn(
+            @Param("userIds") Collection<UUID> userIds,
+            @Param("keycloakUserIds") Collection<String> keycloakUserIds);
 
     boolean existsByEmailAndIdNot(String email, UUID id);
 
