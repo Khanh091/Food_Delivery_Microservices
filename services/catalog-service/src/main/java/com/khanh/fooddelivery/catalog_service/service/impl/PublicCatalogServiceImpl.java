@@ -9,6 +9,8 @@ import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.PublicM
 import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.PublicMenuResponse;
 import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.PublicOptionGroupResponse;
 import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.PublicOptionValueResponse;
+import com.khanh.fooddelivery.catalog_service.dto.request.publiccatalog.SellableItemFilterRequest;
+import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.SellableItemFilterResponse;
 import com.khanh.fooddelivery.catalog_service.entity.BranchItem;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
 import com.khanh.fooddelivery.catalog_service.entity.ItemImage;
@@ -29,6 +31,7 @@ import com.khanh.fooddelivery.catalog_service.repository.MenuRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionValueRepository;
 import com.khanh.fooddelivery.catalog_service.service.PublicCatalogService;
+import com.khanh.fooddelivery.catalog_service.service.CustomerSellabilityService;
 import feign.FeignException;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -53,6 +56,7 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
     private final ItemImageRepository images;
     private final OptionGroupRepository optionGroups;
     private final OptionValueRepository optionValues;
+    private final CustomerSellabilityService customerSellabilityService;
 
     @Override
     public PublicCatalogResponse getBranchCatalog(UUID restaurantId, UUID branchId) {
@@ -131,6 +135,9 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
         CatalogItem item =
                 items.findByIdAndRestaurantIdAndStatus(itemId, restaurantId, CatalogStatus.ACTIVE)
                         .orElseThrow(() -> new AppException(ErrorCode.CATALOG_ITEM_NOT_FOUND));
+        if (!customerSellabilityService.isSellable(restaurantId, branchId, itemId)) {
+            throw new AppException(ErrorCode.ITEM_NOT_SELLABLE);
+        }
         BranchItem branchItem =
                 branchItems
                         .findByBranchIdAndItemId(branchId, itemId)
@@ -142,6 +149,15 @@ public class PublicCatalogServiceImpl implements PublicCatalogService {
                 optionGroups.findAllByItemIdInAndStatusOrderBySortOrderAsc(
                         List.of(itemId), CatalogStatus.ACTIVE),
                 optionValues);
+    }
+
+    @Override
+    public SellableItemFilterResponse filterSellableItems(
+            UUID branchId, SellableItemFilterRequest request) {
+        requirePublicBranch(request.restaurantId(), branchId);
+        return new SellableItemFilterResponse(
+                customerSellabilityService.filterSellable(
+                        request.restaurantId(), branchId, request.itemIds()));
     }
 
     private PublicItemData loadVisibleItemData(

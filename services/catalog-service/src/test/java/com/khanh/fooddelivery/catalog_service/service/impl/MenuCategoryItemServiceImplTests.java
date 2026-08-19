@@ -11,6 +11,7 @@ import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemCreate
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemSortOrderUpdateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.response.MenuCategoryItemResponse;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
+import com.khanh.fooddelivery.catalog_service.entity.BranchItem;
 import com.khanh.fooddelivery.catalog_service.entity.Menu;
 import com.khanh.fooddelivery.catalog_service.entity.MenuCategory;
 import com.khanh.fooddelivery.catalog_service.entity.MenuCategoryItem;
@@ -19,10 +20,12 @@ import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.MenuCategoryItemMapper;
 import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
+import com.khanh.fooddelivery.catalog_service.repository.BranchItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import java.util.List;
+import java.math.BigDecimal;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +45,7 @@ class MenuCategoryItemServiceImplTests {
 
     @Mock private MenuCategoryRepository categoryRepository;
     @Mock private CatalogItemRepository itemRepository;
+    @Mock private BranchItemRepository branchItemRepository;
     @Mock private MenuCategoryItemRepository categoryItemRepository;
     @Mock private MenuCategoryItemMapper categoryItemMapper;
     @Mock private CatalogAuthorizationService authorizationService;
@@ -55,6 +59,7 @@ class MenuCategoryItemServiceImplTests {
                 new MenuCategoryItemServiceImpl(
                         categoryRepository,
                         itemRepository,
+                        branchItemRepository,
                         categoryItemRepository,
                         categoryItemMapper,
                         authorizationService,
@@ -73,11 +78,38 @@ class MenuCategoryItemServiceImplTests {
         when(categoryItemRepository.save(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(categoryItemMapper.toResponse(any())).thenReturn(response());
+        when(branchItemRepository.existsByBranchIdAndItemId(branchId, itemId)).thenReturn(true);
 
         service.add(menuId, categoryId, itemId, new MenuCategoryItemCreateRequest(2));
 
         verify(authorizationService).requireBranchCatalogAccess(restaurantId, branchId);
         verify(categoryItemRepository).save(any(MenuCategoryItem.class));
+    }
+
+    @Test
+    void addCreatesMissingBranchItemAtCatalogBasePrice() {
+        MenuCategory category = category();
+        CatalogItem item = item(restaurantId);
+        BranchItem createdBranchItem = new BranchItem();
+        createdBranchItem.setId(UUID.randomUUID());
+        createdBranchItem.setBranchId(branchId);
+        createdBranchItem.setItem(item);
+        createdBranchItem.setSellingPrice(item.getBasePrice());
+        when(categoryRepository.findByIdAndMenuId(categoryId, menuId)).thenReturn(Optional.of(category));
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
+        when(categoryItemRepository.existsByCategoryIdAndItemId(categoryId, itemId)).thenReturn(false);
+        when(categoryItemRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(categoryItemMapper.toResponse(any())).thenReturn(response());
+        when(branchItemRepository.existsByBranchIdAndItemId(branchId, itemId)).thenReturn(false);
+        when(branchItemRepository.save(any())).thenReturn(createdBranchItem);
+
+        service.add(menuId, categoryId, itemId, new MenuCategoryItemCreateRequest(2));
+
+        verify(branchItemRepository)
+                .save(org.mockito.ArgumentMatchers.argThat(saved -> saved.getBranchId().equals(branchId)
+                        && saved.getItem().equals(item)
+                        && saved.getSellingPrice().compareTo(item.getBasePrice()) == 0
+                        && Boolean.TRUE.equals(saved.getIsAvailable())));
     }
 
     @Test
@@ -221,6 +253,7 @@ class MenuCategoryItemServiceImplTests {
         CatalogItem item = new CatalogItem();
         item.setId(itemId);
         item.setRestaurantId(itemRestaurantId);
+        item.setBasePrice(new BigDecimal("42000"));
         return item;
     }
 

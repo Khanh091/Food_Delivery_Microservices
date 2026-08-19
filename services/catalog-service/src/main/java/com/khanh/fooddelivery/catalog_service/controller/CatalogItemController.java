@@ -4,6 +4,7 @@ import com.khanh.fooddelivery.catalog_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.catalog_service.dto.request.CatalogItemCreateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.request.CatalogItemUpdateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.response.CatalogItemResponse;
+import com.khanh.fooddelivery.catalog_service.dto.response.CatalogItemLibraryPageResponse;
 import com.khanh.fooddelivery.catalog_service.service.CatalogItemService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -44,6 +45,21 @@ public class CatalogItemController {
     public ApiResponse<List<CatalogItemResponse>> list(@RequestParam UUID restaurantId) {
         return ApiResponse.success(
                 "Catalog items retrieved successfully", itemService.list(restaurantId));
+    }
+
+    @GetMapping("/restaurants/{restaurantId}")
+    public ApiResponse<CatalogItemLibraryPageResponse> listLibrary(
+            @PathVariable UUID restaurantId,
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(required = false) List<UUID> excludeItemIds,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int normalizedPage = Math.max(0, page);
+        int normalizedSize = Math.clamp(size, 1, 50);
+        return ApiResponse.success(
+                "Catalog item library retrieved",
+                itemService.listLibrary(
+                        restaurantId, q, excludeItemIds, normalizedPage, normalizedSize));
     }
 
     @PatchMapping("/{itemId}")

@@ -4,6 +4,7 @@ import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemCreate
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemSortOrderUpdateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.response.MenuCategoryItemResponse;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
+import com.khanh.fooddelivery.catalog_service.entity.BranchItem;
 import com.khanh.fooddelivery.catalog_service.entity.Menu;
 import com.khanh.fooddelivery.catalog_service.entity.MenuCategory;
 import com.khanh.fooddelivery.catalog_service.entity.MenuCategoryItem;
@@ -14,6 +15,7 @@ import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventData;
 import com.khanh.fooddelivery.catalog_service.outbox.CatalogEventType;
 import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
+import com.khanh.fooddelivery.catalog_service.repository.BranchItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
@@ -30,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
     private final MenuCategoryRepository categoryRepository;
     private final CatalogItemRepository itemRepository;
+    private final BranchItemRepository branchItemRepository;
     private final MenuCategoryItemRepository categoryItemRepository;
     private final MenuCategoryItemMapper categoryItemMapper;
     private final CatalogAuthorizationService authorizationService;
@@ -52,6 +55,7 @@ public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
         categoryItem.setItem(item);
         categoryItem.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
         MenuCategoryItem savedCategoryItem = categoryItemRepository.save(categoryItem);
+        ensureBranchItem(menu, item);
         enqueue(savedCategoryItem, "ATTACHED");
         return categoryItemMapper.toResponse(savedCategoryItem);
     }
@@ -99,6 +103,24 @@ public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
         return itemRepository
                 .findById(itemId)
                 .orElseThrow(() -> new AppException(ErrorCode.CATALOG_ITEM_NOT_FOUND));
+    }
+
+    private void ensureBranchItem(Menu menu, CatalogItem item) {
+        if (branchItemRepository.existsByBranchIdAndItemId(menu.getBranchId(), item.getId())) {
+            return;
+        }
+        BranchItem branchItem = new BranchItem();
+        branchItem.setBranchId(menu.getBranchId());
+        branchItem.setItem(item);
+        branchItem.setSellingPrice(item.getBasePrice());
+        branchItem.setIsAvailable(true);
+        branchItem.setSoldOutUntil(null);
+        BranchItem savedBranchItem = branchItemRepository.save(branchItem);
+        outboxEventService.enqueue(
+                CatalogEventType.BRANCH_ITEM_UPSERTED,
+                "BRANCH_ITEM",
+                savedBranchItem.getId(),
+                CatalogEventData.branchItem(savedBranchItem, "CREATED_FOR_CATEGORY_ATTACHMENT"));
     }
 
     private MenuCategoryItem requiredCategoryItem(UUID categoryId, UUID itemId) {

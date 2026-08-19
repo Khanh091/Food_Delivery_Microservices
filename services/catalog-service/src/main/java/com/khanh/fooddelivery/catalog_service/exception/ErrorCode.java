@@ -33,6 +33,8 @@ public enum ErrorCode {
     INVALID_SOLD_OUT_TIME(
             "CATALOG_018", HttpStatus.BAD_REQUEST, "Sold out time must be in the future"),
     ITEM_UNAVAILABLE("CATALOG_026", HttpStatus.CONFLICT, "Catalog item is currently unavailable"),
+    ITEM_NOT_SELLABLE(
+            "CATALOG_027", HttpStatus.NOT_FOUND, "Catalog item is not currently sold by this branch"),
     OPTION_GROUP_NOT_FOUND("CATALOG_019", HttpStatus.NOT_FOUND, "Option group not found"),
     OPTION_VALUE_NOT_FOUND("CATALOG_020", HttpStatus.NOT_FOUND, "Option value not found"),
     INVALID_OPTION_SELECTION(

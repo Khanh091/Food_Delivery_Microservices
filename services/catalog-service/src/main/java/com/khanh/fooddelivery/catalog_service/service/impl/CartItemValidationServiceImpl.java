@@ -15,6 +15,7 @@ import com.khanh.fooddelivery.catalog_service.repository.ItemImageRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionValueRepository;
 import com.khanh.fooddelivery.catalog_service.service.CartItemValidationService;
+import com.khanh.fooddelivery.catalog_service.service.CustomerSellabilityService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
@@ -38,6 +39,7 @@ public class CartItemValidationServiceImpl implements CartItemValidationService 
     private final ItemImageRepository images;
     private final OptionGroupRepository optionGroups;
     private final OptionValueRepository optionValues;
+    private final CustomerSellabilityService customerSellabilityService;
 
     @Override
     public CartItemValidationResponse validate(CartItemValidationRequest request) {
@@ -51,6 +53,12 @@ public class CartItemValidationServiceImpl implements CartItemValidationService 
                 items.findByIdAndRestaurantIdAndStatus(
                                 request.catalogItemId(), request.restaurantId(), CatalogStatus.ACTIVE)
                         .orElseThrow(() -> new AppException(ErrorCode.CATALOG_ITEM_NOT_FOUND));
+        if (!customerSellabilityService.isSellable(
+                request.restaurantId(), request.branchId(), item.getId())) {
+            throw new AppException(
+                    ErrorCode.ITEM_UNAVAILABLE,
+                    item.getName() + " is not currently sold by this branch");
+        }
         BranchItem branchItem =
                 branchItems
                         .findByBranchIdAndItemId(request.branchId(), item.getId())

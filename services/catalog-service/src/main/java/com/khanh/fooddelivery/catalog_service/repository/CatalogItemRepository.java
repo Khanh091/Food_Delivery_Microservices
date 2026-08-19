@@ -5,6 +5,7 @@ import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -13,6 +14,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface CatalogItemRepository extends JpaRepository<CatalogItem, UUID> {
     List<CatalogItem> findAllByRestaurantIdOrderByCreatedAtAsc(UUID restaurantId);
+
+    @Query(
+            "select item from CatalogItem item "
+                    + "where item.restaurantId = :restaurantId "
+                    + "and (:query = '' or lower(item.name) like lower(concat('%', :query, '%'))) "
+                    + "and (:hasExcludedItems = false or item.id not in :excludedItemIds) "
+                    + "order by item.createdAt desc")
+    Page<CatalogItem> searchLibrary(
+            @Param("restaurantId") UUID restaurantId,
+            @Param("query") String query,
+            @Param("hasExcludedItems") boolean hasExcludedItems,
+            @Param("excludedItemIds") List<UUID> excludedItemIds,
+            Pageable pageable);
 
     List<CatalogItem> findAllByIdInAndStatus(List<UUID> itemIds, CatalogStatus status);
 

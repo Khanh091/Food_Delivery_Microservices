@@ -3,11 +3,16 @@ package com.khanh.fooddelivery.catalog_service.controller;
 import com.khanh.fooddelivery.catalog_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.PublicCatalogItemResponse;
 import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.PublicCatalogResponse;
+import com.khanh.fooddelivery.catalog_service.dto.request.publiccatalog.SellableItemFilterRequest;
+import com.khanh.fooddelivery.catalog_service.dto.response.publiccatalog.SellableItemFilterResponse;
+import jakarta.validation.Valid;
 import com.khanh.fooddelivery.catalog_service.service.PublicCatalogService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,5 +38,14 @@ public class PublicCatalogController {
         return ApiResponse.success(
                 "Public catalog item retrieved",
                 publicCatalogService.getBranchItem(restaurantId, branchId, itemId));
+    }
+
+    @PostMapping("/sellable-items")
+    public ApiResponse<SellableItemFilterResponse> filterSellableItems(
+            @PathVariable UUID branchId,
+            @Valid @RequestBody SellableItemFilterRequest request) {
+        return ApiResponse.success(
+                "Sellable catalog items retrieved",
+                publicCatalogService.filterSellableItems(branchId, request));
     }
 }

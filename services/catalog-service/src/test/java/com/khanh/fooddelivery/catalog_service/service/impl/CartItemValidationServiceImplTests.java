@@ -10,6 +10,7 @@ import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.ItemImageRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionValueRepository;
+import com.khanh.fooddelivery.catalog_service.service.CustomerSellabilityService;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,8 @@ class CartItemValidationServiceImplTests {
                         Mockito.mock(BranchItemRepository.class),
                         Mockito.mock(ItemImageRepository.class),
                         Mockito.mock(OptionGroupRepository.class),
-                        Mockito.mock(OptionValueRepository.class));
+                        Mockito.mock(OptionValueRepository.class),
+                        Mockito.mock(CustomerSellabilityService.class));
         UUID duplicate = UUID.randomUUID();
 
         assertThatThrownBy(

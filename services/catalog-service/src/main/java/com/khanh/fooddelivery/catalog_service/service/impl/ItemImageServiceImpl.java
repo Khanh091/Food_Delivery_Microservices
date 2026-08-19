@@ -51,7 +51,6 @@ public class ItemImageServiceImpl implements ItemImageService {
         boolean primary =
                 Boolean.TRUE.equals(requestedPrimary) || !imageRepository.existsByItemId(itemId);
         ItemImage image = new ItemImage();
-        image.setId(imageId);
         image.setItem(item);
         image.setImageUrl(preferredUrl(uploaded));
         image.setStorageProvider(uploaded.provider());

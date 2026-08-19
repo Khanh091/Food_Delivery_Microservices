@@ -30,6 +30,7 @@ import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryRepository;
 import com.khanh.fooddelivery.catalog_service.repository.MenuRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionValueRepository;
+import com.khanh.fooddelivery.catalog_service.service.CustomerSellabilityService;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -59,6 +60,7 @@ class PublicCatalogServiceImplTests {
     @Mock private ItemImageRepository imageRepository;
     @Mock private OptionGroupRepository optionGroupRepository;
     @Mock private OptionValueRepository optionValueRepository;
+    @Mock private CustomerSellabilityService customerSellabilityService;
 
     private PublicCatalogServiceImpl service;
 
@@ -74,7 +76,8 @@ class PublicCatalogServiceImplTests {
                         branchItemRepository,
                         imageRepository,
                         optionGroupRepository,
-                        optionValueRepository);
+                        optionValueRepository,
+                        customerSellabilityService);
         when(restaurantServiceClient.getPublicBranchAvailability(restaurantId, branchId))
                 .thenReturn(
                         ApiResponse.success(
@@ -155,6 +158,7 @@ class PublicCatalogServiceImplTests {
         when(optionGroupRepository.findAllByItemIdInAndStatusOrderBySortOrderAsc(
                         List.of(itemId), CatalogStatus.ACTIVE))
                 .thenReturn(List.of());
+        when(customerSellabilityService.isSellable(restaurantId, branchId, itemId)).thenReturn(true);
 
         PublicCatalogItemResponse response = service.getBranchItem(restaurantId, branchId, itemId);
 
@@ -162,19 +166,18 @@ class PublicCatalogServiceImplTests {
     }
 
     @Test
-    void itemWithoutBranchItemIsNotExposedAsPublicDetail() {
+    void itemWithoutSellablePlacementIsNotExposedAsPublicDetail() {
         when(itemRepository.findByIdAndRestaurantIdAndStatus(
                         itemId, restaurantId, CatalogStatus.ACTIVE))
                 .thenReturn(Optional.of(item()));
-        when(branchItemRepository.findByBranchIdAndItemId(branchId, itemId))
-                .thenReturn(Optional.empty());
+        when(customerSellabilityService.isSellable(restaurantId, branchId, itemId)).thenReturn(false);
 
         AppException error =
                 assertThrows(
                         AppException.class,
                         () -> service.getBranchItem(restaurantId, branchId, itemId));
 
-        assertEquals(ErrorCode.CATALOG_ITEM_NOT_FOUND, error.getErrorCode());
+        assertEquals(ErrorCode.ITEM_NOT_SELLABLE, error.getErrorCode());
     }
 
     @Test

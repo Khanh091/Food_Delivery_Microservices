@@ -19,6 +19,8 @@ import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.CatalogItemMapper;
 import com.khanh.fooddelivery.catalog_service.outbox.CatalogItemSearchEventPublisher;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
+import com.khanh.fooddelivery.catalog_service.repository.ItemImageRepository;
+import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryItemRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -35,6 +37,8 @@ class CatalogItemServiceImplTests {
     private final UUID itemId = UUID.randomUUID();
 
     @Mock private CatalogItemRepository itemRepository;
+    @Mock private ItemImageRepository imageRepository;
+    @Mock private MenuCategoryItemRepository categoryItemRepository;
     @Mock private CatalogItemMapper itemMapper;
     @Mock private CatalogAuthorizationService authorizationService;
     @Mock private CatalogItemSearchEventPublisher catalogItemSearchEventPublisher;
@@ -45,7 +49,12 @@ class CatalogItemServiceImplTests {
     void setUp() {
         service =
                 new CatalogItemServiceImpl(
-                        itemRepository, itemMapper, authorizationService, catalogItemSearchEventPublisher);
+                        itemRepository,
+                        imageRepository,
+                        categoryItemRepository,
+                        itemMapper,
+                        authorizationService,
+                        catalogItemSearchEventPublisher);
     }
 
     @Test
