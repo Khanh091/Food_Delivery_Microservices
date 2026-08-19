@@ -1,0 +1,161 @@
+.owner-metric-grid { display: grid; gap: 14px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.owner-overview-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+.owner-stack { display: grid; gap: 16px; }
+
+.owner-status-list { display: grid; gap: 10px; }
+.owner-status-item {
+  align-items: center;
+  border-bottom: 1px solid var(--owner-border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+.owner-status-item:last-child { border-bottom: 0; }
+.owner-status-item-label { color: var(--owner-text-secondary); font-size: 13px; }
+.owner-status-item-value { color: var(--owner-text); font-size: 13px; font-weight: 600; text-align: right; }
+
+.owner-quick-actions { display: grid; gap: 8px; }
+.owner-quick-action {
+  align-items: center;
+  border: 1px solid var(--owner-border);
+  border-radius: var(--owner-radius-sm);
+  color: var(--owner-text);
+  display: flex;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 14px;
+  text-decoration: none;
+}
+.owner-quick-action:hover { background: var(--owner-primary-soft); border-color: #c5daf4; color: var(--owner-primary); }
+
+.owner-branch-list { display: grid; gap: 12px; }
+.owner-branch-card {
+  background: var(--owner-surface);
+  border: 1px solid var(--owner-border);
+  border-radius: var(--owner-radius-lg);
+  box-shadow: var(--owner-shadow-sm);
+  padding: 16px 18px;
+}
+.owner-branch-card-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+.owner-branch-card-title { display: grid; gap: 3px; min-width: 0; }
+.owner-branch-card-title h3 { color: var(--owner-text); font-size: 16px; font-weight: 600; line-height: 24px; margin: 0; }
+.owner-branch-card-title p { color: var(--owner-text-secondary); font-size: 13px; line-height: 20px; margin: 0; overflow-wrap: anywhere; }
+.owner-branch-card-badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.owner-branch-card-meta {
+  border-top: 1px solid var(--owner-border);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
+  padding-top: 12px;
+}
+.owner-branch-meta-item { display: grid; gap: 2px; }
+.owner-branch-meta-item dt { color: var(--owner-text-muted); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.owner-branch-meta-item dd { color: var(--owner-text); font-size: 13px; font-weight: 500; margin: 0; }
+.owner-branch-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+
+.owner-hours-editor { display: grid; gap: 8px; }
+.owner-hours-row {
+  align-items: center;
+  border: 1px solid var(--owner-border);
+  border-radius: var(--owner-radius-sm);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr) auto;
+  padding: 10px 12px;
+}
+.owner-hours-day { color: var(--owner-text); font-size: 14px; font-weight: 600; }
+.owner-hours-row input { min-height: 36px; padding: 6px 9px; }
+.owner-hours-row.is-closed { opacity: 0.72; }
+
+.owner-special-hours-list { display: grid; gap: 8px; }
+.owner-special-hour-item {
+  align-items: center;
+  border: 1px solid var(--owner-border);
+  border-radius: var(--owner-radius-sm);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+.owner-special-hour-item strong { color: var(--owner-text); font-size: 14px; font-weight: 600; }
+.owner-special-hour-item small { color: var(--owner-text-secondary); font-size: 12px; }
+
+.owner-filter-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.owner-member-filter-card .owner-card-body { padding: 16px 20px; }
+.owner-member-toolbar { align-items: end; display: grid; gap: 12px; grid-template-columns: minmax(190px, 1.6fr) repeat(3, minmax(140px, 1fr)); }
+.owner-member-search { min-width: 0; }
+.owner-member-list-gap { height: 14px; }
+.owner-member-identity { align-items: center; display: flex; gap: 10px; min-width: 220px; }
+.owner-member-avatar { align-items: center; background: var(--owner-primary-soft); border: 1px solid var(--owner-border); border-radius: 50%; color: var(--owner-primary); display: inline-flex; flex: 0 0 36px; font-size: 12px; font-weight: 700; height: 36px; justify-content: center; overflow: hidden; width: 36px; }
+.owner-member-avatar img { height: 100%; object-fit: cover; width: 100%; }
+.owner-member-copy { display: grid; gap: 2px; min-width: 0; }
+.owner-member-copy strong { color: var(--owner-text); font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.owner-member-copy span { color: var(--owner-text-secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 880px) {
+  .owner-member-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .owner-member-toolbar { grid-template-columns: 1fr; }
+  .owner-member-filter-card .owner-card-body { padding: 14px; }
+}
+.owner-filter-pill {
+  background: var(--owner-surface);
+  border: 1px solid var(--owner-border);
+  border-radius: 999px;
+  color: var(--owner-text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 32px;
+  padding: 0 13px;
+}
+.owner-filter-pill:hover { border-color: var(--owner-border-strong); color: var(--owner-text); }
+.owner-filter-pill.active { background: var(--owner-primary); border-color: var(--owner-primary); color: #fff; }
+
+.owner-restaurant-hero {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.owner-restaurant-logo {
+  align-items: center;
+  background: var(--owner-primary-soft);
+  border: 1px solid var(--owner-border);
+  border-radius: var(--owner-radius-md);
+  color: var(--owner-primary);
+  display: flex;
+  font-size: 22px;
+  font-weight: 700;
+  height: 64px;
+  justify-content: center;
+  overflow: hidden;
+  width: 64px;
+}
+.owner-restaurant-logo img { display: block; height: 100%; object-fit: cover; width: 100%; }
+.owner-restaurant-hero h2 { color: var(--owner-text); font-size: 20px; font-weight: 700; line-height: 28px; margin: 0; }
+.owner-restaurant-hero p { color: var(--owner-text-secondary); font-size: 13px; margin: 4px 0 0; }
+
+@media (max-width: 1180px) {
+  .owner-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .owner-overview-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .owner-branch-card-meta { grid-template-columns: 1fr; }
+  .owner-hours-row { grid-template-columns: 1fr 1fr; }
+  .owner-hours-day { grid-column: 1 / -1; }
+}
+.owner-overview-grid { margin-top: 16px; }

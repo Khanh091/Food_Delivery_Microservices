@@ -9,6 +9,7 @@ interface RestaurantOwnerContextValue {
   loading: boolean
   error: string | null
   selectRestaurant: (restaurantId: string) => void
+  refreshSelectedRestaurant: () => Promise<void>
   retry: () => void
 }
 
@@ -65,12 +66,23 @@ export function RestaurantOwnerProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [selectedRestaurantId])
 
+  const refreshSelectedRestaurant = useCallback(async () => {
+    if (!selectedRestaurantId) return
+    try {
+      const detail = await getRestaurant(selectedRestaurantId)
+      setSelectedRestaurant(detail)
+      setError(null)
+    } catch {
+      setError('Chưa thể tải dữ liệu nhà hàng.')
+    }
+  }, [selectedRestaurantId])
+
   const retry = useCallback(() => setReloadKey((value) => value + 1), [])
 
   const value = useMemo(() => ({
     restaurants, selectedRestaurantId, selectedRestaurant, loading, error,
-    selectRestaurant, retry,
-  }), [error, loading, restaurants, retry, selectRestaurant, selectedRestaurant, selectedRestaurantId])
+    selectRestaurant, refreshSelectedRestaurant, retry,
+  }), [error, loading, refreshSelectedRestaurant, restaurants, retry, selectRestaurant, selectedRestaurant, selectedRestaurantId])
 
   return <RestaurantOwnerContext.Provider value={value}>{children}</RestaurantOwnerContext.Provider>
 }

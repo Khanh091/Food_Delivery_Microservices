@@ -15,7 +15,12 @@ import { CartListPage } from '../features/cart/pages/CartListPage'
 import { CheckoutReviewPage } from '../features/checkout/pages/CheckoutReviewPage'
 import { RestaurantPartnerPortalPage } from '../features/partner/pages/RestaurantPartnerPortalPage'
 import { RestaurantOwnerDashboardPage } from '../features/partner/pages/RestaurantOwnerDashboardPage'
-import { RestaurantBankAccountsPage, RestaurantBranchesPage, RestaurantCatalogPage, RestaurantDetailsPage, RestaurantLegalPage, RestaurantMembersPage } from '../features/partner/pages/RestaurantOwnerManagementPages'
+import { RestaurantBankAccountsPage } from '../features/partner/pages/RestaurantBankAccountsPage'
+import { RestaurantBranchesPage } from '../features/partner/pages/RestaurantBranchesPage'
+import { RestaurantCatalogPage } from '../features/partner/pages/RestaurantCatalogPage'
+import { RestaurantDetailsPage } from '../features/partner/pages/RestaurantDetailsPage'
+import { RestaurantLegalPage } from '../features/partner/pages/RestaurantLegalPage'
+import { RestaurantMembersPage } from '../features/partner/pages/RestaurantMembersPage'
 
 export function AppRoutes() {
   return (
