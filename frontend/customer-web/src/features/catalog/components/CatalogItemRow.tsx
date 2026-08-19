@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react'
+import { PencilIcon } from '../../../components/icons/PencilIcon'
+import { Button } from '../../../components/ui/Button'
+import { IconButton } from '../../../components/ui/IconButton'
 import { RestaurantStatusBadge } from '../../partner/components/RestaurantStatusBadge'
 import { RestaurantToggle } from '../../partner/components/RestaurantToggle'
 import type { BranchCatalogItem, CatalogItem } from '../types/catalog'
@@ -32,12 +35,10 @@ export function CatalogItemRow({ item, imageUrl, branchItem, busy = false, onEdi
       <div className="catalog-item-branch">
         {branchItem ? <>
           <RestaurantToggle checked={branchItem.isAvailable} busy={busy} onChange={onToggleAvailability} label={branchItem.isAvailable ? 'Đang bán' : 'Tạm hết'} />
-          <label className="catalog-price-field"><span>Giá tại chi nhánh</span><div><input aria-label={`Giá tại chi nhánh cho ${item.name}`} type="number" min="0" step="1000" value={sellingPrice} disabled={busy} onChange={(event) => setSellingPrice(event.target.value)} /><button type="button" className="button secondary" disabled={busy || Number(sellingPrice) === branchItem.sellingPrice} onClick={() => onSavePrice(Number(sellingPrice))}>Lưu</button></div></label>
-        </> : <div className="catalog-branch-empty"><span>Chưa bán tại chi nhánh</span><button type="button" className="button secondary" disabled={busy} onClick={onActivateForBranch}>Bán tại chi nhánh</button></div>}
+          <label className="catalog-price-field"><span>Giá tại chi nhánh</span><div><input aria-label={`Giá tại chi nhánh cho ${item.name}`} type="number" min="0" step="1000" value={sellingPrice} disabled={busy} onChange={(event) => setSellingPrice(event.target.value)} /><Button variant="secondary" size="compact" loading={busy} disabled={Number(sellingPrice) === branchItem.sellingPrice} onClick={() => onSavePrice(Number(sellingPrice))}>Lưu</Button></div></label>
+        </> : <div className="catalog-branch-empty"><span>Chưa bán tại chi nhánh</span><Button variant="secondary" size="compact" loading={busy} onClick={onActivateForBranch}>Bán tại chi nhánh</Button></div>}
       </div>
-      <button type="button" className="icon-button catalog-item-edit" onClick={onEdit} aria-label={`Chỉnh sửa ${item.name}`}>
-        <svg viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true"><path d="m4 14.8 1.1-3.3L13 3.6a1.7 1.7 0 0 1 2.4 2.4l-7.9 7.9L4 14.8Zm7.8-10 2.4 2.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      </button>
+      <IconButton className="catalog-item-edit" icon={<PencilIcon />} label={`Chỉnh sửa ${item.name}`} onClick={onEdit} />
     </article>
   )
 }

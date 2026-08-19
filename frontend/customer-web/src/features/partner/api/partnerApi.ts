@@ -23,6 +23,7 @@ export const uploadDocument = async (applicationId: string, file: File, metadata
 export const getMyRestaurants = async () => (await httpClient.get<ApiResponse<RestaurantSummary[]>>(`${restaurantsPath}/me`)).data.data
 export const getRestaurant = async (id: string) => (await httpClient.get<ApiResponse<Restaurant>>(`${restaurantsPath}/${id}`)).data.data
 export const updateRestaurant = async (id: string, input: Partial<Pick<Restaurant, 'name' | 'legalName' | 'description' | 'phoneNumber' | 'email' | 'taxCode'>>) => (await httpClient.patch<ApiResponse<Restaurant>>(`${restaurantsPath}/${id}`, input)).data.data
+export const activateRestaurant = async (id: string) => (await httpClient.post<ApiResponse<Restaurant>>(`${restaurantsPath}/${id}/activate`)).data.data
 
 export const uploadRestaurantLogo = async (id: string, file: File) => {
   const form = new FormData()

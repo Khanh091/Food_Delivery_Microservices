@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { updateRestaurant, uploadRestaurantCover, uploadRestaurantLogo } from '../api/partnerApi'
+import { Button } from '../../../components/ui/Button'
+import { activateRestaurant, updateRestaurant, uploadRestaurantCover, uploadRestaurantLogo } from '../api/partnerApi'
 import { OwnerPageState } from '../components/OwnerPageState'
 import { RestaurantFormSection } from '../components/RestaurantFormSection'
 import { RestaurantImageUpload } from '../components/RestaurantImageUpload'
@@ -33,8 +34,10 @@ export function RestaurantDetailsPage() {
   const [values, setValues] = useState<RestaurantFormValues>(emptyValues)
   const [logoBusy, setLogoBusy] = useState(false)
   const [coverBusy, setCoverBusy] = useState(false)
+  const [activating, setActivating] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
   const [coverError, setCoverError] = useState<string | null>(null)
+  const [activationError, setActivationError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!selectedRestaurant) return
@@ -43,6 +46,7 @@ export function RestaurantDetailsPage() {
     setFormError(null)
     setLogoError(null)
     setCoverError(null)
+    setActivationError(null)
   }, [selectedRestaurant])
 
   const update = (name: keyof RestaurantFormValues, value: string) => setValues((current) => ({ ...current, [name]: value }))
@@ -102,7 +106,23 @@ export function RestaurantDetailsPage() {
     }
   }
 
+  const activate = async () => {
+    if (!selectedRestaurant || activating) return
+    setActivating(true)
+    setActivationError(null)
+    try {
+      await activateRestaurant(selectedRestaurant.id)
+      await refreshSelectedRestaurant()
+      pushToast('success', 'Đã kích hoạt nhà hàng.')
+    } catch {
+      setActivationError('Không thể kích hoạt nhà hàng. Vui lòng kiểm tra trạng thái hoặc quyền quản lý của bạn.')
+    } finally {
+      setActivating(false)
+    }
+  }
+
   const noRestaurant = restaurants.length === 0 || !selectedRestaurant
+  const canActivate = selectedRestaurant?.status === 'PENDING' || selectedRestaurant?.status === 'INACTIVE'
 
   return (
     <div className="owner-page">
@@ -112,7 +132,7 @@ export function RestaurantDetailsPage() {
         actions={selectedRestaurant && !editing ? (
           <>
             <Link className="button secondary" to="/restaurant">Quay lại</Link>
-            <button type="button" className="button primary" onClick={() => { setValues(valuesOf(selectedRestaurant.name, selectedRestaurant.legalName, selectedRestaurant.description, selectedRestaurant.phoneNumber, selectedRestaurant.email, selectedRestaurant.taxCode)); setFormError(null); setEditing(true) }}>Chỉnh sửa</button>
+            <Button onClick={() => { setValues(valuesOf(selectedRestaurant.name, selectedRestaurant.legalName, selectedRestaurant.description, selectedRestaurant.phoneNumber, selectedRestaurant.email, selectedRestaurant.taxCode)); setFormError(null); setEditing(true) }}>Chỉnh sửa</Button>
           </>
         ) : undefined}
       />
@@ -163,8 +183,8 @@ export function RestaurantDetailsPage() {
                   </RestaurantFormSection>
                   {formError ? <p className="form-error" role="alert">{formError}</p> : null}
                   <div className="owner-form-actions">
-                    <button type="button" className="button secondary" disabled={saving} onClick={() => { setEditing(false); setFormError(null) }}>Hủy</button>
-                    <button type="submit" className="button primary" disabled={saving}>{saving ? 'Đang lưu…' : 'Lưu thay đổi'}</button>
+                    <Button variant="secondary" disabled={saving} onClick={() => { setEditing(false); setFormError(null) }}>Hủy</Button>
+                    <Button type="submit" loading={saving}>Lưu thay đổi</Button>
                   </div>
                 </div>
               </form>
@@ -179,6 +199,7 @@ export function RestaurantDetailsPage() {
                   <div className="owner-detail-item"><dt>Trạng thái</dt><dd><RestaurantStatusBadge status={selectedRestaurant.status} /></dd></div>
                   <div className="owner-detail-item"><dt>Xác minh</dt><dd><RestaurantStatusBadge status={selectedRestaurant.verificationStatus} /></dd></div>
                 </dl>
+                {canActivate ? <div className="owner-activation-panel"><div><strong>Nhà hàng chưa hoạt động</strong><p>Kích hoạt khi nhà hàng đã sẵn sàng nhận đơn.</p></div><div><Button variant="secondary" loading={activating} onClick={() => void activate()}>Kích hoạt nhà hàng</Button>{activationError ? <p className="form-error" role="alert">{activationError}</p> : null}</div></div> : null}
                 <div className="owner-detail-item owner-description-item"><dt>Mô tả</dt><dd>{selectedRestaurant.description || 'Chưa cập nhật'}</dd></div>
               </RestaurantFormSection>
             )}

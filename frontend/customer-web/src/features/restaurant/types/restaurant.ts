@@ -40,6 +40,16 @@ export interface PublicCatalogItem {
   optionGroups: PublicOptionGroup[]
 }
 
+export interface BranchOperatingStatus {
+  open: boolean
+  withinBusinessHours: boolean
+  acceptingOrders: boolean
+  closedToday: boolean
+  openTime: string | null
+  closeTime: string | null
+  reason: string
+}
+
 export interface PublicOptionGroup {
   id: string
   name: string

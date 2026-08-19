@@ -21,11 +21,14 @@ interface CatalogItemEditorProps {
   initialCategoryId?: string | null
   itemCategoryIds?: string[]
   initialSortOrder?: number
+  initialName?: string
+  showCategories?: boolean
+  formId?: string
   error?: string | null
   onSubmit: (value: CatalogItemEditorValue) => void
 }
 
-export function CatalogItemEditor({ item, categories, initialCategoryId, itemCategoryIds, initialSortOrder, error, onSubmit }: CatalogItemEditorProps) {
+export function CatalogItemEditor({ item, categories, initialCategoryId, itemCategoryIds, initialSortOrder, initialName, showCategories = true, formId = 'catalog-item-editor', error, onSubmit }: CatalogItemEditorProps) {
   const imageRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -40,7 +43,7 @@ export function CatalogItemEditor({ item, categories, initialCategoryId, itemCat
   const [imageError, setImageError] = useState<string | null>(null)
 
   useEffect(() => {
-    setName(item?.name ?? '')
+    setName(item?.name ?? initialName ?? '')
     setDescription(item?.description ?? '')
     setItemType(item?.itemType ?? 'FOOD')
     setBasePrice(item ? String(item.basePrice) : '')
@@ -51,7 +54,7 @@ export function CatalogItemEditor({ item, categories, initialCategoryId, itemCat
     setSortOrder(initialSortOrder ?? 0)
     setImage(null)
     setImageError(null)
-  }, [item, itemCategoryIds, initialCategoryId, initialSortOrder])
+  }, [item, itemCategoryIds, initialCategoryId, initialName, initialSortOrder])
 
   const toggleCategory = (categoryId: string) => setCategoryIds((current) => current.includes(categoryId) ? current.filter((id) => id !== categoryId) : [...current, categoryId])
   const chooseImage = (file?: File) => {
@@ -63,7 +66,7 @@ export function CatalogItemEditor({ item, categories, initialCategoryId, itemCat
   }
 
   return (
-    <form id="catalog-item-editor" className="owner-form-grid" onSubmit={(event) => {
+    <form id={formId} className="owner-form-grid" onSubmit={(event) => {
       event.preventDefault()
       onSubmit({ name: name.trim(), description: description.trim() || null, itemType, basePrice: Number(basePrice), preparationTimeMinutes: preparationTimeMinutes === '' ? null : Number(preparationTimeMinutes), isVegetarian, active, categoryIds, sortOrder, image })
     }}>
@@ -75,7 +78,7 @@ export function CatalogItemEditor({ item, categories, initialCategoryId, itemCat
       <label className="owner-field"><span>Thứ tự trong danh mục</span><input type="number" min="0" value={sortOrder} onChange={(event) => setSortOrder(Number(event.target.value))} /></label>
       <div className="owner-field"><span>Trạng thái món</span><RestaurantToggle checked={active} onChange={setActive} label={active ? 'Đang hoạt động' : 'Tạm ngưng'} /></div>
       <div className="owner-field"><span>Tuỳ chọn</span><RestaurantToggle checked={isVegetarian} onChange={setIsVegetarian} label={isVegetarian ? 'Món chay' : 'Không phải món chay'} /></div>
-      <fieldset className="owner-field full catalog-category-checks"><legend>Danh mục hiển thị</legend>{categories.length ? categories.map((category) => <label key={category.id}><input type="checkbox" checked={categoryIds.includes(category.id)} onChange={() => toggleCategory(category.id)} />{category.name}</label>) : <p>Hãy tạo danh mục trước khi thêm món.</p>}</fieldset>
+      {showCategories ? <fieldset className="owner-field full catalog-category-checks"><legend>Danh mục hiển thị</legend>{categories.length ? categories.map((category) => <label key={category.id}><input type="checkbox" checked={categoryIds.includes(category.id)} onChange={() => toggleCategory(category.id)} />{category.name}</label>) : <p>Hãy tạo danh mục trước khi thêm món.</p>}</fieldset> : null}
       <div className="owner-field full"><span>Ảnh món</span><div className="catalog-image-picker"><input ref={imageRef} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => chooseImage(event.target.files?.[0])} /><button type="button" className="button secondary" onClick={() => imageRef.current?.click()}>Chọn ảnh</button><small>{image ? image.name : 'JPG, PNG hoặc WebP · tối đa 5 MB'}</small></div>{imageError ? <p className="owner-form-error" role="alert">{imageError}</p> : null}</div>
       {error ? <p className="owner-form-error full" role="alert">{error}</p> : null}
     </form>

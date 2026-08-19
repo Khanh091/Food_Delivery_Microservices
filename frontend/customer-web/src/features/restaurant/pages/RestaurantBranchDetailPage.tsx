@@ -3,12 +3,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '../../auth/stores/authStore'
 import { useCartStore } from '../../cart/stores/cartStore'
-import { getPublicBranchCatalog, getPublicRestaurantBranch } from '../api/restaurantApi'
+import { getBranchOperatingStatus, getPublicBranchCatalog, getPublicRestaurantBranch } from '../api/restaurantApi'
 import { BranchCartPanel } from '../components/BranchCartPanel'
 import { BranchHeader } from '../components/BranchHeader'
 import { BusinessHours } from '../components/BusinessHours'
 import { MenuSection } from '../components/MenuSection'
-import type { PublicCatalog, PublicRestaurantBranch } from '../types/restaurant'
+import type { BranchOperatingStatus, PublicCatalog, PublicRestaurantBranch } from '../types/restaurant'
 
 const unavailableRoute = (error: unknown) => isAxiosError(error) && error.response?.status === 404
 const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
@@ -22,6 +22,7 @@ export function RestaurantBranchDetailPage() {
     ? location.state.searchOrigin
     : '/search'
   const [branch, setBranch] = useState<PublicRestaurantBranch | null>(null)
+  const [operatingStatus, setOperatingStatus] = useState<BranchOperatingStatus | null>(null)
   const [catalog, setCatalog] = useState<PublicCatalog | null>(null)
   const [branchLoading, setBranchLoading] = useState(true)
   const [menuLoading, setMenuLoading] = useState(false)
@@ -44,9 +45,6 @@ export function RestaurantBranchDetailPage() {
   const catalogHasVisibleItems = catalog?.menus.some((menu) =>
     menu.categories.some((category) => category.items.length > 0),
   )
-  const itemDetailUrl = restaurantId && branchId && validTargetItemId
-    ? `/restaurants/${restaurantId}/branches/${branchId}/items/${targetItemId}`
-    : null
 
   useEffect(() => {
     if (!restaurantId || !branchId) {
@@ -60,8 +58,12 @@ export function RestaurantBranchDetailPage() {
     setBranchError(null)
     setNotFound(false)
     setBranch(null)
+    setOperatingStatus(null)
     void getPublicRestaurantBranch(restaurantId, branchId, controller.signal)
-      .then(setBranch)
+      .then(async (value) => {
+        setBranch(value)
+        try { setOperatingStatus(await getBranchOperatingStatus(branchId, controller.signal)) } catch { setOperatingStatus(null) }
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
         if (unavailableRoute(error)) setNotFound(true)
@@ -120,11 +122,11 @@ export function RestaurantBranchDetailPage() {
     <main className="page-shell branch-detail-page">
       <Link className="branch-detail-back" to={searchOrigin}>← Quay lại tìm kiếm</Link>
       <BranchHeader branch={branch} />
-      <BusinessHours hours={branch.businessHours} />
+      <BusinessHours hours={branch.businessHours} status={operatingStatus} />
       {menuLoading && <section className="branch-menu-loading" aria-live="polite"><p>Đang tải thực đơn…</p><div className="menu-loading-grid"><div /><div /><div /></div></section>}
       {menuError && <section className="menu-empty"><h2>Chưa thể tải thực đơn</h2><p>{menuError}</p><button type="button" className="button secondary" onClick={() => setMenuRetryKey((value) => value + 1)}>Thử lại</button></section>}
       {catalog && !menuLoading && !menuError && targetItemId && !validTargetItemId && <section className="menu-empty"><h2>Đường dẫn món ăn không hợp lệ</h2><p>Hãy quay lại kết quả tìm kiếm hoặc mở thực đơn của cửa hàng để chọn món.</p></section>}
-      {catalog && !menuLoading && !menuError && validTargetItemId && !targetItemInCatalog && itemDetailUrl && <section className="menu-empty"><h2>Món này chưa có trong thực đơn hiện tại</h2><p>Món có thể vẫn được bán tại chi nhánh, nhưng chưa được xếp vào danh mục thực đơn.</p><Link className="button secondary" to={itemDetailUrl} state={{ searchOrigin }}>Xem chi tiết món</Link></section>}
+       {catalog && !menuLoading && !menuError && validTargetItemId && !targetItemInCatalog && <section className="menu-empty"><h2>Món hiện không khả dụng</h2><p>Món ăn này hiện không có trong thực đơn của chi nhánh.</p><Link className="button secondary" to={searchOrigin}>Quay lại tìm kiếm</Link></section>}
       {catalog && !menuLoading && !menuError && (!validTargetItemId || targetItemInCatalog || catalogHasVisibleItems) && <>
         {!branch.acceptingOrders && <p className="branch-ordering-paused" role="status">Chi nhánh hiện không nhận đơn. Bạn vẫn có thể xem thực đơn.</p>}
         <div className={`branch-ordering-layout${authStatus === 'authenticated' ? '' : ' guest'}`}>

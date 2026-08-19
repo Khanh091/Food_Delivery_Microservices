@@ -46,6 +46,7 @@
   gap: 16px;
   justify-content: space-between;
 }
+.owner-branch-card-head-actions { align-items: flex-end; display: grid; gap: 8px; justify-items: end; }
 .owner-branch-card-title { display: grid; gap: 3px; min-width: 0; }
 .owner-branch-card-title h3 { color: var(--owner-text); font-size: 16px; font-weight: 600; line-height: 24px; margin: 0; }
 .owner-branch-card-title p { color: var(--owner-text-secondary); font-size: 13px; line-height: 20px; margin: 0; overflow-wrap: anywhere; }
@@ -74,7 +75,9 @@
   padding: 10px 12px;
 }
 .owner-hours-day { color: var(--owner-text); font-size: 14px; font-weight: 600; }
-.owner-hours-row input { min-height: 36px; padding: 6px 9px; }
+.owner-hours-row select { min-height: 36px; padding: 6px 9px; }
+.owner-hours-overnight { color: var(--owner-text-muted); font-size: 12px; grid-column: 2 / 4; margin-top: -4px; }
+.owner-hours-status { color: var(--owner-text-secondary); font-size: 13px; margin: 2px 0 0; }
 .owner-hours-row.is-closed { opacity: 0.72; }
 
 .owner-special-hours-list { display: grid; gap: 8px; }
@@ -157,5 +160,18 @@
   .owner-branch-card-meta { grid-template-columns: 1fr; }
   .owner-hours-row { grid-template-columns: 1fr 1fr; }
   .owner-hours-day { grid-column: 1 / -1; }
+  .owner-hours-row .owner-toggle { grid-column: 1 / -1; }
+  .owner-hours-overnight { grid-column: 1 / -1; }
 }
 .owner-overview-grid { margin-top: 16px; }
+
+.owner-activation-panel { align-items: center; background: var(--owner-warning-soft); border: 1px solid #f1d5a6; border-radius: var(--owner-radius-md); display: flex; gap: 16px; justify-content: space-between; margin-top: 16px; padding: 14px 16px; }
+.owner-activation-panel strong { color: var(--owner-text); font-size: 14px; }
+.owner-activation-panel p { color: var(--owner-text-secondary); font-size: 13px; line-height: 19px; margin: 3px 0 0; }
+.owner-activation-panel > div:last-child { align-items: flex-end; display: grid; gap: 8px; justify-items: end; }
+.owner-activation-panel .form-error { margin: 0; max-width: 310px; }
+
+@media (max-width: 560px) {
+  .owner-activation-panel { align-items: stretch; flex-direction: column; }
+  .owner-activation-panel > div:last-child { align-items: stretch; justify-items: stretch; }
+}

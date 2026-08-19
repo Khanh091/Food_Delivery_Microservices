@@ -16,7 +16,21 @@
 .branch-phone:hover { text-decoration: underline; }
 
 .business-hours { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); margin-top: var(--space-5); padding: var(--space-6); }
+.business-hours-header { align-items: flex-start; display: flex; gap: var(--space-4); justify-content: space-between; }
+.business-hours-eyebrow { color: var(--color-text-muted); font-size: .75rem; font-weight: 760; letter-spacing: .06em; margin: 0 0 4px; text-transform: uppercase; }
+.business-hours-toggle { background: transparent; border: 0; color: var(--color-primary); font-size: .84rem; font-weight: 720; padding: 4px 0; }
+.business-hours-toggle:hover { text-decoration: underline; }
 .business-hours h2, .branch-menu h2, .menu-empty h2 { color: var(--color-ink); font-size: 1.26rem; letter-spacing: -.02em; margin: 0; }
+.business-hours-today { border: 1px solid var(--color-border); border-radius: var(--radius-md); margin-top: var(--space-4); padding: 14px 16px; }
+.business-hours-status { align-items: center; display: flex; gap: 8px; }
+.business-hours-status strong { color: var(--color-ink); font-size: .95rem; }
+.business-hours-dot { background: currentColor; border-radius: 50%; height: 9px; width: 9px; }
+.business-hours-today p { color: var(--color-text-secondary); font-size: .9rem; margin: 6px 0 0; }
+.business-hours-today small { color: var(--color-text-secondary); display: block; font-size: .82rem; margin-top: 5px; }
+.business-hours-open { color: var(--color-success); }
+.business-hours-closing_soon { color: #9a6100; }
+.business-hours-closed, .business-hours-closed_today { color: var(--color-danger); }
+.business-hours-order-note { color: #9a6100 !important; font-weight: 700; }
 .business-hours dl { display: grid; gap: 9px; margin: var(--space-4) 0 0; max-width: 520px; }
 .business-hours dl div { border-bottom: 1px solid var(--color-border); display: flex; justify-content: space-between; padding-bottom: 9px; }
 .business-hours dl div:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -214,6 +228,8 @@
   .menu-item-image, .menu-item-placeholder { height: 68px; width: 68px; }
   .menu-item-heading { flex-direction: column; gap: 5px; }
   .business-hours dl div { gap: var(--space-3); }
+  .business-hours-header { align-items: stretch; flex-direction: column; gap: 8px; }
+  .business-hours-toggle { align-self: flex-start; }
   .item-detail-card { display: block; }
   .item-detail-media, .item-detail-media img, .item-detail-media > div { min-height: 260px; }
   .item-detail-content { padding: var(--space-6); }

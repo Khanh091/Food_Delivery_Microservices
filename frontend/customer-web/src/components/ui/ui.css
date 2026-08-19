@@ -1,0 +1,41 @@
+.ui-button { align-items: center; border: 1px solid transparent; border-radius: 9px; display: inline-flex; font: inherit; font-size: 14px; font-weight: 600; gap: 7px; justify-content: center; line-height: 20px; min-height: 40px; padding: 0 14px; transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease, transform 140ms ease; }
+.ui-button:hover:not(:disabled) { transform: none; }
+.ui-button:disabled { cursor: not-allowed; opacity: 0.58; }
+.ui-button-primary { background: #1468dd; border-color: #1468dd; box-shadow: 0 1px 2px rgba(7, 91, 216, 0.12); color: #fff; }
+.ui-button-primary:hover:not(:disabled) { background: var(--color-primary); border-color: var(--color-primary); box-shadow: 0 2px 5px rgba(7, 91, 216, 0.16); }
+.ui-button-primary:active:not(:disabled) { box-shadow: none; transform: translateY(1px); }
+.ui-button-secondary { background: var(--color-surface); border-color: var(--color-border); color: var(--color-ink); }
+.ui-button-secondary:hover:not(:disabled) { background: var(--color-primary-soft); border-color: #a9c8ed; }
+.ui-button-ghost { background: transparent; color: var(--color-primary); }
+.ui-button-ghost:hover:not(:disabled) { background: var(--color-primary-soft); }
+.ui-button-danger { background: var(--color-danger); border-color: var(--color-danger); box-shadow: 0 1px 2px rgba(186, 43, 43, 0.1); color: #fff; }
+.ui-button-danger:hover:not(:disabled) { background: #a52020; border-color: #a52020; box-shadow: 0 2px 5px rgba(186, 43, 43, 0.14); }
+.ui-button-compact { min-height: 34px; padding: 0 10px; }
+.ui-button-icon { display: inline-flex; height: 17px; width: 17px; }
+.ui-button-icon > svg { height: 100%; width: 100%; }
+.ui-button-spinner { animation: ui-spin 700ms linear infinite; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; height: 15px; width: 15px; }
+
+.ui-icon-button { align-items: center; background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--color-text-secondary); display: inline-flex; height: 32px; justify-content: center; padding: 0; transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease; width: 32px; }
+.ui-icon-button > svg { height: 17px; width: 17px; }
+.ui-icon-button:hover:not(:disabled), .ui-icon-button:focus-visible { background: var(--color-primary-soft); color: var(--color-primary); }
+.ui-icon-button-danger:hover:not(:disabled), .ui-icon-button-danger:focus-visible { background: var(--color-danger-soft); color: var(--color-danger); }
+.ui-icon-button:active:not(:disabled) { transform: translateY(1px); }
+.ui-button:focus-visible, .ui-icon-button:focus-visible { outline: 3px solid rgba(7, 91, 216, 0.25); outline-offset: 2px; }
+
+.ui-section-header { align-items: flex-start; display: flex; gap: 12px; justify-content: space-between; }
+.ui-section-header-copy { min-width: 0; }
+.ui-section-header h2 { color: var(--owner-text, var(--color-ink)); font-size: 16px; line-height: 24px; margin: 0; }
+.ui-section-header p { color: var(--owner-text-secondary, var(--color-text-secondary)); font-size: 13px; line-height: 19px; margin: 3px 0 0; }
+.ui-section-header-actions { align-items: center; display: flex; flex: 0 0 auto; gap: 6px; }
+
+.ui-dialog-backdrop { align-items: center; background: rgba(17, 35, 63, 0.42); display: flex; inset: 0; justify-content: center; padding: 20px; position: fixed; z-index: 100; }
+.ui-confirm-dialog { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 14px; box-shadow: var(--shadow-md); max-width: 420px; padding: 22px; width: min(100%, 420px); }
+.ui-confirm-dialog h2 { color: var(--color-ink); font-size: 18px; line-height: 26px; margin: 0; }
+.ui-confirm-dialog p { color: var(--color-text-secondary); font-size: 14px; line-height: 21px; margin: 8px 0 0; }
+.ui-confirm-dialog footer { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 560px) {
+  .ui-confirm-dialog footer > .ui-button { flex: 1; }
+}

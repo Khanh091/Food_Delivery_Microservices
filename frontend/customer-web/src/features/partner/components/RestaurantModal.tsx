@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { useEffect, useRef } from 'react'
+import { XIcon } from '../../../components/icons/XIcon'
+import { IconButton } from '../../../components/ui/IconButton'
 
 interface RestaurantModalProps {
   open: boolean
@@ -32,9 +34,7 @@ export function RestaurantModal({ open, title, description, onClose, children, f
             <h2 id="owner-modal-title">{title}</h2>
             {description ? <p>{description}</p> : null}
           </div>
-          <button ref={closeRef} type="button" className="icon-button owner-modal-close" onClick={onClose} aria-label="Đóng">
-            <svg viewBox="0 0 20 20" width="18" height="18" fill="none" aria-hidden="true"><path d="m6 6 8 8M14 6l-8 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-          </button>
+          <IconButton ref={closeRef} className="owner-modal-close" icon={<XIcon />} label="Đóng" onClick={onClose} />
         </header>
         <div className="owner-modal-body">{children}</div>
         {footer ? <footer className="owner-modal-footer">{footer}</footer> : null}

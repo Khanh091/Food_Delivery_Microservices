@@ -1,6 +1,6 @@
 import { httpClient } from '../../../api/httpClient'
 import type { ApiResponse } from '../../../types/api'
-import type { BranchCatalogItem, BranchCatalogItemInput, CatalogCategory, CatalogItem, CatalogItemImage, CatalogItemInput, CatalogMenu, CategoryInput, CategoryItem, MenuInput } from '../types/catalog'
+import type { BranchCatalogItem, BranchCatalogItemInput, CatalogCategory, CatalogItem, CatalogItemImage, CatalogItemInput, CatalogItemLibraryPage, CatalogMenu, CategoryInput, CategoryItem, MenuInput } from '../types/catalog'
 
 const root = '/api/v1/catalog'
 
@@ -19,6 +19,8 @@ export const deleteCategory = (menuId: string, categoryId: string) => httpClient
 export const setCategoryStatus = (menuId: string, categoryId: string, active: boolean) => unwrap(httpClient.patch<ApiResponse<CatalogCategory>>(`${root}/menus/${menuId}/categories/${categoryId}/${active ? 'activate' : 'deactivate'}`))
 
 export const listCatalogItems = (restaurantId: string) => unwrap(httpClient.get<ApiResponse<CatalogItem[]>>(`${root}/items`, { params: { restaurantId } }))
+export const listCatalogItemLibrary = (restaurantId: string, params: { q?: string; page?: number; size?: number; excludeItemIds?: string[] } = {}) =>
+  unwrap(httpClient.get<ApiResponse<CatalogItemLibraryPage>>(`${root}/items/restaurants/${restaurantId}`, { params }))
 export const createCatalogItem = (input: CatalogItemInput) => unwrap(httpClient.post<ApiResponse<CatalogItem>>(`${root}/items`, input))
 export const updateCatalogItem = (itemId: string, input: Omit<CatalogItemInput, 'restaurantId'>) => unwrap(httpClient.patch<ApiResponse<CatalogItem>>(`${root}/items/${itemId}`, input))
 export const setCatalogItemStatus = (itemId: string, active: boolean) => unwrap(httpClient.patch<ApiResponse<CatalogItem>>(`${root}/items/${itemId}/${active ? 'activate' : 'deactivate'}`))

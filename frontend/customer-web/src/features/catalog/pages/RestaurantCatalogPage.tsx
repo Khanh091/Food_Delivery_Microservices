@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PencilIcon } from '../../../components/icons/PencilIcon'
+import { PlusIcon } from '../../../components/icons/PlusIcon'
 import { getRestaurantBranches } from '../../partner/api/partnerApi'
+import { Button } from '../../../components/ui/Button'
+import { IconButton } from '../../../components/ui/IconButton'
 import { OwnerPageState } from '../../partner/components/OwnerPageState'
 import { RestaurantCard } from '../../partner/components/RestaurantCard'
 import { RestaurantEmptyState } from '../../partner/components/RestaurantEmptyState'
@@ -9,14 +13,18 @@ import { RestaurantPageHeader } from '../../partner/components/RestaurantPageHea
 import { RestaurantSkeleton } from '../../partner/components/RestaurantSkeleton'
 import { RestaurantStatusBadge } from '../../partner/components/RestaurantStatusBadge'
 import { useRestaurantOwner } from '../../partner/contexts/RestaurantOwnerContext'
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog'
 import type { RestaurantBranch } from '../../partner/types/partner'
 import { useToastStore } from '../../toast/stores/toastStore'
 import { addItemToCategory, createBranchItem, createCatalogItem, createCategory, createMenu, deleteCategory, listBranchItems, listCatalogItems, listCategories, listCategoryItems, listItemImages, listMenus, setBranchItemAvailability, setCatalogItemStatus, setCategoryStatus, setMenuStatus, updateBranchItemPrice, updateCatalogItem, updateCategory, updateCategoryItemSortOrder, updateMenu, uploadItemImage } from '../api/catalogApi'
 import { CatalogItemEditor, type CatalogItemEditorValue } from '../components/CatalogItemEditor'
+import { AttachExistingItemModal } from '../components/AttachExistingItemModal'
+import { CatalogItemLibrary } from '../components/CatalogItemLibrary'
 import { CatalogItemRow } from '../components/CatalogItemRow'
+import { CatalogSidebar } from '../components/CatalogSidebar'
 import { CategoryEditor } from '../components/CategoryEditor'
 import { MenuEditor } from '../components/MenuEditor'
-import type { BranchCatalogItem, CatalogCategory, CatalogItem, CatalogItemImage, CatalogMenu, CategoryItem } from '../types/catalog'
+import type { BranchCatalogItem, CatalogCategory, CatalogItem, CatalogItemImage, CatalogItemLibraryItem, CatalogMenu, CategoryItem } from '../types/catalog'
 import '../catalog.css'
 
 type EditorMode = 'create' | 'edit' | null
@@ -50,6 +58,12 @@ export function RestaurantCatalogPage() {
   const [formError, setFormError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [busyItemId, setBusyItemId] = useState<string | null>(null)
+  const [categoryToDelete, setCategoryToDelete] = useState<CatalogCategory | null>(null)
+  const [deletingCategory, setDeletingCategory] = useState(false)
+  const [catalogView, setCatalogView] = useState<'menus' | 'items'>('menus')
+  const [attachOpen, setAttachOpen] = useState(false)
+  const [itemPrefillName, setItemPrefillName] = useState('')
+  const [libraryRefreshKey, setLibraryRefreshKey] = useState(0)
   const categoryRequest = useRef(0)
   const itemRequest = useRef(0)
 
@@ -110,12 +124,12 @@ export function RestaurantCatalogPage() {
     }
   }, [menuId])
 
-  const loadCategoryItems = useCallback(async () => {
+  const loadCategoryItems = useCallback(async (targetMenuId = menuId, targetCategoryId = categoryId) => {
     const request = ++itemRequest.current
     setItemError(null)
-    if (!menuId || !categoryId || categoriesMenuId !== menuId) { setCategoryLinks([]); return }
+    if (!targetMenuId || !targetCategoryId || categoriesMenuId !== targetMenuId) { setCategoryLinks([]); return }
     try {
-      const result = await listCategoryItems(menuId, categoryId)
+      const result = await listCategoryItems(targetMenuId, targetCategoryId)
       if (request === itemRequest.current) setCategoryLinks(result)
     } catch {
       if (request === itemRequest.current) setItemError('Không thể tải món trong danh mục này.')
@@ -130,18 +144,23 @@ export function RestaurantCatalogPage() {
   const reload = async () => {
     if (error) { await loadCatalog(); return }
     if (categoryError) { await loadCategories(); return }
-    if (itemError) await loadCategoryItems()
+    if (itemError || (!error && !categoryError)) await loadCategoryItems()
   }
-  const closeEditors = () => { setMenuEditor(null); setCategoryEditor(null); setItemEditor(null); setEditingItem(null); setFormError(null) }
+  const closeEditors = () => { setMenuEditor(null); setCategoryEditor(null); setItemEditor(null); setEditingItem(null); setItemPrefillName(''); setFormError(null) }
   const openEditor = (setter: (value: EditorMode) => void, mode: EditorMode) => { setFormError(null); setter(mode) }
 
   const saveMenu = async (input: { name: string; description?: string | null; availableFrom?: string | null; availableUntil?: string | null; active: boolean }) => {
     if (!restaurantId || !branchId) return
     setSubmitting(true); setFormError(null)
     try {
-      const saved = menuEditor === 'edit' && menu ? await updateMenu(menu.id, input) : await createMenu({ ...input, restaurantId, branchId })
-      if ((saved.status === 'ACTIVE') !== input.active) await setMenuStatus(saved.id, input.active)
-      closeEditors(); await reload(); pushToast('success', menuEditor === 'edit' ? 'Đã cập nhật thực đơn.' : 'Đã thêm thực đơn.')
+      const creating = menuEditor !== 'edit'
+      const saved = !creating && menu ? await updateMenu(menu.id, input) : await createMenu({ ...input, restaurantId, branchId })
+      const persisted = (saved.status === 'ACTIVE') !== input.active ? await setMenuStatus(saved.id, input.active) : saved
+      setMenus((current) => current ? (creating ? [...current, persisted] : current.map((value) => value.id === persisted.id ? persisted : value)) : current)
+      setMenuId(persisted.id)
+      closeEditors()
+      await loadCategories(persisted.id, creating ? null : categoryId)
+      pushToast('success', creating ? 'Đã thêm thực đơn.' : 'Đã cập nhật thực đơn.')
     } catch { setFormError('Không thể lưu thực đơn. Vui lòng kiểm tra dữ liệu và thử lại.') } finally { setSubmitting(false) }
   }
 
@@ -165,34 +184,75 @@ export function RestaurantCatalogPage() {
     try {
       const input = { name: value.name, description: value.description, itemType: value.itemType, basePrice: value.basePrice, currency: 'VND', preparationTimeMinutes: value.preparationTimeMinutes, isVegetarian: value.isVegetarian }
       const saved = editingItem ? await updateCatalogItem(editingItem.id, input) : await createCatalogItem({ ...input, restaurantId })
-      if ((saved.status === 'ACTIVE') !== value.active) await setCatalogItemStatus(saved.id, value.active)
-      if (!editingItem) { await addItemToCategory(menuId, categoryId, saved.id, value.sortOrder); await createBranchItem({ itemId: saved.id, branchId, sellingPrice: value.basePrice }) }
-      else { await updateCategoryItemSortOrder(menuId, categoryId, saved.id, value.sortOrder) }
-      if (value.image) { await uploadItemImage(saved.id, value.image); pushToast('success', 'Đã cập nhật ảnh món.') }
-      closeEditors(); await reload(); pushToast('success', editingItem ? 'Đã cập nhật món.' : 'Đã thêm món.')
+      const persisted = (saved.status === 'ACTIVE') !== value.active ? await setCatalogItemStatus(saved.id, value.active) : saved
+      if (!editingItem) {
+        const link = await addItemToCategory(menuId, categoryId, saved.id, value.sortOrder)
+        setItems((current) => current ? [...current, persisted] : [persisted])
+        setCategoryLinks((current) => [...current, link])
+        setBranchItems(await listBranchItems(restaurantId, branchId))
+      } else {
+        const link = await updateCategoryItemSortOrder(menuId, categoryId, saved.id, value.sortOrder)
+        setItems((current) => current?.map((item) => item.id === persisted.id ? persisted : item) ?? [persisted])
+        setCategoryLinks((current) => current.map((item) => item.itemId === persisted.id ? link : item))
+      }
+      if (value.image) {
+        try {
+          const image = await uploadItemImage(saved.id, value.image)
+          setImages((current) => ({ ...current, [saved.id]: image }))
+          pushToast('success', 'Đã cập nhật ảnh món.')
+        } catch {
+          await loadCategoryItems(menuId, categoryId)
+          closeEditors()
+          pushToast('error', 'Đã lưu món nhưng chưa tải được ảnh. Hãy chỉnh sửa món để thử lại ảnh.')
+          return
+        }
+      }
+      closeEditors(); await loadCategoryItems(menuId, categoryId); setLibraryRefreshKey((value) => value + 1); pushToast('success', editingItem ? 'Đã cập nhật món.' : 'Đã thêm món.')
     } catch { setFormError('Không thể lưu món. Vui lòng kiểm tra dữ liệu và thử lại.') } finally { setSubmitting(false) }
   }
 
   const toggleAvailability = async (itemId: string, branchItem: BranchCatalogItem, available: boolean) => {
     setBusyItemId(itemId)
-    try { await setBranchItemAvailability(branchItem.id, available); await loadCatalog(); pushToast('success', 'Đã cập nhật khả năng bán của món.') }
+    try { const updated = await setBranchItemAvailability(branchItem.id, available); setBranchItems((current) => current.map((item) => item.id === updated.id ? updated : item)); pushToast('success', 'Đã cập nhật khả năng bán của món.') }
     catch { pushToast('error', 'Không thể cập nhật khả năng bán của món.') } finally { setBusyItemId(null) }
   }
   const activateAtBranch = async (item: CatalogItem) => {
     if (!branchId) return
     setBusyItemId(item.id)
-    try { await createBranchItem({ itemId: item.id, branchId, sellingPrice: item.basePrice }); await loadCatalog(); pushToast('success', 'Món đã được bán tại chi nhánh.') }
+    try { const created = await createBranchItem({ itemId: item.id, branchId, sellingPrice: item.basePrice }); setBranchItems((current) => current.some((value) => value.id === created.id) ? current : [...current, created]); pushToast('success', 'Món đã được bán tại chi nhánh.') }
     catch { pushToast('error', 'Không thể thêm món vào chi nhánh.') } finally { setBusyItemId(null) }
   }
   const savePrice = async (itemId: string, branchItem: BranchCatalogItem, price: number) => {
     if (!Number.isFinite(price) || price < 0) { pushToast('error', 'Giá tại chi nhánh không hợp lệ.'); return }
     setBusyItemId(itemId)
-    try { await updateBranchItemPrice(branchItem.id, price, branchItem.originalPrice); await loadCatalog(); pushToast('success', 'Đã cập nhật giá tại chi nhánh.') }
+    try { const updated = await updateBranchItemPrice(branchItem.id, price, branchItem.originalPrice); setBranchItems((current) => current.map((item) => item.id === updated.id ? updated : item)); pushToast('success', 'Đã cập nhật giá tại chi nhánh.') }
     catch { pushToast('error', 'Không thể cập nhật giá tại chi nhánh.') } finally { setBusyItemId(null) }
   }
-  const deleteCurrentCategory = async () => {
-    if (!menu || !category || !window.confirm(`Xóa danh mục “${category.name}”? Các món gốc vẫn được giữ lại.`)) return
-    try { await deleteCategory(menu.id, category.id); await loadCategories(); pushToast('success', 'Đã xóa danh mục.') } catch { pushToast('error', 'Không thể xóa danh mục lúc này.') }
+  const deleteSelectedCategory = async () => {
+    if (!menu || !categoryToDelete) return
+    setDeletingCategory(true)
+    try {
+      await deleteCategory(menu.id, categoryToDelete.id)
+      setCategoryToDelete(null)
+      await loadCategories(menu.id, categoryId === categoryToDelete.id ? null : categoryId)
+      pushToast('success', 'Đã xóa danh mục.')
+    } catch { pushToast('error', 'Không thể xóa danh mục lúc này.') } finally { setDeletingCategory(false) }
+  }
+
+  const attachExistingItem = async (item: CatalogItemLibraryItem) => {
+    if (!menuId || !categoryId || !branchId || !restaurantId) return
+    try {
+      await addItemToCategory(menuId, categoryId, item.id, categoryLinks.length)
+      await Promise.all([
+        loadCategoryItems(menuId, categoryId),
+        listBranchItems(restaurantId, branchId).then(setBranchItems),
+      ])
+      setAttachOpen(false)
+      setLibraryRefreshKey((value) => value + 1)
+      pushToast('success', `Đã thêm ${item.name} vào danh mục.`)
+    } catch {
+      pushToast('error', 'Không thể thêm món này vào danh mục. Món có thể đã được gắn trước đó.')
+    }
   }
 
   const visibleItems = useMemo(() => (items ?? []).filter((item) => {
@@ -205,19 +265,34 @@ export function RestaurantCatalogPage() {
     return filter !== 'unavailable' || !branchItem || !branchItem.isAvailable
   }).sort((left, right) => (linkByItem.get(left.id)?.sortOrder ?? 0) - (linkByItem.get(right.id)?.sortOrder ?? 0)), [branchItemByItem, filter, items, linkByItem, query])
   const noRestaurant = restaurants.length === 0 || !selectedRestaurant
-  const footer = (formId: string, label: string) => <><button type="button" className="button secondary" disabled={submitting} onClick={closeEditors}>Hủy</button><button type="submit" form={formId} className="button primary" disabled={submitting}>{submitting ? 'Đang lưu…' : label}</button></>
+  const footer = (formId: string, label: string) => <><Button variant="secondary" disabled={submitting} onClick={closeEditors}>Hủy</Button><Button type="submit" form={formId} loading={submitting}>{label}</Button></>
 
   return <div className="owner-page catalog-page">
-    <RestaurantPageHeader title="Thực đơn" description="Quản lý món ăn và khả năng bán theo từng chi nhánh." actions={<><label className="catalog-branch-select"><span>Chi nhánh</span><select value={branchId ?? ''} onChange={(event) => setBranchId(event.target.value)} disabled={!branches?.length}>{branches?.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label><button type="button" className="button primary" disabled={!category} onClick={() => openEditor(setItemEditor, 'create')}>Thêm món</button></>} />
+    <RestaurantPageHeader title="Thực đơn" description="Quản lý món ăn và khả năng bán theo từng chi nhánh." actions={<label className="catalog-branch-select"><span>Chi nhánh</span><select value={branchId ?? ''} onChange={(event) => setBranchId(event.target.value)} disabled={!branches?.length}>{branches?.map((value) => <option key={value.id} value={value.id}>{value.name}</option>)}</select></label>} />
     <OwnerPageState loading={ownerLoading} error={ownerError} onRetry={retry} empty={noRestaurant} emptyTitle="Bạn chưa có nhà hàng được phê duyệt." emptyDescription="Nhà hàng sẽ xuất hiện sau khi hồ sơ đối tác được phê duyệt.">
-      {error ? <RestaurantErrorState message={error} onRetry={() => void reload()} /> : branches === null || loadingData ? <RestaurantSkeleton rows={7} /> : branches.length === 0 ? <RestaurantEmptyState title="Chưa có chi nhánh" description="Thêm chi nhánh đầu tiên để bắt đầu cấu hình thực đơn." /> : <div className="catalog-workspace">
-        <aside className="catalog-navigation"><div className="catalog-navigation-heading"><div><span>Thực đơn</span><strong>{branch?.name}</strong></div><button type="button" className="icon-button" aria-label="Thêm thực đơn" onClick={() => openEditor(setMenuEditor, 'create')}><svg viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button></div>{menus?.length ? <div className="catalog-menu-list">{menus.map((value) => <button type="button" key={value.id} className={`catalog-menu-button${value.id === menuId ? ' active' : ''}`} onClick={() => setMenuId(value.id)}><span>{value.name}</span><RestaurantStatusBadge status={value.status} label={value.status === 'ACTIVE' ? 'Đang bật' : 'Tạm ngưng'} /></button>)}</div> : <RestaurantEmptyState title="Chưa có thực đơn" description="Tạo thực đơn đầu tiên cho chi nhánh này." action={<button type="button" className="button secondary" onClick={() => openEditor(setMenuEditor, 'create')}>Thêm thực đơn</button>} />}{menu ? <><div className="catalog-nav-divider" /><div className="catalog-navigation-heading"><div><span>Danh mục</span><strong>{menu.name}</strong></div><button type="button" className="icon-button" aria-label="Thêm danh mục" onClick={() => openEditor(setCategoryEditor, 'create')}><svg viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button></div>{categoryError || selectedMenuCategories === null ? null : selectedMenuCategories.length ? <div className="catalog-category-list">{selectedMenuCategories.map((value) => <button type="button" key={value.id} className={`catalog-category-button${value.id === categoryId ? ' active' : ''}`} onClick={() => setCategoryId(value.id)}><span>{value.name}</span></button>)}</div> : <RestaurantEmptyState title="Chưa có danh mục" description="Tạo danh mục để sắp xếp món ăn." />}</> : null}</aside>
-        <section className="catalog-main"><RestaurantCard><div className="catalog-main-header"><div><span className="catalog-eyebrow">{menu?.name ?? 'Thực đơn chi nhánh'}</span><h2>{category?.name ?? menu?.name ?? 'Bắt đầu với thực đơn'}</h2><p>{category?.description ?? (menu ? 'Tạo danh mục đầu tiên để bắt đầu thêm món vào thực đơn này.' : 'Món là dữ liệu chuẩn của nhà hàng; giá và trạng thái bán được lưu riêng theo chi nhánh.')}</p></div>{category ? <div className="catalog-category-actions"><RestaurantStatusBadge status={category.status} label={category.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm ngưng'} /><button type="button" className="button secondary" onClick={() => openEditor(setCategoryEditor, 'edit')}>Chỉnh sửa</button><button type="button" className="button danger-button" onClick={() => void deleteCurrentCategory()}>Xóa</button></div> : menu ? <button type="button" className="button secondary" onClick={() => openEditor(setMenuEditor, 'edit')}>Chỉnh sửa thực đơn</button> : null}</div>
-        {!menu ? <RestaurantEmptyState title="Bắt đầu bằng một thực đơn" description="Thực đơn thuộc từng chi nhánh. Sau đó bạn có thể tạo danh mục và thêm món." action={<button type="button" className="button primary" onClick={() => openEditor(setMenuEditor, 'create')}>Tạo thực đơn</button>} /> : categoryError ? <RestaurantErrorState message={categoryError} onRetry={() => void reload()} /> : selectedMenuCategories === null ? <RestaurantSkeleton rows={4} /> : !category ? <RestaurantEmptyState title="Bắt đầu với thực đơn" description="Tạo danh mục đầu tiên để thêm món vào thực đơn này." action={<button type="button" className="button primary" onClick={() => openEditor(setCategoryEditor, 'create')}>Thêm danh mục</button>} /> : itemError ? <RestaurantErrorState message={itemError} onRetry={() => void reload()} /> : <><div className="catalog-toolbar"><label className="catalog-search"><span>Tìm món</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tên hoặc mô tả món" /></label><select aria-label="Lọc món" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="all">Tất cả trạng thái</option><option value="active">Món đang hoạt động</option><option value="inactive">Món tạm ngưng</option><option value="available">Đang bán</option><option value="unavailable">Tạm hết / chưa bán</option></select></div>{visibleItems.length ? <div className="catalog-item-list">{visibleItems.map((item) => <CatalogItemRow key={item.id} item={item} imageUrl={images[item.id]?.imageUrl} branchItem={branchItemByItem.get(item.id)} busy={busyItemId === item.id} onEdit={() => { setEditingItem(item); openEditor(setItemEditor, 'edit') }} onActivateForBranch={() => void activateAtBranch(item)} onToggleAvailability={(available) => { const value = branchItemByItem.get(item.id); if (value) void toggleAvailability(item.id, value, available) }} onSavePrice={(price) => { const value = branchItemByItem.get(item.id); if (value) void savePrice(item.id, value, price) }} />)}</div> : <RestaurantEmptyState title="Chưa có món trong danh mục này" description={query || filter !== 'all' ? 'Không có món phù hợp với tìm kiếm hoặc bộ lọc hiện tại.' : 'Thêm món đầu tiên để bắt đầu bán tại chi nhánh này.'} action={!query && filter === 'all' ? <button type="button" className="button primary" onClick={() => openEditor(setItemEditor, 'create')}>Thêm món</button> : null} />}</>}</RestaurantCard></section>
-      </div>}
+      {error ? <RestaurantErrorState message={error} onRetry={() => void reload()} /> : branches === null || loadingData ? <RestaurantSkeleton rows={7} /> : branches.length === 0 ? <RestaurantEmptyState title="Chưa có chi nhánh" description="Thêm chi nhánh đầu tiên để bắt đầu cấu hình thực đơn." /> : <><div className="catalog-view-tabs" role="tablist"><button type="button" className={catalogView === 'menus' ? 'active' : ''} onClick={() => setCatalogView('menus')}>Thực đơn</button><button type="button" className={catalogView === 'items' ? 'active' : ''} onClick={() => setCatalogView('items')}>Món ăn</button></div>{catalogView === 'items' ? (restaurantId ? <CatalogItemLibrary restaurantId={restaurantId} refreshKey={libraryRefreshKey} /> : null) : <div className="catalog-workspace">
+        <CatalogSidebar
+          branchName={branch?.name ?? null}
+          menus={menus}
+          selectedMenu={menu}
+          categories={selectedMenuCategories}
+          categoryError={categoryError}
+          selectedCategoryId={categoryId}
+          onCreateMenu={() => openEditor(setMenuEditor, 'create')}
+          onSelectMenu={(value) => setMenuId(value)}
+          onCreateCategory={() => openEditor(setCategoryEditor, 'create')}
+          onEditCategory={(value) => { setCategoryId(value.id); setCategoryEditor('edit'); setFormError(null) }}
+          onDeleteCategory={(value) => setCategoryToDelete(value)}
+          onSelectCategory={(value) => setCategoryId(value)}
+        />
+        <section className="catalog-main"><RestaurantCard><div className="catalog-main-header"><div><span className="catalog-eyebrow">{menu?.name ?? 'Thực đơn chi nhánh'}</span><h2>{category?.name ?? menu?.name ?? 'Bắt đầu với thực đơn'}</h2><p>{category?.description ?? (menu ? 'Tạo danh mục đầu tiên để bắt đầu thêm món vào thực đơn này.' : 'Món là dữ liệu chuẩn của nhà hàng; giá và trạng thái bán được lưu riêng theo chi nhánh.')}</p></div>{menu ? <div className="catalog-category-actions"><IconButton icon={<PencilIcon />} label={`Chỉnh sửa ${menu.name}`} onClick={() => openEditor(setMenuEditor, 'edit')} />{category ? <RestaurantStatusBadge status={category.status} label={category.status === 'ACTIVE' ? 'Đang hoạt động' : 'Tạm ngưng'} /> : null}</div> : null}</div>
+        {!menu ? <RestaurantEmptyState title="Bắt đầu bằng một thực đơn" description="Thực đơn thuộc từng chi nhánh. Sau đó bạn có thể tạo danh mục và thêm món." action={<Button onClick={() => openEditor(setMenuEditor, 'create')}>Tạo thực đơn</Button>} /> : categoryError ? <RestaurantErrorState message={categoryError} onRetry={() => void reload()} /> : selectedMenuCategories === null ? <RestaurantSkeleton rows={4} /> : !category ? <RestaurantEmptyState title="Bắt đầu với thực đơn" description="Tạo danh mục đầu tiên để thêm món vào thực đơn này." action={<Button onClick={() => openEditor(setCategoryEditor, 'create')}>Thêm danh mục</Button>} /> : itemError ? <RestaurantErrorState message={itemError} onRetry={() => void reload()} /> : <><div className="catalog-toolbar"><label className="catalog-search"><span>Tìm món</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tên hoặc mô tả món" /></label><select aria-label="Lọc món" value={filter} onChange={(event) => setFilter(event.target.value as Filter)}><option value="all">Tất cả trạng thái</option><option value="active">Món đang hoạt động</option><option value="inactive">Món tạm ngưng</option><option value="available">Đang bán</option><option value="unavailable">Tạm hết / chưa bán</option></select><Button icon={<PlusIcon />} onClick={() => setAttachOpen(true)}>Thêm món</Button></div>{visibleItems.length ? <div className="catalog-item-list">{visibleItems.map((item) => <CatalogItemRow key={item.id} item={item} imageUrl={images[item.id]?.imageUrl} branchItem={branchItemByItem.get(item.id)} busy={busyItemId === item.id} onEdit={() => { setEditingItem(item); openEditor(setItemEditor, 'edit') }} onActivateForBranch={() => void activateAtBranch(item)} onToggleAvailability={(available) => { const value = branchItemByItem.get(item.id); if (value) void toggleAvailability(item.id, value, available) }} onSavePrice={(price) => { const value = branchItemByItem.get(item.id); if (value) void savePrice(item.id, value, price) }} />)}</div> : <RestaurantEmptyState title="Chưa có món trong danh mục này" description={query || filter !== 'all' ? 'Không có món phù hợp với tìm kiếm hoặc bộ lọc hiện tại.' : 'Thêm món đầu tiên để bắt đầu bán tại chi nhánh này.'} action={!query && filter === 'all' ? <Button icon={<PlusIcon />} onClick={() => setAttachOpen(true)}>Thêm món</Button> : null} />}</>}</RestaurantCard></section>
+      </div>}</>}
     </OwnerPageState>
     <RestaurantModal open={menuEditor !== null} title={menuEditor === 'edit' ? 'Chỉnh sửa thực đơn' : 'Thêm thực đơn'} description="Thực đơn chỉ áp dụng cho chi nhánh đang chọn." onClose={closeEditors} footer={footer('catalog-menu-editor', menuEditor === 'edit' ? 'Lưu thay đổi' : 'Thêm thực đơn')}><MenuEditor menu={menuEditor === 'edit' ? menu : null} error={formError} onSubmit={(value) => void saveMenu(value)} /></RestaurantModal>
     <RestaurantModal open={categoryEditor !== null} title={categoryEditor === 'edit' ? 'Chỉnh sửa danh mục' : 'Thêm danh mục'} description="Danh mục sắp xếp các món trong thực đơn đang chọn." onClose={closeEditors} footer={footer('catalog-category-editor', categoryEditor === 'edit' ? 'Lưu thay đổi' : 'Thêm danh mục')}><CategoryEditor category={categoryEditor === 'edit' ? category : null} error={formError} onSubmit={(value) => void saveCategory(value)} /></RestaurantModal>
-    <RestaurantModal open={itemEditor !== null} title={itemEditor === 'edit' ? 'Chỉnh sửa món' : 'Thêm món'} description="Giá cơ sở là giá chuẩn; chi nhánh có giá bán và khả năng bán riêng." onClose={closeEditors} footer={footer('catalog-item-editor', itemEditor === 'edit' ? 'Lưu thay đổi' : 'Thêm món')}><CatalogItemEditor item={editingItem} categories={category ? [category] : []} initialCategoryId={categoryId} itemCategoryIds={editingItem && categoryId ? [categoryId] : undefined} initialSortOrder={editingItem ? linkByItem.get(editingItem.id)?.sortOrder : 0} error={formError} onSubmit={(value) => void saveItem(value)} /></RestaurantModal>
+    <RestaurantModal open={itemEditor !== null} title={itemEditor === 'edit' ? 'Chỉnh sửa món' : 'Thêm món'} description="Giá cơ sở là giá chuẩn; chi nhánh có giá bán và khả năng bán riêng." onClose={closeEditors} footer={footer('catalog-item-editor', itemEditor === 'edit' ? 'Lưu thay đổi' : 'Thêm món')}><CatalogItemEditor initialName={itemPrefillName} item={editingItem} categories={category ? [category] : []} initialCategoryId={categoryId} itemCategoryIds={editingItem && categoryId ? [categoryId] : undefined} initialSortOrder={editingItem ? linkByItem.get(editingItem.id)?.sortOrder : 0} error={formError} onSubmit={(value) => void saveItem(value)} /></RestaurantModal>
+     <AttachExistingItemModal open={attachOpen} restaurantId={restaurantId ?? null} excludedItemIds={categoryLinks.map((item) => item.itemId)} onClose={() => setAttachOpen(false)} onAttach={(item) => void attachExistingItem(item)} onCreateNew={(name) => { setAttachOpen(false); setItemPrefillName(name); setEditingItem(null); setFormError(null); setItemEditor('create') }} />
+   <ConfirmDialog open={categoryToDelete !== null} title="Xóa danh mục?" description={categoryToDelete ? `Xóa “${categoryToDelete.name}”? Những món trong danh mục sẽ được gỡ khỏi danh mục, nhưng không bị xóa khỏi danh sách món ăn của nhà hàng.` : ''} confirmLabel="Xóa danh mục" busy={deletingCategory} onCancel={() => { if (!deletingCategory) setCategoryToDelete(null) }} onConfirm={() => void deleteSelectedCategory()} />
   </div>
 }

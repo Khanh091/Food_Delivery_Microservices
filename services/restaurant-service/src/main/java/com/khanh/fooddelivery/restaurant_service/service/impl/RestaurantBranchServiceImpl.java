@@ -226,7 +226,7 @@ public class RestaurantBranchServiceImpl implements RestaurantBranchService {
         if (closed == null
                 || (closed
                         ? (open != null || close != null)
-                        : (open == null || close == null || !close.isAfter(open))))
+                        : (open == null || close == null || close.equals(open))))
             throw new AppException(ErrorCode.INVALID_BUSINESS_HOURS);
     }
 

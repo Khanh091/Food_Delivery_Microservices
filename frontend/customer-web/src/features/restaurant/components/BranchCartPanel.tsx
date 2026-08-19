@@ -63,8 +63,9 @@ export function BranchCartPanel({ branchId, catalog, orderingEnabled, onClose }:
               && mutation.cartItemId === item.cartItemId
             const groups = optionGroups(item)
             const editableItem = itemsById.get(item.catalogItemId)
+            const imageUrl = item.imageUrl || editableItem?.primaryImageUrl || editableItem?.images.find((image) => image.isPrimary)?.imageUrl || null
             return <article className="branch-cart-line" key={item.cartItemId}>
-              {item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <span className="branch-cart-placeholder" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>}
+              {imageUrl ? <img src={imageUrl} alt={item.name} /> : <span className="branch-cart-placeholder" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>}
               <div className="branch-cart-line-main"><h3>{item.name}</h3>{Object.entries(groups).map(([group, values]) => <p key={group}><strong>{group}:</strong> {values.join(', ')}</p>)}{item.note && <p className="branch-cart-note">{item.note}</p>}<span>{money(item.unitPrice, currency)}</span></div>
               <div className="branch-cart-line-actions"><strong>{money(item.lineTotal, currency)}</strong><div className="branch-cart-stepper"><button type="button" disabled={busy || item.quantity <= 1} onClick={() => void changeQuantity(item, item.quantity - 1)} aria-label={`Giảm số lượng ${item.name}`}>−</button><span>{item.quantity}</span><button type="button" disabled={busy || item.quantity >= 99} onClick={() => void changeQuantity(item, item.quantity + 1)} aria-label={`Tăng số lượng ${item.name}`}>+</button></div><div>{editableItem && <button type="button" disabled={busy} onClick={() => setEditing(item)}>Sửa</button>}<button type="button" disabled={busy} onClick={() => void remove(item)}>Xóa</button></div></div>
             </article>

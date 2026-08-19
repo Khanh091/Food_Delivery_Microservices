@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PencilIcon } from '../../../components/icons/PencilIcon'
+import { Button } from '../../../components/ui/Button'
+import { IconButton } from '../../../components/ui/IconButton'
 import { createRestaurantBranch, getRestaurantBranches, setBranchAcceptingOrders, updateRestaurantBranch } from '../api/partnerApi'
 import { BranchForm } from '../components/BranchForm'
 import { BranchSpecialHoursList } from '../components/BranchSpecialHoursList'
@@ -116,7 +119,7 @@ export function RestaurantBranchesPage() {
       <RestaurantPageHeader
         title="Chi nhánh"
         description="Quản lý chi nhánh, vận hành nhận đơn và giờ hoạt động."
-        actions={<button type="button" className="button primary" onClick={() => { setFormError(null); setCreateOpen(true) }}>+ Thêm chi nhánh</button>}
+        actions={<Button onClick={() => { setFormError(null); setCreateOpen(true) }}>Thêm chi nhánh</Button>}
       />
       <OwnerPageState
         loading={loading}
@@ -141,7 +144,7 @@ export function RestaurantBranchesPage() {
               <RestaurantEmptyState
                 title="Chưa có chi nhánh"
                 description="Thêm chi nhánh đầu tiên để bắt đầu cấu hình khu vực bán hàng."
-                action={<button type="button" className="button primary" onClick={() => { setFormError(null); setCreateOpen(true) }}>+ Thêm chi nhánh</button>}
+                action={<Button onClick={() => { setFormError(null); setCreateOpen(true) }}>Thêm chi nhánh</Button>}
               />
             ) : filteredBranches.length === 0 ? (
               <RestaurantEmptyState title="Không có chi nhánh phù hợp" description="Thử đổi bộ lọc hoặc thêm chi nhánh mới." />
@@ -154,9 +157,12 @@ export function RestaurantBranchesPage() {
                         <h3>{branch.name}</h3>
                         <p>{branch.branchCode} · {branch.addressLine}{branch.city ? `, ${branch.city}` : ''}</p>
                       </div>
-                      <div className="owner-branch-card-badges">
-                      <RestaurantStatusBadge status={branch.status} label={branch.status === 'PENDING' ? 'Chờ kích hoạt' : branch.status === 'ACTIVE' ? 'Đang hoạt động' : branch.status === 'INACTIVE' ? 'Tạm ngưng' : branch.status === 'SUSPENDED' ? 'Tạm đình chỉ' : branch.status === 'CLOSED' ? 'Đã đóng' : branch.status} />
-                        {branch.acceptingOrders ? <RestaurantStatusBadge label="Đang nhận đơn" tone="success" /> : null}
+                      <div className="owner-branch-card-head-actions">
+                        <IconButton icon={<PencilIcon />} label={`Chỉnh sửa ${branch.name}`} onClick={() => { setFormError(null); setEditingBranch(branch) }} />
+                        <div className="owner-branch-card-badges">
+                          <RestaurantStatusBadge status={branch.status} label={branch.status === 'PENDING' ? 'Chờ kích hoạt' : branch.status === 'ACTIVE' ? 'Đang hoạt động' : branch.status === 'INACTIVE' ? 'Tạm ngưng' : branch.status === 'SUSPENDED' ? 'Tạm đình chỉ' : branch.status === 'CLOSED' ? 'Đã đóng' : branch.status} />
+                          {branch.acceptingOrders ? <RestaurantStatusBadge label="Đang nhận đơn" tone="success" /> : null}
+                        </div>
                       </div>
                     </div>
                     <dl className="owner-branch-card-meta">
@@ -172,7 +178,6 @@ export function RestaurantBranchesPage() {
                         busy={togglingId === branch.id}
                         onChange={() => void toggleOrders(branch)}
                       />
-                      <button type="button" className="button secondary" onClick={() => { setFormError(null); setEditingBranch(branch) }}>Chỉnh sửa</button>
                       <button type="button" className="button secondary" onClick={() => setHoursBranch(branch)}>Giờ hoạt động</button>
                     </div>
                   </article>

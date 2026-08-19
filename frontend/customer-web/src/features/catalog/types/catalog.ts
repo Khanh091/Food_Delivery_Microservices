@@ -34,6 +34,45 @@ export interface CatalogItem {
   status: CatalogStatus
 }
 
+export interface CatalogItemLibraryItem extends CatalogItem {
+  primaryImageUrl: string | null
+  placementCount: number
+}
+
+export interface CatalogItemLibraryPage {
+  content: CatalogItemLibraryItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface CatalogItemLibraryItem extends CatalogItem {
+  primaryImageUrl: string | null
+  placementCount: number
+}
+
+export interface CatalogItemLibraryPage {
+  content: CatalogItemLibraryItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface CatalogItemLibraryItem extends CatalogItem {
+  primaryImageUrl: string | null
+  placementCount: number
+}
+
+export interface CatalogItemLibraryPage {
+  content: CatalogItemLibraryItem[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
 export interface CategoryItem {
   id: string
   categoryId: string
