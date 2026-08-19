@@ -1,14 +1,21 @@
 package com.khanh.fooddelivery.search_service.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.khanh.fooddelivery.search_service.client.CatalogSellabilityClient;
+import com.khanh.fooddelivery.search_service.client.CatalogSellabilityClient.SellableItemFilterRequest;
 import com.khanh.fooddelivery.search_service.dto.CatalogItemSearchResponse;
 import com.khanh.fooddelivery.search_service.dto.ItemSearchCriteria;
 import com.khanh.fooddelivery.search_service.dto.SearchPageResponse;
+import com.khanh.fooddelivery.search_service.exception.SearchApiException;
+import com.khanh.fooddelivery.search_service.exception.SearchErrorCode;
 import com.khanh.fooddelivery.search_service.repository.SearchProjectionRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,9 +24,13 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class ElasticsearchCatalogItemSearchService implements CatalogItemSearchService {
     private final SearchProjectionRepository projectionRepository;
+    private final CatalogSellabilityClient catalogSellabilityClient;
 
-    public ElasticsearchCatalogItemSearchService(SearchProjectionRepository projectionRepository) {
+    public ElasticsearchCatalogItemSearchService(
+            SearchProjectionRepository projectionRepository,
+            CatalogSellabilityClient catalogSellabilityClient) {
         this.projectionRepository = projectionRepository;
+        this.catalogSellabilityClient = catalogSellabilityClient;
     }
 
     @Override
@@ -40,7 +51,32 @@ public class ElasticsearchCatalogItemSearchService implements CatalogItemSearchS
             }
         }
 
-        long totalElements = response.path("hits").path("total").path("value").asLong();
+        Map<UUID, List<UUID>> itemIdsByRestaurant = new LinkedHashMap<>();
+        for (CatalogItemSearchResponse item : items) {
+            itemIdsByRestaurant
+                    .computeIfAbsent(item.restaurantId(), ignored -> new ArrayList<>())
+                    .add(item.itemId());
+        }
+        Map<UUID, Set<UUID>> sellableByRestaurant = new LinkedHashMap<>();
+        try {
+            for (Map.Entry<UUID, List<UUID>> entry : itemIdsByRestaurant.entrySet()) {
+                List<UUID> sellable = catalogSellabilityClient
+                        .filterSellableItems(
+                                entry.getKey(),
+                                criteria.branchId(),
+                                new SellableItemFilterRequest(entry.getKey(), entry.getValue()))
+                        .data()
+                        .itemIds();
+                sellableByRestaurant.put(entry.getKey(), Set.copyOf(sellable));
+            }
+        } catch (RuntimeException exception) {
+            throw new SearchApiException(SearchErrorCode.CATALOG_SELLABILITY_UNAVAILABLE, exception);
+        }
+        items.removeIf(item -> !sellableByRestaurant
+                .getOrDefault(item.restaurantId(), Set.of())
+                .contains(item.itemId()));
+
+        long totalElements = items.size();
         int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / criteria.size());
         return new SearchPageResponse<>(items, criteria.page(), criteria.size(), totalElements, totalPages);
     }

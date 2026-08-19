@@ -6,10 +6,14 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.khanh.fooddelivery.search_service.client.CatalogSellabilityClient;
+import com.khanh.fooddelivery.search_service.client.CatalogSellabilityClient.SellableItemFilterResponse;
+import com.khanh.fooddelivery.search_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.search_service.dto.GlobalSearchResult;
 import com.khanh.fooddelivery.search_service.dto.SearchPageResponse;
 import com.khanh.fooddelivery.search_service.repository.GlobalElasticsearchSearchRepository;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,7 +27,21 @@ class ElasticsearchGlobalSearchServiceTests {
     private static final String BRANCH = "00000000-0000-0000-0000-000000000011";
 
     @Mock private GlobalElasticsearchSearchRepository repository;
+    @Mock private CatalogSellabilityClient catalogSellabilityClient;
     @InjectMocks private ElasticsearchGlobalSearchService service;
+
+    @BeforeEach
+    void allowIndexedItemsThatCatalogConfirmsAsSellable() {
+        when(catalogSellabilityClient.filterSellableItems(
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any(),
+                        org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> ApiResponse.success(
+                        "ok",
+                        new SellableItemFilterResponse(
+                                invocation.<CatalogSellabilityClient.SellableItemFilterRequest>getArgument(2)
+                                        .itemIds())));
+    }
 
     @Test
     void fillsPreviewForBranchTextMatchWhenNoItemMatches() throws Exception {

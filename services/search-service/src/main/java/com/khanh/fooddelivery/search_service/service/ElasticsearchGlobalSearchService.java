@@ -1,8 +1,13 @@
 package com.khanh.fooddelivery.search_service.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.khanh.fooddelivery.search_service.client.CatalogSellabilityClient;
+import com.khanh.fooddelivery.search_service.client.CatalogSellabilityClient.SellableItemFilterRequest;
+import com.khanh.fooddelivery.search_service.client.CatalogSellabilityClient.SellableItemFilterResponse;
 import com.khanh.fooddelivery.search_service.dto.GlobalSearchResult;
 import com.khanh.fooddelivery.search_service.dto.SearchPageResponse;
+import com.khanh.fooddelivery.search_service.exception.SearchApiException;
+import com.khanh.fooddelivery.search_service.exception.SearchErrorCode;
 import com.khanh.fooddelivery.search_service.repository.GlobalElasticsearchSearchRepository;
 import java.math.BigDecimal;
 import java.text.Normalizer;
@@ -18,9 +23,13 @@ import org.springframework.stereotype.Service;
 public class ElasticsearchGlobalSearchService implements GlobalSearchService {
     private static final int PREVIEW_ITEMS_PER_BRANCH = 6;
     private final GlobalElasticsearchSearchRepository repository;
+    private final CatalogSellabilityClient catalogSellabilityClient;
 
-    public ElasticsearchGlobalSearchService(GlobalElasticsearchSearchRepository repository) {
+    public ElasticsearchGlobalSearchService(
+            GlobalElasticsearchSearchRepository repository,
+            CatalogSellabilityClient catalogSellabilityClient) {
         this.repository = repository;
+        this.catalogSellabilityClient = catalogSellabilityClient;
     }
 
     @Override
@@ -32,6 +41,7 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
         addItemMatches(itemHits, candidates);
         addPreviewFallbacks(repository.previewItemsForBranches(
                 candidates.keySet().stream().map(Key::branchId).distinct().toList()), candidates);
+        filterCandidatesBySellability(candidates);
 
         List<UUID> missing = candidates.keySet().stream().map(Key::restaurantId)
                 .filter(id -> !restaurants.containsKey(id)).distinct().toList();
@@ -50,6 +60,31 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
         long total = all.size();
         return new SearchPageResponse<>(all.subList(from, to), page, size, total,
                 total == 0 ? 0 : (int) Math.ceil((double) total / size));
+    }
+
+    private void filterCandidatesBySellability(Map<Key, Candidate> candidates) {
+        candidates.entrySet().removeIf(entry -> {
+            Candidate candidate = entry.getValue();
+            List<UUID> itemIds = candidate.itemIds();
+            if (itemIds.isEmpty()) return candidate.itemScore > 0;
+            try {
+                SellableItemFilterResponse response = catalogSellabilityClient
+                        .filterSellableItems(
+                                entry.getKey().restaurantId(),
+                                entry.getKey().branchId(),
+                                new SellableItemFilterRequest(
+                                        entry.getKey().restaurantId(), itemIds))
+                        .data();
+                candidate.retainSellable(response == null ? List.of() : response.itemIds());
+                return candidate.itemScore > 0
+                        && candidate.restaurantScore == 0
+                        && !candidate.hasMatchingItems();
+            } catch (RuntimeException exception) {
+                if (exception instanceof SearchApiException searchApiException) throw searchApiException;
+                throw new SearchApiException(
+                        SearchErrorCode.CATALOG_SELLABILITY_UNAVAILABLE, exception);
+            }
+        });
     }
 
     private void addRestaurantMatches(JsonNode response, String query, Map<Key, Candidate> candidates, Map<UUID, JsonNode> restaurants) {
@@ -154,6 +189,17 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
             if (previewItems.size() < PREVIEW_ITEMS_PER_BRANCH) previewItems.putIfAbsent(item.branchItemId(), item);
         }
         List<GlobalSearchResult.MatchingItem> matchingItems() { return List.copyOf(matchingItems.values()); }
+        List<UUID> itemIds() {
+            return java.util.stream.Stream.concat(matchingItems.keySet().stream(), previewItems.keySet().stream())
+                    .distinct().toList();
+        }
+        void retainSellable(List<UUID> sellableItemIds) {
+            java.util.Set<UUID> allowed = java.util.Set.copyOf(sellableItemIds);
+            matchingItems.entrySet().removeIf(entry -> !allowed.contains(entry.getKey()));
+            previewItems.entrySet().removeIf(entry -> !allowed.contains(entry.getKey()));
+        }
+        boolean hasMatchingItems() { return !matchingItems.isEmpty(); }
+        boolean hasSellableItems() { return !matchingItems.isEmpty() || !previewItems.isEmpty(); }
         List<GlobalSearchResult.PreviewItem> previewItems() {
             return previewItems.values().stream().map(item -> new GlobalSearchResult.PreviewItem(
                     item.itemId(), item.branchItemId(), item.name(), item.sellingPrice(), item.originalPrice(), item.currency(), item.imageUrl())).toList();

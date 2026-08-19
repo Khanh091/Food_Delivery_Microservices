@@ -10,7 +10,11 @@ public enum SearchErrorCode {
             HttpStatus.BAD_GATEWAY, "SEARCH_004", "Unable to trigger catalog snapshot reindex"),
     RESTAURANT_REINDEX_TRIGGER_FAILED(
             HttpStatus.BAD_GATEWAY, "SEARCH_005", "Unable to trigger restaurant snapshot reindex"),
-    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "SEARCH_006", "Invalid request");
+    INVALID_REQUEST(HttpStatus.BAD_REQUEST, "SEARCH_006", "Invalid request"),
+    CATALOG_SELLABILITY_UNAVAILABLE(
+            HttpStatus.SERVICE_UNAVAILABLE,
+            "SEARCH_007",
+            "Catalog sellability validation is temporarily unavailable");
 
     private final HttpStatus status;
     private final String code;
