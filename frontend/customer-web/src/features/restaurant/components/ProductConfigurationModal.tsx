@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { Cart, CartItem } from '../../cart/types/cart'
 import type { PublicCatalogItem } from '../types/restaurant'
 import { ProductConfiguration } from './ProductConfiguration'
@@ -22,8 +23,8 @@ export function ProductConfigurationModal({ item, branchId, orderingEnabled, car
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [item, onClose])
 
-  if (!item) return null
-  return (
+  if (!item || typeof document === 'undefined') return null
+  return createPortal(
     <div className="product-modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section className="product-modal" role="dialog" aria-modal="true" aria-labelledby="product-modal-title" onMouseDown={(event) => event.stopPropagation()}>
         <button ref={closeRef} type="button" className="product-modal-close" onClick={onClose} aria-label="Đóng tùy chỉnh món">×</button>
@@ -33,6 +34,7 @@ export function ProductConfigurationModal({ item, branchId, orderingEnabled, car
         </div>
         <ProductConfiguration item={item} branchId={branchId} cartItem={cartItem} orderingEnabled={orderingEnabled} onSuccess={(cart) => { onSuccess?.(cart); onClose() }} />
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }

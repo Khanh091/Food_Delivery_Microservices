@@ -9,7 +9,7 @@ import { DeliveryLocationPicker } from '../../delivery/components/DeliveryLocati
 import { getCheckoutTemporaryLocation, saveCheckoutTemporaryLocation } from '../../delivery/api/deliveryApi'
 import type { CheckoutTemporaryLocation, ReverseGeocodeCandidate } from '../../delivery/types/delivery'
 import { useToastStore } from '../../toast/stores/toastStore'
-import { CheckoutApiError, checkoutErrorMessage, getCheckoutPreview } from '../api/checkoutApi'
+import { CheckoutApiError, checkoutErrorMessage, createOrder, getCheckoutPreview } from '../api/checkoutApi'
 import type { CheckoutDeliveryTargetRequest, CheckoutPreview, CheckoutPreviewItem } from '../types/checkout'
 
 const isUuid = (value: string | undefined) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value))
@@ -46,6 +46,8 @@ export function CheckoutReviewPage() {
   const [locationPickerOpen, setLocationPickerOpen] = useState(false)
   const [locationError, setLocationError] = useState<string | null>(null)
   const [locationSaving, setLocationSaving] = useState(false)
+  const [placing, setPlacing] = useState(false)
+  const [placedOrderCode, setPlacedOrderCode] = useState<string | null>(null)
   const pushToast = useToastStore((state) => state.push)
   const requestGeneration = useRef(0)
   const addressMenuRef = useRef<HTMLDivElement>(null)
@@ -141,6 +143,13 @@ export function CheckoutReviewPage() {
 
   const priceChanges = useMemo(() => new Map(preview?.priceChanges.map((change) => [change.cartItemId, change]) ?? []), [preview])
   const retryPreview = () => { setPreviewBlocked(false); setPreviewRetry((value) => value + 1) }
+  const placeOrder = async () => {
+    if (!preview || !branchId || !deliveryTarget || placing) return
+    setPlacing(true)
+    try { const order = await createOrder({ branchId, cartVersion: preview.cartVersion, target: deliveryTarget }); setPlacedOrderCode(order.orderCode); pushToast('success', `Đã đặt đơn ${order.orderCode}`); void loadBranchCart(branchId) }
+    catch (error) { pushToast('error', checkoutErrorMessage(error)) }
+    finally { setPlacing(false) }
+  }
   const selectAddress = (addressId: string) => {
     setDeliveryTarget({ type: 'SAVED_ADDRESS', addressId })
     setPreviewBlocked(false)
@@ -231,7 +240,7 @@ export function CheckoutReviewPage() {
             {!deliveryTarget && addresses.length > 0 ? <p className="checkout-waiting">Chọn một địa chỉ để kiểm tra đơn hàng.</p> : preview ? <div className="checkout-item-list">{preview.items.map((item) => { const change = priceChanges.get(item.cartItemId); const options = groupedOptions(item); return <article key={item.cartItemId} className="checkout-item">{item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <span className="checkout-item-placeholder" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>}<div><h3>{item.name}</h3>{Object.entries(options).map(([group, values]) => <p key={group}><strong>{group}:</strong> {values.join(', ')}</p>)}{item.note && <p className="checkout-item-note">{item.note}</p>}<span>{item.quantity} × {change ? <><del>{money(change.previousUnitPrice, preview.currency)}</del> {money(change.currentUnitPrice, preview.currency)}</> : money(item.unitPrice, preview.currency)}</span></div><strong>{money(item.lineTotal, preview.currency)}</strong></article> })}</div> : <p className="checkout-waiting">Đang chờ dữ liệu kiểm tra đơn hàng.</p>}
           </section>
         </div>
-        <aside className="checkout-summary"><h2>Thanh toán</h2>{preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Khuyến mãi</span><span>{preview.discountAmount === 0 ? 'Chưa áp dụng' : `−${money(preview.discountAmount, preview.currency)}`}</span></div><div><span>Phí giao hàng</span><span>{deliveryFeeLabel(preview)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div>{preview.deliveryQuoteExpiresAt ? <p className="checkout-delivery-note">Phí giao hàng được giữ đến {new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date(preview.deliveryQuoteExpiresAt))}.</p> : <p className="checkout-delivery-note">{preview.deliveryQuoteStatus === 'LOCATION_REQUIRED' ? 'Xác nhận vị trí giao hàng để tính phí.' : preview.deliveryQuoteStatus === 'NOT_SERVICEABLE' ? 'Hãy chọn địa chỉ khác trong phạm vi giao hàng.' : 'Phí giao hàng chưa thể được xác định.'}</p>}<button type="button" className="button primary" disabled>Đặt món — Sắp có</button><p className="checkout-place-disabled">Đơn hàng đã được kiểm tra, nhưng chức năng đặt món chưa khả dụng.</p></> : <p className="checkout-waiting">{deliveryTarget ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}</aside>
+        <aside className="checkout-summary"><h2>Thanh toán</h2>{placedOrderCode ? <p className="checkout-delivery-note">Đã đặt đơn <strong>{placedOrderCode}</strong>. Nhà hàng sẽ xác nhận sớm.</p> : preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Phí giao hàng</span><span>{deliveryFeeLabel(preview)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div><button type="button" className="button primary" disabled={!preview.canPlaceOrder || placing} onClick={() => void placeOrder()}>{placing ? 'Đang đặt món…' : 'Đặt món'}</button></> : <p className="checkout-waiting">{deliveryTarget ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}</aside>
       </div>
     </div>
     {locationPickerOpen && <DeliveryLocationPicker initialLocation={pickerInitialLocation} onConfirm={(location) => void confirmLocation(location)} onClose={() => setLocationPickerOpen(false)} />}

@@ -1,7 +1,7 @@
 import { isAxiosError, type AxiosResponse } from 'axios'
 import { httpClient } from '../../../api/httpClient'
 import type { ApiResponse } from '../../../types/api'
-import type { CheckoutPreview, CheckoutPreviewRequest } from '../types/checkout'
+import type { CheckoutPreview, CheckoutPreviewRequest, OrderResponse } from '../types/checkout'
 
 interface CheckoutErrorBody { code?: string; message?: string }
 
@@ -26,6 +26,11 @@ const unwrap = async (request: Promise<AxiosResponse<ApiResponse<CheckoutPreview
 
 export const getCheckoutPreview = (input: CheckoutPreviewRequest, signal?: AbortSignal) =>
   unwrap(httpClient.post<ApiResponse<CheckoutPreview>>('/api/v1/orders/checkout/preview', input, { signal }))
+
+export const createOrder = async (input: CheckoutPreviewRequest): Promise<OrderResponse> => {
+  try { return (await httpClient.post<ApiResponse<OrderResponse>>('/api/v1/orders', input)).data.data }
+  catch (error) { if (isAxiosError<CheckoutErrorBody>(error)) throw new CheckoutApiError(error.response?.data?.code ?? null, error.response?.status ?? null, error.response?.data?.message ?? 'Không thể đặt món lúc này.'); throw error }
+}
 
 export const checkoutErrorMessage = (error: unknown): string => {
   const code = error instanceof CheckoutApiError ? error.code : null

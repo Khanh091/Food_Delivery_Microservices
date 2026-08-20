@@ -47,32 +47,6 @@ export interface CatalogItemLibraryPage {
   totalPages: number
 }
 
-export interface CatalogItemLibraryItem extends CatalogItem {
-  primaryImageUrl: string | null
-  placementCount: number
-}
-
-export interface CatalogItemLibraryPage {
-  content: CatalogItemLibraryItem[]
-  page: number
-  size: number
-  totalElements: number
-  totalPages: number
-}
-
-export interface CatalogItemLibraryItem extends CatalogItem {
-  primaryImageUrl: string | null
-  placementCount: number
-}
-
-export interface CatalogItemLibraryPage {
-  content: CatalogItemLibraryItem[]
-  page: number
-  size: number
-  totalElements: number
-  totalPages: number
-}
-
 export interface CategoryItem {
   id: string
   categoryId: string
@@ -97,6 +71,83 @@ export interface CatalogItemImage {
   imageUrl: string
   sortOrder: number
   isPrimary: boolean
+}
+
+export type OptionSelectionType = 'SINGLE' | 'MULTIPLE'
+
+export interface CatalogOptionValue {
+  id: string
+  optionGroupId: string
+  name: string
+  additionalPrice: number
+  isAvailable: boolean
+  sortOrder: number
+}
+
+export interface CatalogOptionGroup {
+  id: string
+  itemId: string
+  name: string
+  selectionType: OptionSelectionType
+  minimumSelections: number
+  maximumSelections: number
+  required: boolean
+  sourceTemplateId: string | null
+  sortOrder: number
+  status: CatalogStatus
+}
+
+export interface OptionTemplateValue {
+  id: string
+  name: string
+  additionalPrice: number
+  isAvailable: boolean
+  sortOrder: number
+}
+
+export interface OptionTemplate {
+  id: string
+  restaurantId: string
+  name: string
+  selectionType: OptionSelectionType
+  minimumSelections: number
+  maximumSelections: number
+  required: boolean
+  sortOrder: number
+  status: CatalogStatus
+  values: OptionTemplateValue[]
+}
+
+export interface OptionTemplatePage {
+  content: OptionTemplate[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+}
+
+export interface OptionTemplateInput {
+  name: string
+  selectionType: OptionSelectionType
+  minimumSelections: number
+  maximumSelections: number
+  sortOrder?: number
+  values: Array<{ name: string; additionalPrice: number; isAvailable?: boolean; sortOrder?: number }>
+}
+
+export interface CatalogOptionGroupInput {
+  name: string
+  selectionType: OptionSelectionType
+  minimumSelections: number
+  maximumSelections: number
+  required: boolean
+  sortOrder?: number
+}
+
+export interface CatalogOptionValueInput {
+  name: string
+  additionalPrice: number
+  sortOrder?: number
 }
 
 export interface MenuInput {

@@ -3,6 +3,10 @@ export interface CheckoutPreviewRequest {
   cartVersion: number
   target: CheckoutDeliveryTargetRequest
 }
+export type OrderStatus = 'PENDING_RESTAURANT' | 'CONFIRMED' | 'PREPARING' | 'DELIVERING' | 'COMPLETED' | 'REJECTED' | 'CANCELLED'
+export interface OrderOption { optionGroupId: string; optionValueId: string; groupName: string; valueName: string; additionalPrice: number }
+export interface OrderItem { id: string; catalogItemId: string; name: string; imageUrl: string | null; unitPrice: number; quantity: number; lineTotal: number; note: string | null; options: OrderOption[] }
+export interface OrderResponse { id: string; orderCode: string; restaurantId: string; restaurantName: string; branchId: string; branchName: string; status: OrderStatus; currency: string; itemsSubtotal: number; deliveryFee: number; discountAmount: number; totalAmount: number; addressDisplayLabel: string; recipientName: string; recipientPhone: string; addressLine: string; rejectionReason: string | null; createdAt: string; items: OrderItem[] }
 
 export type CheckoutDeliveryTargetRequest =
   | { type: 'SAVED_ADDRESS'; addressId: string; temporaryLocationId?: never }
