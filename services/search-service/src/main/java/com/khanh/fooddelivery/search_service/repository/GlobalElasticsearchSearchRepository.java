@@ -55,11 +55,6 @@ public class GlobalElasticsearchSearchRepository {
                 .retrieve().body(JsonNode.class);
     }
 
-    /**
-     * Fetches eligible branch items for every candidate branch in one request. Branch IDs are
-     * globally unique UUIDs, so filtering nested branch IDs cannot associate an item with the
-     * wrong branch.
-     */
     public JsonNode previewItemsForBranches(List<UUID> branchIds) {
         if (branchIds.isEmpty()) return null;
         List<String> values = branchIds.stream().map(UUID::toString).toList();

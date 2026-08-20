@@ -14,7 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/search/admin/restaurants")
 @RequiredArgsConstructor
 public class RestaurantSearchRebuildController {
+
     private final RestaurantSearchRebuildService service;
-    @PostMapping("/rebuild") @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<RestaurantSnapshotResult> rebuild() { return ResponseEntity.status(HttpStatus.ACCEPTED).body(service.rebuild()); }
+
+    @PostMapping("/rebuild")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<RestaurantSnapshotResult> rebuild() {
+        return ResponseEntity
+                .status(HttpStatus.ACCEPTED)
+                .body(service.rebuild());
+    }
 }

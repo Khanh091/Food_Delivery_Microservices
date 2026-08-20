@@ -144,6 +144,23 @@ class OptionTemplateServiceImplTests {
         verify(groupRepository, never()).save(any());
     }
 
+    @Test
+    void copyToItemBatchRejectsAnExistingActiveGroupBeforeCopying() {
+        OptionTemplate template = template(TEMPLATE_ID, "Size");
+        CatalogItem item = new CatalogItem();
+        item.setId(UUID.randomUUID());
+        item.setRestaurantId(RESTAURANT_ID);
+        when(itemRepository.findById(item.getId())).thenReturn(Optional.of(item));
+        when(templateRepository.findByIdAndRestaurantId(TEMPLATE_ID, RESTAURANT_ID)).thenReturn(Optional.of(template));
+        when(groupRepository.existsByItemIdAndNameAndStatus(item.getId(), "Size", CatalogStatus.ACTIVE)).thenReturn(true);
+
+        AppException error = assertThrows(AppException.class, () -> service.copyToItemBatch(
+                RESTAURANT_ID, item.getId(), new OptionTemplateBatchCopyRequest(List.of(TEMPLATE_ID))));
+
+        assertThat(error.getErrorCode()).isEqualTo(ErrorCode.DATA_CONFLICT);
+        verify(groupRepository, never()).save(any());
+    }
+
     private OptionTemplate template(UUID id, String name) {
         OptionTemplate template = new OptionTemplate();
         template.setId(id);

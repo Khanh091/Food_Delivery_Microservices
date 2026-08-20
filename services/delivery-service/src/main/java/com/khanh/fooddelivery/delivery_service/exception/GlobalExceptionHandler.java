@@ -20,6 +20,11 @@ public class GlobalExceptionHandler {
         return out(ErrorCode.ACCESS_DENIED, ErrorCode.ACCESS_DENIED.getDefaultMessage(), request);
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    ResponseEntity<ErrorResponse> conflict(IllegalStateException exception, HttpServletRequest request) {
+        return out(ErrorCode.DELIVERY_CONFLICT, exception.getMessage(), request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException exception, HttpServletRequest request) {
         String message = exception.getBindingResult().getFieldErrors().stream().map(FieldError::getField)

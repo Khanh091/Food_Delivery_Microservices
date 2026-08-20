@@ -42,6 +42,11 @@ management:
         include: health,info
 
 delivery:
+  offer:
+    ttl: ${DELIVERY_OFFER_TTL:45s}
+  dispatch:
+    search-radii-meters: ${DELIVERY_DISPATCH_SEARCH_RADII_METERS:2000,4000,6000,8000}
+    candidates-per-radius: ${DELIVERY_DISPATCH_CANDIDATES_PER_RADIUS:20}
   vietmap:
     service-key: ${DELIVERY_VIETMAP_SERVICE_KEY:}
     api-base-url: ${DELIVERY_VIETMAP_API_BASE_URL:https://maps.vietmap.vn}

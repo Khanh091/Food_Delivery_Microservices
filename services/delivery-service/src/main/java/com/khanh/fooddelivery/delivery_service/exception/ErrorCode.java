@@ -16,7 +16,8 @@ public enum ErrorCode {
     ROUTE_NOT_FOUND("DELIVERY_009", HttpStatus.CONFLICT, "No delivery route was found"),
     DELIVERY_PROVIDER_UNAVAILABLE("DELIVERY_010", HttpStatus.SERVICE_UNAVAILABLE, "Delivery routing is temporarily unavailable"),
     INTERNAL_SERVER_ERROR("DELIVERY_011", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
-    CHECKOUT_LOCATION_NOT_FOUND("DELIVERY_012", HttpStatus.NOT_FOUND, "Checkout location was not found");
+    CHECKOUT_LOCATION_NOT_FOUND("DELIVERY_012", HttpStatus.NOT_FOUND, "Checkout location was not found"),
+    DELIVERY_CONFLICT("DELIVERY_013", HttpStatus.CONFLICT, "Delivery state has changed");
 
     private final String code;
     private final HttpStatus httpStatus;

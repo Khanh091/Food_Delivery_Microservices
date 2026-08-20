@@ -5,6 +5,7 @@ import com.khanh.fooddelivery.delivery_service.dto.request.ReverseGeocodeRequest
 import com.khanh.fooddelivery.delivery_service.dto.request.UpsertCheckoutTemporaryLocationRequest;
 import com.khanh.fooddelivery.delivery_service.dto.response.CheckoutTemporaryLocationResponse;
 import com.khanh.fooddelivery.delivery_service.dto.response.ReverseGeocodeResponse;
+import com.khanh.fooddelivery.delivery_service.mapper.CheckoutLocationMapper;
 import com.khanh.fooddelivery.delivery_service.model.CheckoutTemporaryLocation;
 import com.khanh.fooddelivery.delivery_service.repository.CheckoutTemporaryLocationRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentUserProvider;
@@ -24,6 +25,7 @@ public class CheckoutTemporaryLocationServiceImpl implements CheckoutTemporaryLo
     private final ReverseGeocodingService reverseGeocodingService;
     private final CurrentUserProvider currentUserProvider;
     private final DeliveryCheckoutLocationProperties properties;
+    private final CheckoutLocationMapper locationMapper;
 
     @Override
     public CheckoutTemporaryLocationResponse upsert(Jwt jwt, UUID branchId, UpsertCheckoutTemporaryLocationRequest request) {
@@ -39,17 +41,12 @@ public class CheckoutTemporaryLocationServiceImpl implements CheckoutTemporaryLo
                 normalized.latitude(), normalized.longitude(), previous == null ? now : previous.createdAt(), now,
                 now.plus(properties.getTtl()));
         repository.save(location, properties.getTtl());
-        return toResponse(location);
+        return locationMapper.toResponse(location);
     }
 
     @Override
     public Optional<CheckoutTemporaryLocationResponse> getCurrent(Jwt jwt, UUID branchId) {
-        return repository.findCurrent(currentUserProvider.getCurrentUserId(jwt), branchId).map(this::toResponse);
-    }
-
-    private CheckoutTemporaryLocationResponse toResponse(CheckoutTemporaryLocation location) {
-        return new CheckoutTemporaryLocationResponse(location.id(), location.branchId(), location.formattedAddress(),
-                location.addressLine(), location.ward(), location.district(), location.city(), location.latitude(),
-                location.longitude(), location.expiresAt());
+        return repository.findCurrent(currentUserProvider.getCurrentUserId(jwt), branchId)
+                .map(locationMapper::toResponse);
     }
 }

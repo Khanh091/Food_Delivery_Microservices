@@ -13,18 +13,54 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 @EnableConfigurationProperties(RestaurantSearchReindexProperties.class)
-public class RestaurantSearchReindexServiceImpl implements RestaurantSearchReindexService {
+public class RestaurantSearchReindexServiceImpl
+        implements RestaurantSearchReindexService {
+
     private final RestaurantSearchReindexBatchService batches;
     private final RestaurantSearchReindexProperties properties;
+
     @Override
     public RestaurantSearchReindexResponse enqueueCurrentRestaurantSnapshot() {
-        if (properties.getBatchSize() < 1) throw new IllegalStateException("Restaurant search reindex batch size must be positive");
-        return new RestaurantSearchReindexResponse(enqueue(batches::enqueueRestaurantBatch), enqueue(batches::enqueueBranchBatch));
+        if (properties.getBatchSize() < 1) {
+            throw new IllegalStateException(
+                    "Restaurant search reindex batch size must be positive"
+            );
+        }
+
+        return new RestaurantSearchReindexResponse(
+                enqueue(batches::enqueueRestaurantBatch),
+                enqueue(batches::enqueueBranchBatch)
+        );
     }
+
     private long enqueue(BatchEnqueuer enqueuer) {
-        long total=0; UUID cursor=null; RestaurantSearchReindexBatchService.BatchResult result;
-        do { result=enqueuer.enqueue(cursor, PageRequest.of(0, properties.getBatchSize(), Sort.by("id"))); total+=result.queued(); cursor=result.lastProcessedId(); } while(cursor != null);
+        long total = 0;
+        UUID cursor = null;
+        RestaurantSearchReindexBatchService.BatchResult result;
+
+        do {
+            result = enqueuer.enqueue(
+                    cursor,
+                    PageRequest.of(
+                            0,
+                            properties.getBatchSize(),
+                            Sort.by("id")
+                    )
+            );
+
+            total += result.queued();
+            cursor = result.lastProcessedId();
+        } while (cursor != null);
+
         return total;
     }
-    @FunctionalInterface private interface BatchEnqueuer { RestaurantSearchReindexBatchService.BatchResult enqueue(UUID cursor, org.springframework.data.domain.Pageable page); }
+
+    @FunctionalInterface
+    private interface BatchEnqueuer {
+
+        RestaurantSearchReindexBatchService.BatchResult enqueue(
+                UUID cursor,
+                org.springframework.data.domain.Pageable page
+        );
+    }
 }

@@ -8,12 +8,14 @@ import com.khanh.fooddelivery.delivery_service.dto.request.ReverseGeocodeRequest
 import com.khanh.fooddelivery.delivery_service.dto.response.ReverseGeocodeResponse;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
+import com.khanh.fooddelivery.delivery_service.mapper.GeocodingMapper;
 import com.khanh.fooddelivery.delivery_service.service.GeocodingProvider;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 
 @ExtendWith(MockitoExtension.class)
 class ReverseGeocodingServiceImplTests {
@@ -26,7 +28,7 @@ class ReverseGeocodingServiceImplTests {
                 .thenReturn(new GeocodingProvider.GeocodedLocation(null, "12 Nguyen Trai, Ha Noi", "12 Nguyen Trai",
                         "Thanh Xuan Trung", "Thanh Xuan", "Ha Noi", null, null));
 
-        ReverseGeocodeResponse response = new ReverseGeocodingServiceImpl(provider)
+        ReverseGeocodeResponse response = new ReverseGeocodingServiceImpl(provider, mapper())
                 .reverseGeocode(new ReverseGeocodeRequest(new BigDecimal("10.776889"), new BigDecimal("106.700806")));
 
         assertThat(response.formattedAddress()).isEqualTo("12 Nguyen Trai, Ha Noi");
@@ -36,7 +38,7 @@ class ReverseGeocodingServiceImplTests {
 
     @Test
     void rejectsCoordinatesOutsideGeographicRange() {
-        assertThatThrownBy(() -> new ReverseGeocodingServiceImpl(provider)
+        assertThatThrownBy(() -> new ReverseGeocodingServiceImpl(provider, mapper())
                 .reverseGeocode(new ReverseGeocodeRequest(new BigDecimal("91"), new BigDecimal("106"))))
                 .isInstanceOf(AppException.class)
                 .extracting(error -> ((AppException) error).getErrorCode())
@@ -45,7 +47,7 @@ class ReverseGeocodingServiceImplTests {
 
     @Test
     void rejectsLongitudeOutsideGeographicRange() {
-        assertThatThrownBy(() -> new ReverseGeocodingServiceImpl(provider)
+        assertThatThrownBy(() -> new ReverseGeocodingServiceImpl(provider, mapper())
                 .reverseGeocode(new ReverseGeocodeRequest(new BigDecimal("10"), new BigDecimal("181"))))
                 .isInstanceOf(AppException.class)
                 .extracting(error -> ((AppException) error).getErrorCode())
@@ -57,10 +59,14 @@ class ReverseGeocodingServiceImplTests {
         when(provider.reverseGeocode(new BigDecimal("10"), new BigDecimal("106")))
                 .thenThrow(new AppException(ErrorCode.GEOCODING_PROVIDER_UNAVAILABLE));
 
-        assertThatThrownBy(() -> new ReverseGeocodingServiceImpl(provider)
+        assertThatThrownBy(() -> new ReverseGeocodingServiceImpl(provider, mapper())
                 .reverseGeocode(new ReverseGeocodeRequest(new BigDecimal("10"), new BigDecimal("106"))))
                 .isInstanceOf(AppException.class)
                 .extracting(error -> ((AppException) error).getErrorCode())
                 .isEqualTo(ErrorCode.GEOCODING_PROVIDER_UNAVAILABLE);
+    }
+
+    private GeocodingMapper mapper() {
+        return Mappers.getMapper(GeocodingMapper.class);
     }
 }

@@ -96,14 +96,9 @@ export function ItemOptionManagerModal({ open, restaurantId, item, onClose }: It
     if (!open || mode !== 'templatePicker') return
     const current = ++templateRequest.current
     const query = templateQuery.trim()
-    if (query.length < 2) {
-      setTemplateResults([])
-      setTemplateState('idle')
-      return
-    }
     setTemplateState('loading')
     const timer = window.setTimeout(() => {
-      void listOptionTemplates(restaurantId, { q: query, page: 0, size: 5 })
+      void listOptionTemplates(restaurantId, { q: query || undefined, page: 0, size: 20 })
         .then((page) => {
           if (current !== templateRequest.current) return
           const activeTemplates = page.content.filter((template) => template.status === 'ACTIVE')
@@ -113,7 +108,7 @@ export function ItemOptionManagerModal({ open, restaurantId, item, onClose }: It
         .catch(() => {
           if (current === templateRequest.current) setTemplateState('error')
         })
-    }, 300)
+    }, query ? 300 : 0)
     return () => window.clearTimeout(timer)
   }, [mode, open, restaurantId, templateQuery])
 
@@ -331,7 +326,6 @@ export function ItemOptionManagerModal({ open, restaurantId, item, onClose }: It
                </span>
              </label>)}
            </div> : null}
-           {templateQuery.trim().length < 2 ? <p className="catalog-sidebar-loading">Nhập ít nhất 2 ký tự để tìm.</p> : null}
            <div className="catalog-option-actions">
              <Button variant="secondary" disabled={busy} onClick={() => setMode(null)}>Hủy</Button>
              <Button disabled={!selectedTemplateItems.length || busy} loading={busy} onClick={() => void applyTemplates()}>Áp dụng {selectedTemplateItems.length} mẫu</Button>

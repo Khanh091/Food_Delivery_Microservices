@@ -13,9 +13,11 @@ import static org.mockito.Mockito.when;
 import com.khanh.fooddelivery.order_service.client.CartServiceClient;
 import com.khanh.fooddelivery.order_service.client.CatalogServiceClient;
 import com.khanh.fooddelivery.order_service.client.DeliveryServiceClient;
-import com.khanh.fooddelivery.order_service.client.RemoteApiResponse;
 import com.khanh.fooddelivery.order_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.order_service.client.UserServiceClient;
+import com.khanh.fooddelivery.order_service.client.dto.request.CheckoutItemsValidationRequest;
+import com.khanh.fooddelivery.order_service.client.dto.response.*;
+import com.khanh.fooddelivery.order_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.order_service.dto.request.CheckoutPreviewRequest;
 import com.khanh.fooddelivery.order_service.dto.request.CheckoutDeliveryTargetRequest;
 import com.khanh.fooddelivery.order_service.exception.AppException;
@@ -84,7 +86,7 @@ class CheckoutPreviewServiceImplTests {
 
     @Test
     void emptyCartIsRejected() {
-        when(carts.getCurrentSnapshot(anyString(), any())).thenReturn(success(new CartServiceClient.InternalCartSnapshotResponse(
+        when(carts.getCurrentSnapshot(anyString(), any())).thenReturn(success(new InternalCartSnapshotResponse(
                 ownerId, null, null, null, List.of(), 0L, null, null)));
 
         assertError(() -> service.preview(jwt, new CheckoutPreviewRequest(branchId, 1L, addressId)), ErrorCode.CART_EMPTY);
@@ -111,7 +113,7 @@ class CheckoutPreviewServiceImplTests {
 
     @Test
     void addressWithoutCoordinatesReturnsPartialLocationRequiredPreviewWithoutCallingDelivery() {
-        when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new UserServiceClient.InternalUserAddressResponse(
+        when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new InternalUserAddressResponse(
                 addressId, "HOME", null, "Home", "Customer", "84912345678", "1 Nguyen Trai", null,
                 "District 1", "Ho Chi Minh City", null, null, null, null, null, null, 2L)));
 
@@ -130,7 +132,7 @@ class CheckoutPreviewServiceImplTests {
     void temporaryTargetUsesItsServerOwnedReferenceWithoutLoadingAnySavedAddress() {
         UUID temporaryLocationId = UUID.randomUUID();
         when(delivery.getCurrentCheckoutLocation("Bearer token", branchId)).thenReturn(success(
-                new DeliveryServiceClient.CheckoutTemporaryLocationResponse(
+                new CheckoutTemporaryLocationResponse(
                         temporaryLocationId, branchId, "Temporary location", "Temporary location", null, null, null,
                         BigDecimal.valueOf(10.8), BigDecimal.valueOf(106.8), Instant.now().plusSeconds(2700))));
 
@@ -184,35 +186,35 @@ class CheckoutPreviewServiceImplTests {
     }
 
     private void happyCart(long version) {
-        CartServiceClient.InternalSelectedOptionSnapshotResponse option =
-                new CartServiceClient.InternalSelectedOptionSnapshotResponse(
+        InternalSelectedOptionSnapshotResponse option =
+                new InternalSelectedOptionSnapshotResponse(
                         UUID.randomUUID(), UUID.randomUUID(), "Size", "Large", BigDecimal.TEN);
-        CartServiceClient.InternalCartItemSnapshotResponse item =
-                new CartServiceClient.InternalCartItemSnapshotResponse(
+        InternalCartItemSnapshotResponse item =
+                new InternalCartItemSnapshotResponse(
                         cartItemId, catalogItemId, UUID.randomUUID(), 2, "no onion", List.of(option), "Burger", null,
                         BigDecimal.valueOf(40), BigDecimal.TEN, BigDecimal.valueOf(50), null);
-        when(carts.getCurrentSnapshot(anyString(), any())).thenReturn(success(new CartServiceClient.InternalCartSnapshotResponse(
+        when(carts.getCurrentSnapshot(anyString(), any())).thenReturn(success(new InternalCartSnapshotResponse(
                 ownerId, restaurantId, branchId, "VND", List.of(item), version, Instant.parse("2026-08-17T00:00:00Z"), Instant.now())));
     }
 
     private void happyAddress() {
-        lenient().when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new UserServiceClient.InternalUserAddressResponse(
+        lenient().when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new InternalUserAddressResponse(
                 addressId, "HOME", null, "Nhà", "Nguyen Khanh", "84912345678", "1 Nguyen Trai", null,
                 "District 1", "Ho Chi Minh City", BigDecimal.valueOf(10.7), BigDecimal.valueOf(106.7), null, null, null, "Call first", 2L)));
     }
 
     private void happyRestaurant(boolean acceptingOrders) {
         lenient().when(restaurants.getCartAvailability(anyString(), any(), any())).thenReturn(success(
-                new RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse(
+                new RestaurantBranchCartAvailabilityResponse(
                         restaurantId, "Restaurant", true, branchId, "Branch", true, acceptingOrders)));
     }
 
     private void happyCatalog(BigDecimal finalUnitPrice) {
-        CatalogServiceClient.SelectedOptionResponse option =
-                new CatalogServiceClient.SelectedOptionResponse(UUID.randomUUID(), UUID.randomUUID(), "Size", "Large", BigDecimal.TEN);
+        SelectedOptionResponse option =
+                new SelectedOptionResponse(UUID.randomUUID(), UUID.randomUUID(), "Size", "Large", BigDecimal.TEN);
         lenient().when(catalog.validateCheckoutItems(anyString(), any())).thenReturn(success(
-                new CatalogServiceClient.CheckoutItemsValidationResponse(List.of(
-                        new CatalogServiceClient.ValidatedCheckoutItemResponse(
+                new CheckoutItemsValidationResponse(List.of(
+                        new ValidatedCheckoutItemResponse(
                                 cartItemId, catalogItemId, UUID.randomUUID(), "Burger", null,
                                 finalUnitPrice.subtract(BigDecimal.TEN), null, "VND", List.of(option), BigDecimal.TEN,
                                 finalUnitPrice)))));
@@ -220,13 +222,13 @@ class CheckoutPreviewServiceImplTests {
 
     private void happyDeliveryQuote() {
         UUID quoteId = UUID.nameUUIDFromBytes("quote".getBytes());
-        lenient().when(delivery.createQuote(anyString(), any())).thenReturn(success(new DeliveryServiceClient.DeliveryQuoteResponse(
+        lenient().when(delivery.createQuote(anyString(), any())).thenReturn(success(new DeliveryQuoteResponse(
                 quoteId, true, "VND", BigDecimal.valueOf(15000), 4000, 12, "dev-v1",
                 Instant.parse("2026-08-17T00:00:00Z"), Instant.parse("2026-08-17T00:05:00Z"))));
     }
 
-    private static <T> RemoteApiResponse<T> success(T data) {
-        return new RemoteApiResponse<>(true, "SUCCESS", "", data, Instant.now());
+    private static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(true, "SUCCESS", "", data, Instant.now());
     }
 
     private void assertError(org.assertj.core.api.ThrowableAssert.ThrowingCallable action, ErrorCode expected) {

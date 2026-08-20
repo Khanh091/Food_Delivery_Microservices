@@ -519,6 +519,8 @@ services:
         condition: service_healthy
       driver-service:
         condition: service_healthy
+      tracking-service:
+        condition: service_healthy
     networks:
       - food-delivery-network
     healthcheck:
@@ -544,6 +546,7 @@ services:
       KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     ports:
       - "${DRIVER_SERVICE_PORT:-8108}:8108"
     depends_on:
@@ -557,6 +560,41 @@ services:
       - food-delivery-network
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8108/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  tracking-service:
+    build:
+      context: ./services/tracking-service
+      dockerfile: Dockerfile
+    environment:
+      SERVER_PORT: 8111
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: tracking-service
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      DRIVER_LOCATION_STALE_AFTER: ${DRIVER_LOCATION_STALE_AFTER:-45s}
+      DRIVER_LOCATION_MAX_ACCURACY_METERS: ${DRIVER_LOCATION_MAX_ACCURACY_METERS:-100}
+    ports:
+      - "${TRACKING_SERVICE_PORT:-8111}:8111"
+    depends_on:
+      redis:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      driver-service:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8111/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 12

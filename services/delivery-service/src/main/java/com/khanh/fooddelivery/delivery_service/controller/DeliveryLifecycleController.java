@@ -1,10 +1,57 @@
 package com.khanh.fooddelivery.delivery_service.controller;
-import com.khanh.fooddelivery.delivery_service.common.response.ApiResponse; import com.khanh.fooddelivery.delivery_service.model.*; import com.khanh.fooddelivery.delivery_service.repository.DeliveryRepository; import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider; import com.khanh.fooddelivery.delivery_service.security.CurrentUserProvider; import com.khanh.fooddelivery.delivery_service.client.OrderServiceClient; import com.khanh.fooddelivery.delivery_service.client.DriverServiceClient; import java.util.*; import lombok.RequiredArgsConstructor; import org.springframework.security.core.annotation.AuthenticationPrincipal; import org.springframework.security.oauth2.jwt.Jwt; import org.springframework.transaction.annotation.Transactional; import org.springframework.web.bind.annotation.*;
-@RestController @RequiredArgsConstructor public class DeliveryLifecycleController { private final DeliveryRepository deliveries; private final CurrentUserProvider users; private final CurrentBearerTokenProvider bearer; private final OrderServiceClient orders; private final DriverServiceClient drivers;
- @PostMapping("/internal/v1/deliveries/matching") @Transactional public ApiResponse<Delivery> matching(@RequestBody MatchRequest r) { if(deliveries.findByOrderId(r.orderId()).isPresent()) return ApiResponse.success("Delivery already matching",deliveries.findByOrderId(r.orderId()).orElseThrow()); Delivery d=new Delivery(); d.setId(UUID.randomUUID());d.setOrderId(r.orderId());d.setRestaurantId(r.restaurantId());d.setBranchId(r.branchId());d.setCustomerId(r.customerId());d.setRestaurantName(r.restaurantName());d.setBranchName(r.branchName());d.setCustomerAddress(r.customerAddress());d.setStatus(DeliveryStatus.MATCHING); d=deliveries.save(d); if(drivers.available(bearer.getBearerToken()).isEmpty()){d.setStatus(DeliveryStatus.MATCH_FAILED);orders.matchingFailed(bearer.getBearerToken(),d.getOrderId());} return ApiResponse.success(d.getStatus()==DeliveryStatus.MATCH_FAILED?"No driver available":"Driver matching started",d); }
- @GetMapping("/api/v1/deliveries/driver/offers") public ApiResponse<List<Delivery>> offers(){return ApiResponse.success("Delivery offers",deliveries.findByStatusOrderByCreatedAtAsc(DeliveryStatus.MATCHING));}
- @PostMapping("/api/v1/deliveries/{id}/accept") @Transactional public ApiResponse<Delivery> accept(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id){Delivery d=require(id); if(d.getStatus()!=DeliveryStatus.MATCHING) throw new IllegalStateException("Delivery is no longer available"); UUID driverId=users.getCurrentUserId(jwt); drivers.reserve(bearer.getBearerToken(),driverId,d.getId()); d.setDriverId(driverId);d.setStatus(DeliveryStatus.ASSIGNED);orders.assigned(bearer.getBearerToken(),d.getOrderId());return ApiResponse.success("Delivery assigned",d);}
- @PostMapping("/api/v1/deliveries/{id}/picked-up") @Transactional public ApiResponse<Delivery> pickup(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id){Delivery d=mine(jwt,id);if(d.getStatus()!=DeliveryStatus.ASSIGNED)throw new IllegalStateException("Delivery cannot be picked up");d.setStatus(DeliveryStatus.PICKED_UP);orders.pickedUp(bearer.getBearerToken(),d.getOrderId());return ApiResponse.success("Order picked up",d);}
- @PostMapping("/api/v1/deliveries/{id}/delivered") @Transactional public ApiResponse<Delivery> delivered(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID id){Delivery d=mine(jwt,id);if(d.getStatus()!=DeliveryStatus.PICKED_UP)throw new IllegalStateException("Delivery cannot be completed");d.setStatus(DeliveryStatus.DELIVERED);orders.delivered(bearer.getBearerToken(),d.getOrderId());drivers.release(bearer.getBearerToken(),d.getDriverId(),d.getId());return ApiResponse.success("Delivery completed",d);}
- private Delivery require(UUID id){return deliveries.findById(id).orElseThrow();} private Delivery mine(Jwt j,UUID id){Delivery d=require(id);if(!users.getCurrentUserId(j).equals(d.getDriverId()))throw new IllegalStateException("Not assigned driver");return d;} public record MatchRequest(UUID orderId,UUID restaurantId,UUID branchId,UUID customerId,String restaurantName,String branchName,String customerAddress,java.math.BigDecimal customerLatitude,java.math.BigDecimal customerLongitude){}
+
+import com.khanh.fooddelivery.delivery_service.common.response.ApiResponse;
+import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryMatchingRequest;
+import com.khanh.fooddelivery.delivery_service.dto.response.*;
+import com.khanh.fooddelivery.delivery_service.service.DeliveryLifecycleService;
+import java.util.List;
+import java.util.UUID;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequiredArgsConstructor
+public class DeliveryLifecycleController {
+    private final DeliveryLifecycleService lifecycle;
+
+    @PostMapping("/internal/v1/deliveries/matching")
+    public ApiResponse<DeliveryResponse> matching(@RequestBody DeliveryMatchingRequest request) {
+        DeliveryResponse response = lifecycle.startMatching(request);
+        String message = response.status().name().equals("MATCH_FAILED") ? "No driver available" : "Driver matching started";
+        return ApiResponse.success(message, response);
+    }
+
+    @GetMapping("/api/v1/deliveries/driver/offers")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ApiResponse<List<DeliveryOfferResponse>> offers(@AuthenticationPrincipal Jwt jwt) {
+        return ApiResponse.success("Delivery offers", lifecycle.offers(jwt));
+    }
+
+    @PostMapping("/api/v1/deliveries/{id}/accept")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ApiResponse<DeliveryResponse> accept(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return ApiResponse.success("Delivery assigned", lifecycle.accept(jwt, id));
+    }
+
+    @PostMapping("/api/v1/deliveries/{id}/reject")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ApiResponse<Void> reject(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        lifecycle.reject(jwt, id);
+        return ApiResponse.success("Delivery offer rejected", null);
+    }
+
+    @PostMapping("/api/v1/deliveries/{id}/picked-up")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ApiResponse<DeliveryResponse> pickup(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return ApiResponse.success("Order picked up", lifecycle.pickup(jwt, id));
+    }
+
+    @PostMapping("/api/v1/deliveries/{id}/delivered")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ApiResponse<DeliveryResponse> delivered(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return ApiResponse.success("Delivery completed", lifecycle.delivered(jwt, id));
+    }
 }

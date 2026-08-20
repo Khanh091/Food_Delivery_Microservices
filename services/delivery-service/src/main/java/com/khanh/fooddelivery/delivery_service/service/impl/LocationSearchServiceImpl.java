@@ -4,6 +4,7 @@ import com.khanh.fooddelivery.delivery_service.dto.response.LocationSearchCandid
 import com.khanh.fooddelivery.delivery_service.dto.response.ReverseGeocodeResponse;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
+import com.khanh.fooddelivery.delivery_service.mapper.GeocodingMapper;
 import com.khanh.fooddelivery.delivery_service.service.GeocodingProvider;
 import com.khanh.fooddelivery.delivery_service.service.LocationSearchService;
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ public class LocationSearchServiceImpl implements LocationSearchService {
     private static final int DEFAULT_LIMIT = 5;
     private static final int MAX_LIMIT = 10;
     private final GeocodingProvider geocodingProvider;
+    private final GeocodingMapper geocodingMapper;
 
     @Override
     public List<LocationSearchCandidateResponse> search(String query, BigDecimal latitude, BigDecimal longitude, Integer limit) {
@@ -26,8 +28,7 @@ public class LocationSearchServiceImpl implements LocationSearchService {
         }
         int resolvedLimit = limit == null ? DEFAULT_LIMIT : Math.min(Math.max(limit, 1), MAX_LIMIT);
         return geocodingProvider.search(query.trim(), latitude, longitude, resolvedLimit).stream()
-                .map(location -> new LocationSearchCandidateResponse(location.providerRefId(), location.formattedAddress(), location.addressLine(),
-                        location.latitude(), location.longitude(), location.ward(), location.district(), location.city()))
+                .map(geocodingMapper::toSearchResponse)
                 .toList();
     }
 
@@ -39,7 +40,6 @@ public class LocationSearchServiceImpl implements LocationSearchService {
     public ReverseGeocodeResponse place(String providerRefId) {
         GeocodingProvider.GeocodedLocation location = geocodingProvider.place(providerRefId);
         if (location == null || location.latitude() == null || location.longitude() == null) throw new AppException(ErrorCode.LOCATION_NOT_FOUND);
-        return new ReverseGeocodeResponse(location.formattedAddress(), location.addressLine(), location.ward(),
-                location.district(), location.city(), location.latitude(), location.longitude());
+        return geocodingMapper.toReverseResponse(location);
     }
 }

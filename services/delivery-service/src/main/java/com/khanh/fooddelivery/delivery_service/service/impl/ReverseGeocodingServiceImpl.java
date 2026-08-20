@@ -4,6 +4,7 @@ import com.khanh.fooddelivery.delivery_service.dto.request.ReverseGeocodeRequest
 import com.khanh.fooddelivery.delivery_service.dto.response.ReverseGeocodeResponse;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
+import com.khanh.fooddelivery.delivery_service.mapper.GeocodingMapper;
 import com.khanh.fooddelivery.delivery_service.service.GeocodingProvider;
 import com.khanh.fooddelivery.delivery_service.service.ReverseGeocodingService;
 import java.math.BigDecimal;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
     private final GeocodingProvider geocodingProvider;
+    private final GeocodingMapper geocodingMapper;
 
     @Override
     public ReverseGeocodeResponse reverseGeocode(ReverseGeocodeRequest request) {
@@ -22,8 +24,7 @@ public class ReverseGeocodingServiceImpl implements ReverseGeocodingService {
         }
         GeocodingProvider.GeocodedLocation location = geocodingProvider.reverseGeocode(request.latitude(), request.longitude());
         if (location == null || blank(location.formattedAddress())) throw new AppException(ErrorCode.LOCATION_NOT_FOUND);
-        return new ReverseGeocodeResponse(location.formattedAddress(), location.addressLine(), location.ward(),
-                location.district(), location.city(), request.latitude(), request.longitude());
+        return geocodingMapper.toReverseResponse(location, request.latitude(), request.longitude());
     }
 
     private boolean outside(BigDecimal value, int min, int max) {

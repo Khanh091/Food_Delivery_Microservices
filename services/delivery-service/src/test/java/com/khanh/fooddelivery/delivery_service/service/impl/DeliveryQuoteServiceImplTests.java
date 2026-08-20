@@ -9,14 +9,17 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.khanh.fooddelivery.delivery_service.client.RemoteApiResponse;
 import com.khanh.fooddelivery.delivery_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.UserServiceClient;
+import com.khanh.fooddelivery.delivery_service.client.dto.response.InternalUserAddressResponse;
+import com.khanh.fooddelivery.delivery_service.client.dto.response.RestaurantBranchOrderingContextResponse;
+import com.khanh.fooddelivery.delivery_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.delivery_service.config.DeliveryQuoteProperties;
 import com.khanh.fooddelivery.delivery_service.dto.request.CreateDeliveryQuoteRequest;
 import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryTargetRequest;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
+import com.khanh.fooddelivery.delivery_service.mapper.DeliveryQuoteMapper;
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryQuoteRepository;
 import com.khanh.fooddelivery.delivery_service.repository.CheckoutTemporaryLocationRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
@@ -33,6 +36,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mapstruct.factory.Mappers;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,14 +64,25 @@ class DeliveryQuoteServiceImplTests {
         properties.setMaximumServiceDistanceMeters(10000);
         properties.setCurrency("VND");
         properties.setPricingPolicyVersion("test-v1");
-        service = new DeliveryQuoteServiceImpl(restaurants, users, currentUser, bearer, routing, quotes, checkoutLocations, properties);
+        DeliveryQuoteMapper quoteMapper = Mappers.getMapper(DeliveryQuoteMapper.class);
+        service = new DeliveryQuoteServiceImpl(
+                restaurants,
+                users,
+                currentUser,
+                bearer,
+                routing,
+                quotes,
+                checkoutLocations,
+                properties,
+                quoteMapper
+        );
         when(currentUser.getCurrentUserId(jwt)).thenReturn(ownerId);
         when(bearer.getBearerToken()).thenReturn("Bearer token");
-        when(restaurants.getOrderingContext(anyString(), any())).thenReturn(success(new RestaurantServiceClient.RestaurantBranchOrderingContextResponse(
+        when(restaurants.getOrderingContext(anyString(), any())).thenReturn(success(new RestaurantBranchOrderingContextResponse(
                 UUID.randomUUID(), "Restaurant", true, branchId, "Branch", true, true,
                 BigDecimal.valueOf(10.7), BigDecimal.valueOf(106.7))));
         lenient().when(users.getOwnedAddress(anyString(), any())).thenReturn(success(
-                new UserServiceClient.InternalUserAddressResponse(addressId, BigDecimal.valueOf(10.8), BigDecimal.valueOf(106.8))));
+                new InternalUserAddressResponse(addressId, BigDecimal.valueOf(10.8), BigDecimal.valueOf(106.8))));
     }
 
     @Test
@@ -105,7 +120,7 @@ class DeliveryQuoteServiceImplTests {
 
     @Test
     void rejectsAddressWithoutCoordinatesBeforeRouting() {
-        when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new UserServiceClient.InternalUserAddressResponse(addressId, null, null)));
+        when(users.getOwnedAddress(anyString(), any())).thenReturn(success(new InternalUserAddressResponse(addressId, null, null)));
 
         assertError(() -> service.createQuote(jwt, new CreateDeliveryQuoteRequest(branchId, addressId)), ErrorCode.ADDRESS_COORDINATES_MISSING);
         verify(routing, never()).calculateRoute(any(), any(), any(), any());
@@ -120,8 +135,8 @@ class DeliveryQuoteServiceImplTests {
         verify(quotes, never()).save(any(), any());
     }
 
-    private static <T> RemoteApiResponse<T> success(T data) {
-        return new RemoteApiResponse<>(true, "SUCCESS", "", data, Instant.now());
+    private static <T> ApiResponse<T> success(T data) {
+        return new ApiResponse<>(true, "SUCCESS", "", data, Instant.now());
     }
 
     private void assertError(org.assertj.core.api.ThrowableAssert.ThrowingCallable action, ErrorCode expected) {

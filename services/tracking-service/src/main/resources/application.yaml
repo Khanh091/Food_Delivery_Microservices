@@ -4,6 +4,28 @@ server:
 spring:
   application:
     name: tracking-service
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/food-delivery}
+          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:}
+security:
+  jwt:
+    audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
+tracking:
+  driver-location:
+    stale-after: ${DRIVER_LOCATION_STALE_AFTER:45s}
+    max-accuracy-meters: ${DRIVER_LOCATION_MAX_ACCURACY_METERS:100}
 
 eureka:
   client:

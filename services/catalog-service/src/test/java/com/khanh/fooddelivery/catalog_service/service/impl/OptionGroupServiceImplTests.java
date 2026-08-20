@@ -19,6 +19,7 @@ import com.khanh.fooddelivery.catalog_service.outbox.OutboxEventService;
 import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -98,7 +99,7 @@ class OptionGroupServiceImplTests {
     }
 
     @Test
-    void multipleOptionalNormalizesMinimumToZero() {
+    void multipleWithMinimumIsRequired() {
         OptionGroup g = group();
         g.setSelectionType(OptionSelectionType.MULTIPLE);
         g.setRequired(false);
@@ -111,7 +112,21 @@ class OptionGroupServiceImplTests {
                 itemId,
                 new OptionGroupCreateRequest(
                         "Topping", OptionSelectionType.MULTIPLE, 2, 3, false, 0));
-        assertEquals(0, g.getMinimumSelections());
+        assertEquals(2, g.getMinimumSelections());
+        assertEquals(true, g.getRequired());
+    }
+
+    @Test
+    void listReturnsOnlyActiveOptionGroups() {
+        CatalogItem item = item();
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
+        when(groupRepository.findAllByItemIdAndStatusOrderBySortOrderAsc(itemId, CatalogStatus.ACTIVE))
+                .thenReturn(List.of());
+        when(groupMapper.toResponses(List.of())).thenReturn(List.of());
+
+        service.list(itemId);
+
+        verify(groupRepository).findAllByItemIdAndStatusOrderBySortOrderAsc(itemId, CatalogStatus.ACTIVE);
     }
 
     @Test

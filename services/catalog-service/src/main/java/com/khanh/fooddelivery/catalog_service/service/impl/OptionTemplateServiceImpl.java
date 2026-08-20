@@ -119,6 +119,7 @@ public class OptionTemplateServiceImpl implements OptionTemplateService {
         if (!restaurantId.equals(item.getRestaurantId())) {
             throw new AppException(ErrorCode.ACCESS_DENIED);
         }
+        ensureNoActiveGroupWithName(item, template);
         return copyTemplateToItem(template, item,
                 templateValueRepository.findAllByTemplateIdInOrderBySortOrderAsc(List.of(templateId)));
     }
@@ -142,6 +143,7 @@ public class OptionTemplateServiceImpl implements OptionTemplateService {
         if (templates.stream().anyMatch(template -> template.getStatus() != CatalogStatus.ACTIVE)) {
             throw new AppException(ErrorCode.OPTION_TEMPLATE_INACTIVE);
         }
+        templates.forEach(template -> ensureNoActiveGroupWithName(item, template));
         Map<UUID, List<OptionTemplateValue>> values = valuesByTemplate(templates);
         return templates.stream()
                 .map(template -> copyTemplateToItem(template, item, values.get(template.getId())))
@@ -169,6 +171,12 @@ public class OptionTemplateServiceImpl implements OptionTemplateService {
         enqueue(savedGroup, "COPIED_FROM_TEMPLATE");
         copiedValues.forEach(value -> enqueue(value, "COPIED_FROM_TEMPLATE"));
         return groupMapper.toResponse(savedGroup);
+    }
+
+    private void ensureNoActiveGroupWithName(CatalogItem item, OptionTemplate template) {
+        if (groupRepository.existsByItemIdAndNameAndStatus(item.getId(), template.getName(), CatalogStatus.ACTIVE)) {
+            throw new AppException(ErrorCode.DATA_CONFLICT, "An active option group with this name already exists");
+        }
     }
 
     private OptionTemplateResponse changeStatus(UUID restaurantId, UUID templateId, CatalogStatus status) {

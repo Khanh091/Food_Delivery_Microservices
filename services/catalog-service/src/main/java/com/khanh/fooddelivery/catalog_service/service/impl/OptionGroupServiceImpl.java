@@ -60,7 +60,8 @@ public class OptionGroupServiceImpl implements OptionGroupService {
     public List<OptionGroupResponse> list(UUID itemId) {
         CatalogItem item = requiredItem(itemId);
         authorize(item);
-        return groupMapper.toResponses(groupRepository.findAllByItemIdOrderBySortOrderAsc(itemId));
+        return groupMapper.toResponses(
+                groupRepository.findAllByItemIdAndStatusOrderBySortOrderAsc(itemId, CatalogStatus.ACTIVE));
     }
 
     @Override

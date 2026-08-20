@@ -3,7 +3,12 @@ package com.khanh.fooddelivery.order_service.service.impl;
 import com.khanh.fooddelivery.order_service.client.CartServiceClient;
 import com.khanh.fooddelivery.order_service.client.CatalogServiceClient;
 import com.khanh.fooddelivery.order_service.client.DeliveryServiceClient;
-import com.khanh.fooddelivery.order_service.client.RemoteApiResponse;
+import com.khanh.fooddelivery.order_service.common.response.ApiResponse;
+import com.khanh.fooddelivery.order_service.client.dto.request.CheckoutItemRequest;
+import com.khanh.fooddelivery.order_service.client.dto.request.CheckoutItemsValidationRequest;
+import com.khanh.fooddelivery.order_service.client.dto.request.DeliveryTargetRequest;
+import com.khanh.fooddelivery.order_service.client.dto.request.DeliveryQuoteRequest;
+import com.khanh.fooddelivery.order_service.client.dto.response.*;
 import com.khanh.fooddelivery.order_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.order_service.client.UserServiceClient;
 import com.khanh.fooddelivery.order_service.dto.request.CheckoutPreviewRequest;
@@ -44,14 +49,14 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     public CheckoutPreviewResponse preview(Jwt jwt, CheckoutPreviewRequest request) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
         String bearer = bearerTokenProvider.getBearerToken();
-        CartServiceClient.InternalCartSnapshotResponse cart = requireCart(bearer, request.branchId());
+        InternalCartSnapshotResponse cart = requireCart(bearer, request.branchId());
         validateCart(ownerUserId, cart, request.branchId(), request.cartVersion());
         CheckoutPreviewResponse.CheckoutAddressSnapshot address = requireDeliveryTarget(bearer, request.branchId(), request.target());
-        RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse branch =
+        RestaurantBranchCartAvailabilityResponse branch =
                 requireRestaurant(bearer, cart.restaurantId(), cart.branchId());
-        List<CatalogServiceClient.ValidatedCheckoutItemResponse> validated =
+        List<ValidatedCheckoutItemResponse> validated =
                 requireCatalogValidation(bearer, cart);
-        Map<UUID, CatalogServiceClient.ValidatedCheckoutItemResponse> validatedByCartItem = indexValidated(cart, validated);
+        Map<UUID, ValidatedCheckoutItemResponse> validatedByCartItem = indexValidated(cart, validated);
         String currency = resolveCurrency(validated);
         List<CheckoutPreviewResponse.CheckoutItemResponse> items = cart.items().stream()
                 .map(item -> toPreviewItem(item, validatedByCartItem.get(item.cartItemId())))
@@ -81,9 +86,9 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
                 delivery.status() == DeliveryQuoteStatus.AVAILABLE);
     }
 
-    private CartServiceClient.InternalCartSnapshotResponse requireCart(String bearer, UUID branchId) {
+    private InternalCartSnapshotResponse requireCart(String bearer, UUID branchId) {
         try {
-            RemoteApiResponse<CartServiceClient.InternalCartSnapshotResponse> response =
+            ApiResponse<InternalCartSnapshotResponse> response =
                     cartServiceClient.getCurrentSnapshot(bearer, branchId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.CART_SERVICE_UNAVAILABLE);
@@ -95,7 +100,7 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     }
 
     private void validateCart(
-            UUID ownerUserId, CartServiceClient.InternalCartSnapshotResponse cart, UUID expectedBranchId, long expectedVersion) {
+            UUID ownerUserId, InternalCartSnapshotResponse cart, UUID expectedBranchId, long expectedVersion) {
         if (!ownerUserId.equals(cart.ownerUserId())) throw new AppException(ErrorCode.ACCESS_DENIED);
         if (cart.items() == null || cart.items().isEmpty()) throw new AppException(ErrorCode.CART_EMPTY);
         if (!expectedBranchId.equals(cart.branchId())) throw new AppException(ErrorCode.CART_SERVICE_UNAVAILABLE);
@@ -111,12 +116,12 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
 
     private CheckoutPreviewResponse.CheckoutAddressSnapshot requireAddress(String bearer, UUID addressId) {
         try {
-            RemoteApiResponse<UserServiceClient.InternalUserAddressResponse> response =
+            ApiResponse<InternalUserAddressResponse> response =
                     userServiceClient.getOwnedAddress(bearer, addressId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
             }
-            UserServiceClient.InternalUserAddressResponse address = response.data();
+            InternalUserAddressResponse address = response.data();
             return new CheckoutPreviewResponse.CheckoutAddressSnapshot(
                     "SAVED_ADDRESS", address.id(), null, address.labelType(), address.customLabel(), address.displayLabel(),
                     address.recipientName(), address.recipientPhone(), address.addressLine(), address.ward(),
@@ -132,13 +137,13 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     private CheckoutPreviewResponse.CheckoutAddressSnapshot requireTemporaryLocation(
             String bearer, UUID branchId, UUID temporaryLocationId) {
         try {
-            RemoteApiResponse<DeliveryServiceClient.CheckoutTemporaryLocationResponse> response =
+            ApiResponse<CheckoutTemporaryLocationResponse> response =
                     deliveryServiceClient.getCurrentCheckoutLocation(bearer, branchId);
             if (response == null || !response.success() || response.data() == null
                     || !temporaryLocationId.equals(response.data().id())) {
                 throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
             }
-            DeliveryServiceClient.CheckoutTemporaryLocationResponse location = response.data();
+            CheckoutTemporaryLocationResponse location = response.data();
             return new CheckoutPreviewResponse.CheckoutAddressSnapshot(
                     "TEMPORARY_LOCATION", null, location.id(), "TEMPORARY", null, "Vị trí hiện tại",
                     null, null, location.addressLine(), location.ward(), location.district(), location.city(),
@@ -150,15 +155,15 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         }
     }
 
-    private RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse requireRestaurant(
+    private RestaurantBranchCartAvailabilityResponse requireRestaurant(
             String bearer, UUID restaurantId, UUID branchId) {
         try {
-            RemoteApiResponse<RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse> response =
+            ApiResponse<RestaurantBranchCartAvailabilityResponse> response =
                     restaurantServiceClient.getCartAvailability(bearer, restaurantId, branchId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.RESTAURANT_SERVICE_UNAVAILABLE);
             }
-            RestaurantServiceClient.RestaurantBranchCartAvailabilityResponse branch = response.data();
+            RestaurantBranchCartAvailabilityResponse branch = response.data();
             if (!branch.restaurantActive() || !branch.branchActive() || !branch.acceptingOrders()) {
                 throw new AppException(ErrorCode.BRANCH_NOT_ACCEPTING_ORDERS);
             }
@@ -170,21 +175,21 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         }
     }
 
-    private List<CatalogServiceClient.ValidatedCheckoutItemResponse> requireCatalogValidation(
-            String bearer, CartServiceClient.InternalCartSnapshotResponse cart) {
+    private List<ValidatedCheckoutItemResponse> requireCatalogValidation(
+            String bearer, InternalCartSnapshotResponse cart) {
         try {
-            CatalogServiceClient.CheckoutItemsValidationRequest request =
-                    new CatalogServiceClient.CheckoutItemsValidationRequest(
+            CheckoutItemsValidationRequest request =
+                    new CheckoutItemsValidationRequest(
                             cart.restaurantId(),
                             cart.branchId(),
                             cart.items().stream()
-                                    .map(item -> new CatalogServiceClient.CheckoutItemRequest(
+                                    .map(item -> new CheckoutItemRequest(
                                             item.cartItemId(), item.catalogItemId(),
                                             item.selectedOptions().stream()
-                                                    .map(CartServiceClient.InternalSelectedOptionSnapshotResponse::optionValueId)
+                                                    .map(InternalSelectedOptionSnapshotResponse::optionValueId)
                                                     .toList()))
                                     .toList());
-            RemoteApiResponse<CatalogServiceClient.CheckoutItemsValidationResponse> response =
+            ApiResponse<CheckoutItemsValidationResponse> response =
                     catalogServiceClient.validateCheckoutItems(bearer, request);
             if (response == null || !response.success() || response.data() == null || response.data().items() == null) {
                 throw new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
@@ -207,13 +212,13 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
             return DeliveryResolution.of(DeliveryQuoteStatus.LOCATION_REQUIRED);
         }
         try {
-            RemoteApiResponse<DeliveryServiceClient.DeliveryQuoteResponse> response =
-                    deliveryServiceClient.createQuote(bearer, new DeliveryServiceClient.DeliveryQuoteRequest(branchId,
-                            new DeliveryServiceClient.DeliveryTargetRequest(address.targetType(), address.addressId(), address.temporaryLocationId())));
+            ApiResponse<DeliveryQuoteResponse> response =
+                    deliveryServiceClient.createQuote(bearer, new DeliveryQuoteRequest(branchId,
+                            new DeliveryTargetRequest(address.targetType(), address.addressId(), address.temporaryLocationId())));
             if (response == null || !response.success() || response.data() == null) {
                 return DeliveryResolution.of(DeliveryQuoteStatus.TEMPORARILY_UNAVAILABLE);
             }
-            DeliveryServiceClient.DeliveryQuoteResponse quote = response.data();
+            DeliveryQuoteResponse quote = response.data();
             if (!currency.equals(quote.currency()) || !quote.serviceable() || quote.deliveryFee() == null
                     || quote.quoteId() == null || quote.expiresAt() == null) {
                 return DeliveryResolution.of(DeliveryQuoteStatus.TEMPORARILY_UNAVAILABLE);
@@ -226,9 +231,9 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         }
     }
 
-    private record DeliveryResolution(DeliveryQuoteStatus status, DeliveryServiceClient.DeliveryQuoteResponse quote) {
+    private record DeliveryResolution(DeliveryQuoteStatus status, DeliveryQuoteResponse quote) {
         static DeliveryResolution of(DeliveryQuoteStatus status) { return new DeliveryResolution(status, null); }
-        static DeliveryResolution available(DeliveryServiceClient.DeliveryQuoteResponse quote) {
+        static DeliveryResolution available(DeliveryQuoteResponse quote) {
             return new DeliveryResolution(DeliveryQuoteStatus.AVAILABLE, quote);
         }
         UUID quoteId() { return quote == null ? null : quote.quoteId(); }
@@ -237,24 +242,24 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
         String pricingPolicyVersion() { return quote == null ? null : quote.pricingPolicyVersion(); }
     }
 
-    private Map<UUID, CatalogServiceClient.ValidatedCheckoutItemResponse> indexValidated(
-            CartServiceClient.InternalCartSnapshotResponse cart,
-            List<CatalogServiceClient.ValidatedCheckoutItemResponse> validated) {
+    private Map<UUID, ValidatedCheckoutItemResponse> indexValidated(
+            InternalCartSnapshotResponse cart,
+            List<ValidatedCheckoutItemResponse> validated) {
         if (validated.size() != cart.items().size()) throw new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
-        Map<UUID, CatalogServiceClient.ValidatedCheckoutItemResponse> byCartItem = new HashMap<>();
-        for (CatalogServiceClient.ValidatedCheckoutItemResponse item : validated) {
+        Map<UUID, ValidatedCheckoutItemResponse> byCartItem = new HashMap<>();
+        for (ValidatedCheckoutItemResponse item : validated) {
             if (item == null || item.cartItemId() == null || byCartItem.put(item.cartItemId(), item) != null) {
                 throw new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
             }
         }
         if (!byCartItem.keySet().equals(new HashSet<>(cart.items().stream()
-                .map(CartServiceClient.InternalCartItemSnapshotResponse::cartItemId).toList()))) {
+                .map(InternalCartItemSnapshotResponse::cartItemId).toList()))) {
             throw new AppException(ErrorCode.CATALOG_SERVICE_UNAVAILABLE);
         }
         return byCartItem;
     }
 
-    private String resolveCurrency(List<CatalogServiceClient.ValidatedCheckoutItemResponse> validated) {
+    private String resolveCurrency(List<ValidatedCheckoutItemResponse> validated) {
         String currency = validated.getFirst().currency();
         if (currency == null || currency.isBlank() || validated.stream().anyMatch(item -> !currency.equals(item.currency()))) {
             throw new AppException(ErrorCode.CURRENCY_MISMATCH);
@@ -263,8 +268,8 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     }
 
     private CheckoutPreviewResponse.CheckoutItemResponse toPreviewItem(
-            CartServiceClient.InternalCartItemSnapshotResponse cartItem,
-            CatalogServiceClient.ValidatedCheckoutItemResponse validated) {
+            InternalCartItemSnapshotResponse cartItem,
+            ValidatedCheckoutItemResponse validated) {
         BigDecimal lineTotal = validated.finalUnitPrice().multiply(BigDecimal.valueOf(cartItem.quantity()));
         return new CheckoutPreviewResponse.CheckoutItemResponse(
                 cartItem.cartItemId(), validated.catalogItemId(), validated.branchItemId(), validated.itemName(),
@@ -279,8 +284,8 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
     }
 
     private CheckoutPreviewResponse.PriceChangeResponse priceChange(
-            CartServiceClient.InternalCartItemSnapshotResponse cartItem,
-            CatalogServiceClient.ValidatedCheckoutItemResponse validated) {
+            InternalCartItemSnapshotResponse cartItem,
+            ValidatedCheckoutItemResponse validated) {
         if (cartItem.unitPrice() != null && cartItem.unitPrice().compareTo(validated.finalUnitPrice()) == 0) return null;
         return new CheckoutPreviewResponse.PriceChangeResponse(
                 cartItem.cartItemId(), cartItem.catalogItemId(), validated.itemName(),

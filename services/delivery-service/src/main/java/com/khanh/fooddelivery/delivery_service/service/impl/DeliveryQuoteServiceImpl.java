@@ -1,6 +1,8 @@
 package com.khanh.fooddelivery.delivery_service.service.impl;
 
-import com.khanh.fooddelivery.delivery_service.client.RemoteApiResponse;
+import com.khanh.fooddelivery.delivery_service.common.response.ApiResponse;
+import com.khanh.fooddelivery.delivery_service.client.dto.response.InternalUserAddressResponse;
+import com.khanh.fooddelivery.delivery_service.client.dto.response.RestaurantBranchOrderingContextResponse;
 import com.khanh.fooddelivery.delivery_service.client.RestaurantServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.UserServiceClient;
 import com.khanh.fooddelivery.delivery_service.config.DeliveryQuoteProperties;
@@ -9,6 +11,7 @@ import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryTargetRequest
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryQuoteResponse;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
+import com.khanh.fooddelivery.delivery_service.mapper.DeliveryQuoteMapper;
 import com.khanh.fooddelivery.delivery_service.model.DeliveryQuote;
 import com.khanh.fooddelivery.delivery_service.model.DeliveryTargetType;
 import com.khanh.fooddelivery.delivery_service.model.CheckoutTemporaryLocation;
@@ -38,12 +41,13 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
     private final DeliveryQuoteRepository quoteRepository;
     private final CheckoutTemporaryLocationRepository checkoutTemporaryLocationRepository;
     private final DeliveryQuoteProperties properties;
+    private final DeliveryQuoteMapper quoteMapper;
 
     @Override
     public DeliveryQuoteResponse createQuote(Jwt jwt, CreateDeliveryQuoteRequest request) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
         String bearer = bearerTokenProvider.getBearerToken();
-        RestaurantServiceClient.RestaurantBranchOrderingContextResponse branch = requireBranch(bearer, request.branchId());
+        RestaurantBranchOrderingContextResponse branch = requireBranch(bearer, request.branchId());
         TargetLocation target = resolveTarget(ownerUserId, bearer, request.branchId(), request.target());
         validateCoordinates(branch.latitude(), branch.longitude());
         validateCoordinates(target.latitude(), target.longitude());
@@ -61,7 +65,7 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
                 route.distanceMeters(), durationMinutes(route.durationSeconds()), properties.getPricingPolicyVersion(),
                 calculatedAt, expiresAt);
         quoteRepository.save(quote, properties.getTtl());
-        return toResponse(quote);
+        return quoteMapper.toResponse(quote);
     }
 
     BigDecimal calculateFee(long distanceMeters) {
@@ -72,14 +76,14 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
         return properties.getBaseFee().add(extra).setScale(0, RoundingMode.HALF_UP);
     }
 
-    private RestaurantServiceClient.RestaurantBranchOrderingContextResponse requireBranch(String bearer, UUID branchId) {
+    private RestaurantBranchOrderingContextResponse requireBranch(String bearer, UUID branchId) {
         try {
-            RemoteApiResponse<RestaurantServiceClient.RestaurantBranchOrderingContextResponse> response =
+            ApiResponse<RestaurantBranchOrderingContextResponse> response =
                     restaurantServiceClient.getOrderingContext(bearer, branchId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
             }
-            RestaurantServiceClient.RestaurantBranchOrderingContextResponse branch = response.data();
+            RestaurantBranchOrderingContextResponse branch = response.data();
             if (!branch.restaurantActive() || !branch.branchActive() || !branch.acceptingOrders()) {
                 throw new AppException(ErrorCode.DELIVERY_NOT_SERVICEABLE);
             }
@@ -91,9 +95,9 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
         }
     }
 
-    private UserServiceClient.InternalUserAddressResponse requireAddress(String bearer, UUID addressId) {
+    private InternalUserAddressResponse requireAddress(String bearer, UUID addressId) {
         try {
-            RemoteApiResponse<UserServiceClient.InternalUserAddressResponse> response = userServiceClient.getOwnedAddress(bearer, addressId);
+            ApiResponse<InternalUserAddressResponse> response = userServiceClient.getOwnedAddress(bearer, addressId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
             }
@@ -107,7 +111,7 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
 
     private TargetLocation resolveTarget(UUID ownerUserId, String bearer, UUID branchId, DeliveryTargetRequest target) {
         if (target.type() == DeliveryTargetType.SAVED_ADDRESS) {
-            UserServiceClient.InternalUserAddressResponse address = requireAddress(bearer, target.addressId());
+            InternalUserAddressResponse address = requireAddress(bearer, target.addressId());
             if (address.latitude() == null || address.longitude() == null) {
                 throw new AppException(ErrorCode.ADDRESS_COORDINATES_MISSING);
             }
@@ -128,11 +132,6 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
     }
 
     private long durationMinutes(long seconds) { return Math.max(1, (seconds + 59) / 60); }
-
-    private DeliveryQuoteResponse toResponse(DeliveryQuote quote) {
-        return new DeliveryQuoteResponse(quote.quoteId(), true, quote.currency(), quote.deliveryFee(), quote.distanceMeters(),
-                quote.estimatedDurationMinutes(), quote.pricingPolicyVersion(), quote.calculatedAt(), quote.expiresAt());
-    }
 
     private record TargetLocation(DeliveryTargetType type, UUID addressId, UUID temporaryLocationId,
                                   BigDecimal latitude, BigDecimal longitude) {}

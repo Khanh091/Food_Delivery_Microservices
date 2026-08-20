@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.delivery_service.security;
 
 import com.khanh.fooddelivery.delivery_service.client.UserServiceClient;
+import com.khanh.fooddelivery.delivery_service.client.dto.response.CurrentUserResponse;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
 import feign.FeignException;
@@ -19,7 +20,7 @@ public class CurrentUserProviderImpl implements CurrentUserProvider {
         String claim = jwt.getClaimAsString("user_id");
         if (claim != null && !claim.isBlank()) return parse(claim);
         try {
-            UserServiceClient.CurrentUserResponse user = userServiceClient.getCurrentUser("Bearer " + jwt.getTokenValue()).data();
+            CurrentUserResponse user = userServiceClient.getCurrentUser("Bearer " + jwt.getTokenValue()).data();
             if (user == null || user.id() == null) throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
             return user.id();
         } catch (FeignException exception) {
