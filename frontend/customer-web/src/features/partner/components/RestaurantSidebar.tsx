@@ -11,6 +11,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     { to: '/restaurant/catalog', label: 'Thực đơn', icon: 'menu' },
   ] },
   { label: 'Vận hành', items: [
+    { to: '/restaurant/orders', label: 'Đơn hàng', icon: 'orders' },
     { to: '/restaurant/members', label: 'Thành viên', icon: 'members' },
   ] },
   { label: 'Tài chính', items: [

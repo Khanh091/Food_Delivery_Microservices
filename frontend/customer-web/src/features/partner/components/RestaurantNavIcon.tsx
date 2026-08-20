@@ -1,4 +1,4 @@
-export type RestaurantNavIconName = 'overview' | 'restaurant' | 'branches' | 'menu' | 'members' | 'bank' | 'legal'
+export type RestaurantNavIconName = 'overview' | 'restaurant' | 'branches' | 'menu' | 'orders' | 'members' | 'bank' | 'legal'
 
 interface RestaurantNavIconProps {
   name: RestaurantNavIconName
@@ -15,6 +15,8 @@ export function RestaurantNavIcon({ name }: RestaurantNavIconProps) {
       return <svg {...common}><path d="M12 21s6-5.2 6-11a6 6 0 1 0-12 0c0 5.8 6 11 6 11Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /><circle cx="12" cy="10" r="2.2" stroke="currentColor" strokeWidth="1.7" /></svg>
     case 'menu':
       return <svg {...common}><path d="M4 6.5h16M4 12h16M4 17.5h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
+    case 'orders':
+      return <svg {...common}><rect x="5" y="3.5" width="14" height="17" rx="2" stroke="currentColor" strokeWidth="1.7" /><path d="M8.5 9h7M8.5 13h7M8.5 17h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
     case 'members':
       return <svg {...common}><circle cx="9" cy="8.5" r="3.2" stroke="currentColor" strokeWidth="1.7" /><path d="M3.8 19.5c.6-3 2.6-4.7 5.2-4.7s4.6 1.7 5.2 4.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /><path d="M15.5 5.9a3 3 0 0 1 0 5.4M18.6 14.7c1.3.8 2.1 2.2 2.5 4.3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
     case 'bank':

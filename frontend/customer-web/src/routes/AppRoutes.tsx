@@ -21,6 +21,7 @@ import { RestaurantCatalogPage } from '../features/partner/pages/RestaurantCatal
 import { RestaurantDetailsPage } from '../features/partner/pages/RestaurantDetailsPage'
 import { RestaurantLegalPage } from '../features/partner/pages/RestaurantLegalPage'
 import { RestaurantMembersPage } from '../features/partner/pages/RestaurantMembersPage'
+import { RestaurantOrdersPage } from '../features/partner/pages/RestaurantOrdersPage'
 
 export function AppRoutes() {
   return (
@@ -52,6 +53,7 @@ export function AppRoutes() {
             <Route path="details" element={<RestaurantDetailsPage />} />
             <Route path="branches" element={<RestaurantBranchesPage />} />
             <Route path="catalog" element={<RestaurantCatalogPage />} />
+            <Route path="orders" element={<RestaurantOrdersPage />} />
             <Route path="members" element={<RestaurantMembersPage />} />
             <Route path="bank-accounts" element={<RestaurantBankAccountsPage />} />
             <Route path="legal" element={<RestaurantLegalPage />} />

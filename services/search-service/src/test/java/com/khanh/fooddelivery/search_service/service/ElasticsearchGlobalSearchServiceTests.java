@@ -2,7 +2,9 @@ package com.khanh.fooddelivery.search_service.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -13,9 +15,11 @@ import com.khanh.fooddelivery.search_service.dto.GlobalSearchResult;
 import com.khanh.fooddelivery.search_service.dto.SearchPageResponse;
 import com.khanh.fooddelivery.search_service.repository.GlobalElasticsearchSearchRepository;
 import java.util.List;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -76,6 +80,24 @@ class ElasticsearchGlobalSearchServiceTests {
             assertThat(result.previewItems()).extracting(GlobalSearchResult.PreviewItem::name)
                     .containsExactly("Phở Gà", "Combo Phở Gà", "Gà Rán", "Mỳ Ý", "Cơm Gà", "Canh Rong Biển");
         });
+    }
+
+    @Test
+    void sendsCatalogItemIdsToSellabilityFilter() throws Exception {
+        when(repository.searchRestaurants("soup")).thenReturn(empty());
+        when(repository.searchItems("soup")).thenReturn(itemMatches("Soup", "Soup combo"));
+        when(repository.previewItemsForBranches(anyList())).thenReturn(empty());
+        when(repository.restaurantsByIds(anyList())).thenReturn(restaurantMetadata());
+
+        service.search("soup", 0, 20);
+
+        ArgumentCaptor<CatalogSellabilityClient.SellableItemFilterRequest> requestCaptor =
+                ArgumentCaptor.forClass(CatalogSellabilityClient.SellableItemFilterRequest.class);
+        verify(catalogSellabilityClient).filterSellableItems(
+                eq(UUID.fromString(RESTAURANT)), eq(UUID.fromString(BRANCH)), requestCaptor.capture());
+        assertThat(requestCaptor.getValue().itemIds()).containsExactly(
+                UUID.fromString("00000000-0000-0000-0000-000000000100"),
+                UUID.fromString("00000000-0000-0000-0000-000000000101"));
     }
 
     private JsonNode itemMatches(String... names) throws Exception {

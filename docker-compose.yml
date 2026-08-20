@@ -440,6 +440,9 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8106
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: order-service
       KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
@@ -462,6 +465,8 @@ services:
         condition: service_healthy
       delivery-service:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - food-delivery-network
     healthcheck:
@@ -479,6 +484,9 @@ services:
     restart: unless-stopped
     environment:
       SERVER_PORT: 8107
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/delivery_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: delivery-service
       KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
@@ -507,10 +515,48 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
+      driver-service:
+        condition: service_healthy
     networks:
       - food-delivery-network
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8107/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  driver-service:
+    build:
+      context: ./services/driver-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-driver-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8108
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/driver_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: driver-service
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+    ports:
+      - "${DRIVER_SERVICE_PORT:-8108}:8108"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8108/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 12

@@ -182,11 +182,11 @@ public class ElasticsearchGlobalSearchService implements GlobalSearchService {
         private final Map<UUID, GlobalSearchResult.MatchingItem> previewItems = new LinkedHashMap<>();
         Candidate(Key key) { this.key=key; }
         void addMatching(GlobalSearchResult.MatchingItem item) {
-            if (matchingItems.size() < PREVIEW_ITEMS_PER_BRANCH) matchingItems.putIfAbsent(item.branchItemId(), item);
+            if (matchingItems.size() < PREVIEW_ITEMS_PER_BRANCH) matchingItems.putIfAbsent(item.itemId(), item);
             addPreview(item);
         }
         void addPreview(GlobalSearchResult.MatchingItem item) {
-            if (previewItems.size() < PREVIEW_ITEMS_PER_BRANCH) previewItems.putIfAbsent(item.branchItemId(), item);
+            if (previewItems.size() < PREVIEW_ITEMS_PER_BRANCH) previewItems.putIfAbsent(item.itemId(), item);
         }
         List<GlobalSearchResult.MatchingItem> matchingItems() { return List.copyOf(matchingItems.values()); }
         List<UUID> itemIds() {
