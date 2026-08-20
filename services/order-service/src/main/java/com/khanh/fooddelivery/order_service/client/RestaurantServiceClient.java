@@ -7,6 +7,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @FeignClient(name = "restaurant-service")
 public interface RestaurantServiceClient {
@@ -16,8 +17,15 @@ public interface RestaurantServiceClient {
             @PathVariable UUID restaurantId,
             @PathVariable UUID branchId);
 
+    @GetMapping("/internal/v1/restaurants/{restaurantId}/order-authorization")
+    RemoteApiResponse<OrderAuthorizationResponse> orderAuthorization(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable UUID restaurantId,
+            @RequestParam(required = false) UUID branchId);
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     record RestaurantBranchCartAvailabilityResponse(
             UUID restaurantId, String restaurantName, boolean restaurantActive,
             UUID branchId, String branchName, boolean branchActive, boolean acceptingOrders) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record OrderAuthorizationResponse(UUID restaurantId, UUID branchId, boolean authorized) {}
 }

@@ -18,6 +18,10 @@ public interface DeliveryServiceClient {
     RemoteApiResponse<DeliveryQuoteResponse> createQuote(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody DeliveryQuoteRequest request);
 
+    @PostMapping("/internal/v1/deliveries/matching")
+    RemoteApiResponse<Object> startMatching(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @RequestBody DeliveryMatchingRequest request);
+
     @GetMapping("/internal/v1/delivery/checkout-locations/branches/{branchId}/current")
     RemoteApiResponse<CheckoutTemporaryLocationResponse> getCurrentCheckoutLocation(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable UUID branchId);
@@ -25,6 +29,9 @@ public interface DeliveryServiceClient {
     record DeliveryQuoteRequest(UUID branchId, DeliveryTargetRequest target) {
         public DeliveryQuoteRequest(UUID branchId, UUID addressId) { this(branchId, DeliveryTargetRequest.savedAddress(addressId)); }
     }
+    record DeliveryMatchingRequest(UUID orderId, UUID restaurantId, UUID branchId, UUID customerId,
+                                   String restaurantName, String branchName, String customerAddress,
+                                   java.math.BigDecimal customerLatitude, java.math.BigDecimal customerLongitude) {}
     record DeliveryTargetRequest(String type, UUID addressId, UUID temporaryLocationId) {
         static DeliveryTargetRequest savedAddress(UUID addressId) { return new DeliveryTargetRequest("SAVED_ADDRESS", addressId, null); }
     }

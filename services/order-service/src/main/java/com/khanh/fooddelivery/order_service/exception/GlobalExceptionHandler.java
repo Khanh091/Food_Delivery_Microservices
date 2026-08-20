@@ -1,6 +1,8 @@
 package com.khanh.fooddelivery.order_service.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(AppException.class)
     ResponseEntity<ErrorResponse> app(AppException exception, HttpServletRequest request) {
         return out(exception.getErrorCode(), exception.getMessage(), request);
@@ -32,6 +36,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ErrorResponse> unexpected(Exception exception, HttpServletRequest request) {
+        log.error("Unhandled order-service exception for {} {}", request.getMethod(), request.getRequestURI(), exception);
         return out(ErrorCode.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_SERVER_ERROR.getDefaultMessage(), request);
     }
 

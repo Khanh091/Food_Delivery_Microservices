@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.PathVariable;
 
@@ -17,6 +18,9 @@ public interface CartServiceClient {
     RemoteApiResponse<InternalCartSnapshotResponse> getCurrentSnapshot(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
             @PathVariable UUID branchId);
+
+    @DeleteMapping("/api/v1/carts/branches/{branchId}")
+    RemoteApiResponse<Object> clear(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable UUID branchId);
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     record InternalCartSnapshotResponse(

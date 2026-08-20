@@ -22,7 +22,12 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR("CHECKOUT_015", HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred"),
     ADDRESS_COORDINATES_MISSING("CHECKOUT_016", HttpStatus.UNPROCESSABLE_ENTITY, "Delivery address coordinates are required"),
     DELIVERY_NOT_SERVICEABLE("CHECKOUT_017", HttpStatus.CONFLICT, "Delivery is unavailable for this address"),
-    DELIVERY_PROVIDER_UNAVAILABLE("CHECKOUT_018", HttpStatus.SERVICE_UNAVAILABLE, "Delivery quote is temporarily unavailable");
+    DELIVERY_PROVIDER_UNAVAILABLE("CHECKOUT_018", HttpStatus.SERVICE_UNAVAILABLE, "Delivery quote is temporarily unavailable"),
+    ORDER_NOT_FOUND("ORDER_001", HttpStatus.NOT_FOUND, "Order not found"),
+    ORDER_TRANSITION_INVALID("ORDER_002", HttpStatus.CONFLICT, "Order status transition is invalid"),
+    ORDER_ACCESS_DENIED("ORDER_003", HttpStatus.FORBIDDEN, "Order access denied"),
+    DELIVERY_SERVICE_UNAVAILABLE("ORDER_004", HttpStatus.SERVICE_UNAVAILABLE, "Delivery service is unavailable"),
+    ORDER_NOT_PLACEABLE("ORDER_005", HttpStatus.CONFLICT, "Order cannot be placed yet");
 
     private final String code;
     private final HttpStatus httpStatus;
