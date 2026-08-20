@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemCreateRequest;
+import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemBatchCreateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemSortOrderUpdateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.response.MenuCategoryItemResponse;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
@@ -236,6 +237,44 @@ class MenuCategoryItemServiceImplTests {
                                         new MenuCategoryItemSortOrderUpdateRequest(1)));
 
         assertEquals(ErrorCode.MENU_CATEGORY_ITEM_NOT_FOUND, error.getErrorCode());
+    }
+
+    @Test
+    void addBatchAttachesAllItemsAndEnsuresTheirBranchSellingRecords() {
+        UUID secondItemId = UUID.randomUUID();
+        CatalogItem firstItem = item(restaurantId);
+        CatalogItem secondItem = new CatalogItem();
+        secondItem.setId(secondItemId);
+        secondItem.setRestaurantId(restaurantId);
+        secondItem.setBasePrice(new BigDecimal("50000"));
+        when(categoryRepository.findByIdAndMenuId(categoryId, menuId)).thenReturn(Optional.of(category()));
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(firstItem));
+        when(itemRepository.findById(secondItemId)).thenReturn(Optional.of(secondItem));
+        when(categoryItemRepository.existsByCategoryIdAndItemId(categoryId, itemId)).thenReturn(false);
+        when(categoryItemRepository.existsByCategoryIdAndItemId(categoryId, secondItemId)).thenReturn(false);
+        when(categoryItemRepository.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(categoryItemMapper.toResponses(any())).thenReturn(List.of());
+        when(branchItemRepository.existsByBranchIdAndItemId(branchId, itemId)).thenReturn(true);
+        when(branchItemRepository.existsByBranchIdAndItemId(branchId, secondItemId)).thenReturn(true);
+
+        service.addBatch(menuId, categoryId, new MenuCategoryItemBatchCreateRequest(List.of(itemId, secondItemId)));
+
+        verify(authorizationService).requireBranchCatalogAccess(restaurantId, branchId);
+        verify(categoryItemRepository).saveAll(any());
+        verify(branchItemRepository).existsByBranchIdAndItemId(branchId, itemId);
+        verify(branchItemRepository).existsByBranchIdAndItemId(branchId, secondItemId);
+    }
+
+    @Test
+    void addBatchRejectsDuplicateRequestIdsBeforeCreatingMappings() {
+        when(categoryRepository.findByIdAndMenuId(categoryId, menuId)).thenReturn(Optional.of(category()));
+
+        AppException error = assertThrows(
+                AppException.class,
+                () -> service.addBatch(menuId, categoryId, new MenuCategoryItemBatchCreateRequest(List.of(itemId, itemId))));
+
+        assertEquals(ErrorCode.INVALID_REQUEST, error.getErrorCode());
+        verify(categoryItemRepository, never()).saveAll(any());
     }
 
     private MenuCategory category() {

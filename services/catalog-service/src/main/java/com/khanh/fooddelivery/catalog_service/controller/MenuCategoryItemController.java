@@ -2,6 +2,7 @@ package com.khanh.fooddelivery.catalog_service.controller;
 
 import com.khanh.fooddelivery.catalog_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemCreateRequest;
+import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemBatchCreateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemSortOrderUpdateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.response.MenuCategoryItemResponse;
 import com.khanh.fooddelivery.catalog_service.service.MenuCategoryItemService;
@@ -37,6 +38,16 @@ public class MenuCategoryItemController {
                         ApiResponse.success(
                                 "Catalog item added to category",
                                 categoryItemService.add(menuId, categoryId, itemId, request)));
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<ApiResponse<List<MenuCategoryItemResponse>>> addBatch(
+            @PathVariable UUID menuId,
+            @PathVariable UUID categoryId,
+            @Valid @RequestBody MenuCategoryItemBatchCreateRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(
+                        "Catalog items added to category", categoryItemService.addBatch(menuId, categoryId, request)));
     }
 
     @GetMapping

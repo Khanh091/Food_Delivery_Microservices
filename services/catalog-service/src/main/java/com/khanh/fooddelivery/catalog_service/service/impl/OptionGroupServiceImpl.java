@@ -6,7 +6,6 @@ import com.khanh.fooddelivery.catalog_service.dto.response.OptionGroupResponse;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
 import com.khanh.fooddelivery.catalog_service.entity.OptionGroup;
 import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
-import com.khanh.fooddelivery.catalog_service.enums.OptionSelectionType;
 import com.khanh.fooddelivery.catalog_service.exception.AppException;
 import com.khanh.fooddelivery.catalog_service.exception.ErrorCode;
 import com.khanh.fooddelivery.catalog_service.mapper.OptionGroupMapper;
@@ -17,6 +16,7 @@ import com.khanh.fooddelivery.catalog_service.repository.CatalogItemRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import com.khanh.fooddelivery.catalog_service.service.OptionGroupService;
+import com.khanh.fooddelivery.catalog_service.validation.OptionSelectionRules;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -113,18 +113,11 @@ public class OptionGroupServiceImpl implements OptionGroupService {
     }
 
     private void validateSelection(OptionGroup group) {
-        if (group.getMinimumSelections() > group.getMaximumSelections())
-            throw new AppException(ErrorCode.INVALID_OPTION_SELECTION);
-        if (group.getSelectionType() == OptionSelectionType.SINGLE) {
-            boolean valid =
-                    Boolean.TRUE.equals(group.getRequired())
-                            ? group.getMinimumSelections() == 1 && group.getMaximumSelections() == 1
-                            : group.getMinimumSelections() == 0
-                                    && group.getMaximumSelections() == 1;
-            if (!valid) throw new AppException(ErrorCode.INVALID_OPTION_SELECTION);
-        } else if (Boolean.TRUE.equals(group.getRequired()) && group.getMinimumSelections() < 1)
-            throw new AppException(ErrorCode.INVALID_OPTION_SELECTION);
-        else if (!Boolean.TRUE.equals(group.getRequired())) group.setMinimumSelections(0);
+        OptionSelectionRules.Normalized selection = OptionSelectionRules.normalize(
+                group.getSelectionType(), group.getMinimumSelections(), group.getMaximumSelections());
+        group.setMinimumSelections(selection.minimumSelections());
+        group.setMaximumSelections(selection.maximumSelections());
+        group.setRequired(selection.required());
     }
 
     private void enqueue(OptionGroup group, String action) {

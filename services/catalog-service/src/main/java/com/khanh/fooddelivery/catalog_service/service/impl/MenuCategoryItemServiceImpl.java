@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.catalog_service.service.impl;
 
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemCreateRequest;
+import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemBatchCreateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.request.MenuCategoryItemSortOrderUpdateRequest;
 import com.khanh.fooddelivery.catalog_service.dto.response.MenuCategoryItemResponse;
 import com.khanh.fooddelivery.catalog_service.entity.CatalogItem;
@@ -21,6 +22,7 @@ import com.khanh.fooddelivery.catalog_service.repository.MenuCategoryRepository;
 import com.khanh.fooddelivery.catalog_service.service.CatalogAuthorizationService;
 import com.khanh.fooddelivery.catalog_service.service.MenuCategoryItemService;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -58,6 +60,39 @@ public class MenuCategoryItemServiceImpl implements MenuCategoryItemService {
         ensureBranchItem(menu, item);
         enqueue(savedCategoryItem, "ATTACHED");
         return categoryItemMapper.toResponse(savedCategoryItem);
+    }
+
+    @Override
+    public List<MenuCategoryItemResponse> addBatch(
+            UUID menuId, UUID categoryId, MenuCategoryItemBatchCreateRequest request) {
+        MenuCategory category = requiredCategory(menuId, categoryId);
+        Menu menu = category.getMenu();
+        authorize(menu);
+
+        List<UUID> itemIds = request.itemIds();
+        if (new LinkedHashSet<>(itemIds).size() != itemIds.size()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Catalog item IDs must be unique");
+        }
+
+        List<CatalogItem> items = itemIds.stream().map(this::requiredItem).toList();
+        for (CatalogItem item : items) {
+            verifyItemRestaurant(menu, item);
+            if (categoryItemRepository.existsByCategoryIdAndItemId(categoryId, item.getId())) {
+                throw new AppException(ErrorCode.ITEM_ALREADY_IN_CATEGORY);
+            }
+        }
+
+        List<MenuCategoryItem> mappings = items.stream().map(item -> {
+            MenuCategoryItem mapping = new MenuCategoryItem();
+            mapping.setCategory(category);
+            mapping.setItem(item);
+            mapping.setSortOrder(0);
+            return mapping;
+        }).toList();
+        List<MenuCategoryItem> savedMappings = categoryItemRepository.saveAll(mappings);
+        items.forEach(item -> ensureBranchItem(menu, item));
+        savedMappings.forEach(mapping -> enqueue(mapping, "ATTACHED_BATCH"));
+        return categoryItemMapper.toResponses(savedMappings);
     }
 
     @Override

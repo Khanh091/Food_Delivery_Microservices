@@ -1,26 +1,33 @@
 package com.khanh.fooddelivery.catalog_service.entity;
 
 import com.khanh.fooddelivery.catalog_service.common.entity.BaseAuditEntity;
-import com.khanh.fooddelivery.catalog_service.enums.*;
-import jakarta.persistence.*;
+import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
+import com.khanh.fooddelivery.catalog_service.enums.OptionSelectionType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "option_groups")
+@Table(name = "option_templates")
 @Getter
 @Setter
 @NoArgsConstructor
-public class OptionGroup extends BaseAuditEntity {
+public class OptionTemplate extends BaseAuditEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "item_id", nullable = false)
-    private CatalogItem item;
+    @Column(name = "restaurant_id", nullable = false)
+    private UUID restaurantId;
 
     @Column(nullable = false, length = 255)
     private String name;
@@ -35,16 +42,10 @@ public class OptionGroup extends BaseAuditEntity {
     @Column(name = "maximum_selections", nullable = false)
     private Integer maximumSelections = 1;
 
-    @Column(name = "required", nullable = false)
-    private Boolean required = false;
-
-    @Column(name = "source_template_id")
-    private UUID sourceTemplateId;
-
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
-    private CatalogStatus status;
+    private CatalogStatus status = CatalogStatus.ACTIVE;
 }

@@ -3,18 +3,19 @@ package com.khanh.fooddelivery.catalog_service.dto.response;
 import com.khanh.fooddelivery.catalog_service.enums.CatalogStatus;
 import com.khanh.fooddelivery.catalog_service.enums.OptionSelectionType;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
-public record OptionGroupResponse(
+public record OptionTemplateResponse(
         UUID id,
-        UUID itemId,
+        UUID restaurantId,
         String name,
         OptionSelectionType selectionType,
         Integer minimumSelections,
         Integer maximumSelections,
         Boolean required,
-        UUID sourceTemplateId,
         Integer sortOrder,
         CatalogStatus status,
+        List<OptionTemplateValueResponse> values,
         Instant createdAt,
         Instant updatedAt) {}

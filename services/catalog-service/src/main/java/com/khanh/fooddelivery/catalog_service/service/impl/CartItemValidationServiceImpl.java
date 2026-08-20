@@ -16,6 +16,7 @@ import com.khanh.fooddelivery.catalog_service.repository.OptionGroupRepository;
 import com.khanh.fooddelivery.catalog_service.repository.OptionValueRepository;
 import com.khanh.fooddelivery.catalog_service.service.CartItemValidationService;
 import com.khanh.fooddelivery.catalog_service.service.CustomerSellabilityService;
+import com.khanh.fooddelivery.catalog_service.validation.OptionSelectionRules;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collection;
@@ -135,6 +136,8 @@ public class CartItemValidationServiceImpl implements CartItemValidationService 
     private void validateSelections(
             Collection<OptionGroup> groups, Map<UUID, List<OptionValue>> valuesByGroup) {
         for (OptionGroup group : groups) {
+            OptionSelectionRules.normalize(
+                    group.getSelectionType(), group.getMinimumSelections(), group.getMaximumSelections());
             int count = valuesByGroup.getOrDefault(group.getId(), List.of()).size();
             if (count < group.getMinimumSelections() || count > group.getMaximumSelections()) {
                 throw new AppException(ErrorCode.INVALID_OPTION_SELECTION);

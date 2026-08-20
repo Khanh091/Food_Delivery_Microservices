@@ -39,6 +39,8 @@ public enum ErrorCode {
     OPTION_VALUE_NOT_FOUND("CATALOG_020", HttpStatus.NOT_FOUND, "Option value not found"),
     INVALID_OPTION_SELECTION(
             "CATALOG_021", HttpStatus.BAD_REQUEST, "Invalid option selection rules"),
+    OPTION_TEMPLATE_NOT_FOUND("CATALOG_028", HttpStatus.NOT_FOUND, "Option template not found"),
+    OPTION_TEMPLATE_INACTIVE("CATALOG_029", HttpStatus.CONFLICT, "Option template is inactive"),
     ITEM_IMAGE_NOT_FOUND("CATALOG_022", HttpStatus.NOT_FOUND, "Item image not found"),
     INVALID_IMAGE_FILE("CATALOG_023", HttpStatus.BAD_REQUEST, "Invalid image file"),
     IMAGE_UPLOAD_FAILED("CATALOG_024", HttpStatus.BAD_GATEWAY, "Image upload failed"),
