@@ -1,3 +1,42 @@
 spring:
   application:
     name: notification-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/notification_db}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+server:
+  port: ${SERVER_PORT:8112}
+
+security:
+  jwt:
+    audience: ${KEYCLOAK_AUDIENCE:food-delivery-api}
+    issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/food-delivery}
+    jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/food-delivery/protocol/openid-connect/certs}
+
+app:
+  internal-api:
+    key: ${INTERNAL_API_KEY:}
+
+notification:
+  expo:
+    base-url: ${EXPO_PUSH_BASE_URL:https://exp.host/--/api/v2}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    hostname: ${EUREKA_INSTANCE_HOSTNAME:localhost}
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
