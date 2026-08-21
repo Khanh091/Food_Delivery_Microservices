@@ -1,3 +1,6 @@
 package com.khanh.fooddelivery.driver_service.dto.request;
-public record DriverRegistrationRequest(String vehicleType, String vehiclePlate) {
+
+import com.khanh.fooddelivery.driver_service.model.VehicleType;
+
+public record DriverRegistrationRequest(VehicleType vehicleType, String vehiclePlate) {
 }

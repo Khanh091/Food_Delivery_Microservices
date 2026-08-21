@@ -14,6 +14,7 @@ import com.khanh.fooddelivery.driver_service.repository.DriverAvailabilityReposi
 import com.khanh.fooddelivery.driver_service.repository.DriverProfileRepository;
 import com.khanh.fooddelivery.driver_service.service.DriverService;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,20 +44,29 @@ public class DriverServiceImpl implements DriverService {
         profile.setId(UUID.randomUUID());
         profile.setUserId(userId);
         profile.setStatus(DriverStatus.PENDING);
-        profile.setVehicleType(request.vehicleType().trim());
+        profile.setVehicleType(request.vehicleType());
         profile.setVehiclePlate(request.vehiclePlate().trim().toUpperCase());
         return mapper.toResponse(profiles.save(profile));
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<DriverProfileResponse> profile(UUID userId) {
+        return profiles.findByUserId(userId).map(mapper::toResponse);
+    }
+
+    @Override
     public DriverProfileResponse setStatus(UUID driverId, DriverStatusUpdateRequest request) {
-        DriverProfile profile = profiles.findByUserId(driverId).orElseThrow();
+        DriverProfile profile = profiles.findById(driverId)
+                .or(() -> profiles.findByUserId(driverId))
+                .orElseThrow();
+        UUID userId = profile.getUserId();
         if (request.status() == DriverStatus.ACTIVE && profile.getStatus() != DriverStatus.ACTIVE) {
-            systemRoles.grantDriverRole(driverId, internalApiKey);
+            systemRoles.grantDriverRole(userId, internalApiKey);
         }
         profile.setStatus(request.status());
         if (request.status() != DriverStatus.ACTIVE) {
-            availability.findByUserId(driverId).ifPresent(row -> row.setAvailable(false));
+            availability.findByUserId(userId).ifPresent(row -> row.setAvailable(false));
         }
         return mapper.toResponse(profile);
     }
@@ -75,6 +85,12 @@ public class DriverServiceImpl implements DriverService {
         }
         row.setAvailable(request.available());
         return mapper.toResponse(availability.save(row));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<DriverAvailabilityResponse> availability(UUID userId) {
+        return availability.findByUserId(userId).map(mapper::toResponse);
     }
 
     @Override

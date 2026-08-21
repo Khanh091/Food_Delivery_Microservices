@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.driver_service.entity;
 
 import com.khanh.fooddelivery.driver_service.model.DriverStatus;
+import com.khanh.fooddelivery.driver_service.model.VehicleType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -36,8 +37,9 @@ public class DriverProfile {
     @Column(nullable = false, length = 20)
     private DriverStatus status;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 40)
-    private String vehicleType;
+    private VehicleType vehicleType;
 
     @Column(nullable = false, unique = true, length = 32)
     private String vehiclePlate;

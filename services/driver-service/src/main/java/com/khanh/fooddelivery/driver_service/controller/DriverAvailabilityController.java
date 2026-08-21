@@ -5,10 +5,13 @@ import com.khanh.fooddelivery.driver_service.dto.request.DriverRegistrationReque
 import com.khanh.fooddelivery.driver_service.dto.request.DriverStatusUpdateRequest;
 import com.khanh.fooddelivery.driver_service.dto.response.DriverAvailabilityResponse;
 import com.khanh.fooddelivery.driver_service.dto.response.DriverProfileResponse;
+import com.khanh.fooddelivery.driver_service.security.CanonicalUserIdResolver;
 import com.khanh.fooddelivery.driver_service.service.DriverService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -24,20 +27,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class DriverAvailabilityController {
 
     private final DriverService drivers;
+    private final CanonicalUserIdResolver canonicalUserIdResolver;
 
     @PostMapping("/api/v1/drivers/me/profile")
     public DriverProfileResponse register(
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody DriverRegistrationRequest request
     ) {
-        return drivers.register(user(jwt), request);
+        return drivers.register(canonicalUserIdResolver.resolve(jwt), request);
+    }
+
+    @GetMapping("/api/v1/drivers/me/profile")
+    public ResponseEntity<DriverProfileResponse> profile(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return drivers.profile(canonicalUserIdResolver.resolve(jwt))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/api/v1/admin/drivers/{driverId}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public DriverProfileResponse setStatus(
             @PathVariable UUID driverId,
-            @RequestBody DriverStatusUpdateRequest request
+            @Valid @RequestBody DriverStatusUpdateRequest request
     ) {
         return drivers.setStatus(driverId, request);
     }
@@ -48,7 +61,17 @@ public class DriverAvailabilityController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody DriverAvailabilityRequest request
     ) {
-        return drivers.setAvailability(user(jwt), request);
+        return drivers.setAvailability(canonicalUserIdResolver.resolve(jwt), request);
+    }
+
+    @GetMapping("/api/v1/drivers/me/availability")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ResponseEntity<DriverAvailabilityResponse> availability(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return drivers.availability(canonicalUserIdResolver.resolve(jwt))
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/internal/v1/drivers/available")
@@ -93,8 +116,4 @@ public class DriverAvailabilityController {
         drivers.releaseDelivery(driverId, deliveryId);
     }
 
-    private UUID user(Jwt jwt) {
-        String value = jwt.getClaimAsString("user_id");
-        return UUID.fromString(value == null ? jwt.getSubject() : value);
-    }
 }

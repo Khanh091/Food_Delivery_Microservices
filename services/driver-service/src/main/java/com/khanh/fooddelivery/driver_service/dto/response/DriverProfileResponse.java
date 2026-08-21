@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.driver_service.dto.response;
 
 import com.khanh.fooddelivery.driver_service.model.DriverStatus;
+import com.khanh.fooddelivery.driver_service.model.VehicleType;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -9,7 +10,7 @@ public record DriverProfileResponse(
         Long version,
         UUID userId,
         DriverStatus status,
-        String vehicleType,
+        VehicleType vehicleType,
         String vehiclePlate,
         Instant createdAt,
         Instant updatedAt
