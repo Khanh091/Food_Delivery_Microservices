@@ -1,3 +1,4 @@
+name: food_delivery_microservices
 services:
   postgres:
     image: postgres:17
@@ -102,7 +103,7 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
 
-      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT:-8180}
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
 
     command:
@@ -163,7 +164,7 @@ services:
       SERVER_PORT: 8081
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: api-gateway
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
     ports:
@@ -195,7 +196,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: user-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       USER_AVATAR_MAX_FILE_SIZE: ${USER_AVATAR_MAX_FILE_SIZE:-5242880}
@@ -239,7 +240,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: restaurant-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-CLOUDINARY}
@@ -299,7 +300,7 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: catalog-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       MANAGEMENT_HEALTH_REDIS_ENABLED: "false"
@@ -368,7 +369,7 @@ services:
       SEARCH_KAFKA_RETRY_BACKOFF_MS: ${SEARCH_KAFKA_RETRY_BACKOFF_MS:-1000}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: search-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
     ports:
@@ -405,7 +406,7 @@ services:
       CART_CAS_MAX_RETRIES: ${CART_CAS_MAX_RETRIES:-3}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: cart-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
     ports:
@@ -445,7 +446,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: order-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
     ports:
@@ -489,7 +490,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: delivery-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       REDIS_HOST: redis
@@ -506,6 +507,7 @@ services:
       DELIVERY_FEE_PER_KM: ${DELIVERY_FEE_PER_KM:-5000}
       DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS: ${DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS:-10000}
       DELIVERY_PRICING_POLICY_VERSION: ${DELIVERY_PRICING_POLICY_VERSION:-dev-v1}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     ports:
       - "${DELIVERY_SERVICE_PORT:-8107}:8107"
     depends_on:
@@ -520,6 +522,8 @@ services:
       driver-service:
         condition: service_healthy
       tracking-service:
+        condition: service_healthy
+      notification-service:
         condition: service_healthy
     networks:
       - food-delivery-network
@@ -543,7 +547,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: driver-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
@@ -575,7 +579,7 @@ services:
       REDIS_PORT: 6379
       EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
       EUREKA_INSTANCE_HOSTNAME: tracking-service
-      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT:-8180}/realms/food-delivery
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       DRIVER_LOCATION_STALE_AFTER: ${DRIVER_LOCATION_STALE_AFTER:-45s}
@@ -600,6 +604,42 @@ services:
       retries: 12
       start_period: 60s
 
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-notification-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8112
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: notification-service
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      EXPO_PUSH_BASE_URL: ${EXPO_PUSH_BASE_URL:-https://exp.host/--/api/v2}
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-8112}:8112"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8112/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
 networks:
   food-delivery-network:
     name: food-delivery-network
@@ -607,5 +647,7 @@ networks:
 
 volumes:
   postgres_data:
+    external: true
+    name: food_delivery_microservices_postgres_data
   elasticsearch_data:
   redis_data:

@@ -7,6 +7,9 @@ target/
 hs_err_pid*
 replay_pid*
 
+# Maven Wrapper must be committed
+!.mvn/wrapper/maven-wrapper.jar
+
 # IntelliJ IDEA
 .idea/
 *.iml
@@ -25,6 +28,32 @@ bin/
 
 # Visual Studio Code
 .vscode/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Frontend build output
+dist/
+build/
+coverage/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+web-build/
+
+# React Native native build artifacts
+.gradle/
+**/android/app/build/
+**/android/build/
+**/ios/build/
+**/ios/Pods/
+*.jks
+*.keystore
 
 # Environment and secrets
 .env
@@ -49,9 +78,6 @@ volumes/
 *.temp
 *.swp
 *~
-
-# Maven Wrapper must be committed
-!.mvn/wrapper/maven-wrapper.jar
 
 # Local database backups
 backup/
