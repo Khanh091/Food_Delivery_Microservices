@@ -6,7 +6,6 @@ import com.khanh.fooddelivery.tracking_service.dto.response.NearestDriverRespons
 import com.khanh.fooddelivery.tracking_service.service.DriverLocationService;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,9 +28,7 @@ public class DriverLocationController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestBody DriverLocationUpdateRequest request
     ) {
-        UUID driverId = user(jwt);
-
-        return locations.update(driverId, "Bearer " + jwt.getTokenValue(), request);
+        return locations.update("Bearer " + jwt.getTokenValue(), request);
     }
 
     @GetMapping("/internal/v1/tracking/drivers/nearest")
@@ -42,16 +39,6 @@ public class DriverLocationController {
             @RequestParam(defaultValue = "20") long limit
     ) {
         return locations.nearest(latitude, longitude, radiusMeters, limit);
-    }
-
-    private UUID user(Jwt jwt) {
-        String value = jwt.getClaimAsString("user_id");
-
-        return UUID.fromString(
-                value == null
-                        ? jwt.getSubject()
-                        : value
-        );
     }
 
 }

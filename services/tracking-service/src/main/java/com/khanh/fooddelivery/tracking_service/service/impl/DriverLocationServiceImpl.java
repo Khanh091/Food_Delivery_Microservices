@@ -1,10 +1,14 @@
 package com.khanh.fooddelivery.tracking_service.service.impl;
 
 import com.khanh.fooddelivery.tracking_service.client.DriverServiceClient;
+import com.khanh.fooddelivery.tracking_service.client.dto.response.DriverProfileResponse;
 import com.khanh.fooddelivery.tracking_service.dto.request.DriverLocationUpdateRequest;
 import com.khanh.fooddelivery.tracking_service.dto.response.DriverLocationResponse;
 import com.khanh.fooddelivery.tracking_service.dto.response.NearestDriverResponse;
+import com.khanh.fooddelivery.tracking_service.exception.AppException;
+import com.khanh.fooddelivery.tracking_service.exception.ErrorCode;
 import com.khanh.fooddelivery.tracking_service.service.DriverLocationService;
+import feign.FeignException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -42,15 +46,16 @@ public class DriverLocationServiceImpl implements DriverLocationService {
 
     @Override
     public DriverLocationResponse update(
-            UUID driverId,
             String authorization,
             DriverLocationUpdateRequest request
     ) {
-        if (!drivers.active(authorization, driverId)) {
-            throw new IllegalStateException("Driver is not active");
-        }
+        DriverProfileResponse profile = currentProfile(authorization);
+        UUID driverId = profile.userId();
         if (request.accuracyMeters() > maxAccuracy) {
-            throw new IllegalArgumentException("Location accuracy is too low");
+            throw new AppException(
+                    ErrorCode.LOCATION_ACCURACY_TOO_LOW,
+                    "Location accuracy is too low"
+            );
         }
 
         Instant recordedAt = request.recordedAt() == null
@@ -79,6 +84,31 @@ public class DriverLocationServiceImpl implements DriverLocationService {
                 recordedAt,
                 updatedAt
         );
+    }
+
+    private DriverProfileResponse currentProfile(String authorization) {
+        try {
+            DriverProfileResponse profile = drivers.profile(authorization);
+            if (profile == null
+                    || profile.userId() == null
+                    || !"ACTIVE".equalsIgnoreCase(profile.status())) {
+                throw new AppException(
+                        ErrorCode.DRIVER_NOT_ACTIVE,
+                        "Driver profile must be ACTIVE to upload location"
+                );
+            }
+            return profile;
+        } catch (FeignException.NotFound exception) {
+            throw new AppException(
+                    ErrorCode.DRIVER_NOT_ACTIVE,
+                    "Driver profile must be ACTIVE to upload location"
+            );
+        } catch (FeignException exception) {
+            throw new AppException(
+                    ErrorCode.DRIVER_SERVICE_UNAVAILABLE,
+                    "Driver status could not be verified"
+            );
+        }
     }
 
     @Override
@@ -122,12 +152,16 @@ public class DriverLocationServiceImpl implements DriverLocationService {
             }
             return Optional.of(new NearestDriverResponse(
                     driverId,
-                    Math.round(result.getDistance().getValue()),
+                    distanceMeters(result.getDistance()),
                     updatedAt
             ));
         } catch (Exception ignored) {
             return Optional.empty();
         }
+    }
+
+    private long distanceMeters(Distance distance) {
+        return Math.round(distance.in(Metrics.KILOMETERS).getValue() * 1000d);
     }
 
     private String key(UUID driverId) {

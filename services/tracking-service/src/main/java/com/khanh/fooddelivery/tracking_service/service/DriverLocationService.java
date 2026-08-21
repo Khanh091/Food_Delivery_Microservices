@@ -5,11 +5,9 @@ import com.khanh.fooddelivery.tracking_service.dto.response.DriverLocationRespon
 import com.khanh.fooddelivery.tracking_service.dto.response.NearestDriverResponse;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 
 public interface DriverLocationService {
     DriverLocationResponse update(
-            UUID driverId,
             String authorization,
             DriverLocationUpdateRequest request
     );

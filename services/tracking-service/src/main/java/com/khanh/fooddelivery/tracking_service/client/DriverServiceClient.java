@@ -1,12 +1,16 @@
 package com.khanh.fooddelivery.tracking_service.client;
 
-import java.util.UUID;
+import com.khanh.fooddelivery.tracking_service.client.dto.response.DriverProfileResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 
-@FeignClient(name = "driver-service")
+@FeignClient(name = "driver-service", contextId = "trackingDriverServiceClient")
 public interface DriverServiceClient {
-    @GetMapping("/internal/v1/drivers/{driverId}/active")
-    boolean active(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorization, @PathVariable UUID driverId);
+
+    @GetMapping("/api/v1/drivers/me/profile")
+    DriverProfileResponse profile(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization
+    );
 }
