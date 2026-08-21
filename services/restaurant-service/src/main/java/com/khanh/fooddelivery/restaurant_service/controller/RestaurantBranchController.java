@@ -135,6 +135,7 @@ public class RestaurantBranchController {
     public ApiResponse<BranchOperatingStatusResponse> status(@PathVariable UUID id) {
         return ApiResponse.success(
                 "Operating status evaluated",
-                operating.getOperatingStatus(id, ZonedDateTime.now()));
+                operating.getOperatingStatus(
+                        id, ZonedDateTime.now(BranchOperatingStatusService.BUSINESS_ZONE)));
     }
 }

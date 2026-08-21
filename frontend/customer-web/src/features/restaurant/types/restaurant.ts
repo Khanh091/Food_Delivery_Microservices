@@ -47,6 +47,8 @@ export interface BranchOperatingStatus {
   closedToday: boolean
   openTime: string | null
   closeTime: string | null
+  nextOpenAt?: string | null
+  closeAt?: string | null
   reason: string
 }
 
