@@ -21,6 +21,20 @@ public interface DeliveryOfferRepository
             DeliveryOfferStatus status
     );
 
+    @Query("""
+            select o
+            from DeliveryOffer o
+            where o.driverId = :driverId
+              and o.status = :status
+              and o.expiresAt > :now
+            order by o.offeredAt asc
+            """)
+    List<DeliveryOffer> findCurrentByDriverId(
+            @Param("driverId") UUID driverId,
+            @Param("status") DeliveryOfferStatus status,
+            @Param("now") Instant now
+    );
+
     boolean existsByDriverIdAndStatus(
             UUID driverId,
             DeliveryOfferStatus status

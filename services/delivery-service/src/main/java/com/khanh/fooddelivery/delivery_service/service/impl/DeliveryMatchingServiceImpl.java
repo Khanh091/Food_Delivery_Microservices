@@ -16,6 +16,7 @@ import com.khanh.fooddelivery.delivery_service.repository.DeliveryOfferRepositor
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryMatchingService;
+import com.khanh.fooddelivery.delivery_service.service.event.DeliveryOfferCreatedEvent;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
@@ -24,6 +25,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +43,7 @@ public class DeliveryMatchingServiceImpl implements DeliveryMatchingService {
     private final RestaurantServiceClient restaurants;
     private final TrackingServiceClient tracking;
     private final DeliveryMapper mapper;
+    private final ApplicationEventPublisher events;
 
     @Value("${delivery.offer.ttl:45s}")
     private Duration offerTtl;
@@ -106,6 +109,11 @@ public class DeliveryMatchingServiceImpl implements DeliveryMatchingService {
         offer.setStatus(DeliveryOfferStatus.PENDING);
         offer.setExpiresAt(Instant.now().plus(offerTtl));
         offers.save(offer);
+        events.publishEvent(new DeliveryOfferCreatedEvent(
+                driverId,
+                offer.getId(),
+                delivery.getId()
+        ));
     }
 
     private Delivery create(DeliveryMatchingRequest request) {

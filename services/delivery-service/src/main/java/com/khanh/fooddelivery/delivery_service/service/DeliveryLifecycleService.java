@@ -8,6 +8,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 public interface DeliveryLifecycleService {
     DeliveryResponse startMatching(DeliveryMatchingRequest request);
     List<DeliveryOfferResponse> offers(Jwt jwt);
+    Optional<CurrentDeliveryOfferResponse> currentOffer(Jwt jwt);
+    Optional<DeliveryResponse> currentActiveDelivery(Jwt jwt);
     DeliveryResponse accept(Jwt jwt, UUID deliveryId);
     void reject(Jwt jwt, UUID deliveryId);
     DeliveryResponse pickup(Jwt jwt, UUID deliveryId);

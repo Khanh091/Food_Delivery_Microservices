@@ -4,7 +4,10 @@ import com.khanh.fooddelivery.delivery_service.client.DriverServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.OrderServiceClient;
 import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryMatchingRequest;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryOfferResponse;
+import com.khanh.fooddelivery.delivery_service.dto.response.CurrentDeliveryOfferResponse;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryResponse;
+import com.khanh.fooddelivery.delivery_service.exception.AppException;
+import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
 import com.khanh.fooddelivery.delivery_service.mapper.DeliveryMapper;
 import com.khanh.fooddelivery.delivery_service.model.Delivery;
 import com.khanh.fooddelivery.delivery_service.model.DeliveryStatus;
@@ -15,6 +18,7 @@ import com.khanh.fooddelivery.delivery_service.service.DeliveryLifecycleService;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryMatchingService;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryOfferService;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -43,6 +47,16 @@ public class DeliveryLifecycleServiceImpl implements DeliveryLifecycleService {
     @Override
     public List<DeliveryOfferResponse> offers(Jwt jwt) {
         return offerService.offers(jwt);
+    }
+
+    @Override
+    public Optional<CurrentDeliveryOfferResponse> currentOffer(Jwt jwt) {
+        return offerService.currentOffer(jwt);
+    }
+
+    @Override
+    public Optional<DeliveryResponse> currentActiveDelivery(Jwt jwt) {
+        return offerService.currentActiveDelivery(jwt);
     }
 
     @Override
@@ -84,7 +98,11 @@ public class DeliveryLifecycleServiceImpl implements DeliveryLifecycleService {
     }
 
     private Delivery mine(Jwt jwt, UUID deliveryId) {
-        Delivery delivery = deliveries.findByIdForUpdate(deliveryId).orElseThrow();
+        Delivery delivery = deliveries.findByIdForUpdate(deliveryId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.DELIVERY_CONFLICT,
+                        "Delivery is no longer available"
+                ));
         if (!users.getCurrentUserId(jwt).equals(delivery.getDriverId())) {
             throw new IllegalStateException("Not assigned driver");
         }

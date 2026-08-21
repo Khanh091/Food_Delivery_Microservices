@@ -30,6 +30,22 @@ public class DeliveryLifecycleController {
         return ApiResponse.success("Delivery offers", lifecycle.offers(jwt));
     }
 
+    @GetMapping("/api/v1/deliveries/me/offers/current")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ApiResponse<CurrentDeliveryOfferResponse> currentOffer(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ApiResponse.success("Current delivery offer", lifecycle.currentOffer(jwt).orElse(null));
+    }
+
+    @GetMapping("/api/v1/deliveries/me/active")
+    @PreAuthorize("hasRole('DRIVER')")
+    public ApiResponse<DeliveryResponse> currentActiveDelivery(
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ApiResponse.success("Current active delivery", lifecycle.currentActiveDelivery(jwt).orElse(null));
+    }
+
     @PostMapping("/api/v1/deliveries/{id}/accept")
     @PreAuthorize("hasRole('DRIVER')")
     public ApiResponse<DeliveryResponse> accept(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {

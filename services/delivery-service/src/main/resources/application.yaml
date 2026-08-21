@@ -23,6 +23,10 @@ security:
     issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8180/realms/food-delivery}
     jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/food-delivery/protocol/openid-connect/certs}
 
+app:
+  internal-api:
+    key: ${INTERNAL_API_KEY:}
+
 eureka:
   client:
     service-url:

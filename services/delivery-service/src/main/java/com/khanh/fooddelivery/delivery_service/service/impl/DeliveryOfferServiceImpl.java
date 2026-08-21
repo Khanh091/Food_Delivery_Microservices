@@ -3,7 +3,10 @@ package com.khanh.fooddelivery.delivery_service.service.impl;
 import com.khanh.fooddelivery.delivery_service.client.DriverServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.OrderServiceClient;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryOfferResponse;
+import com.khanh.fooddelivery.delivery_service.dto.response.CurrentDeliveryOfferResponse;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryResponse;
+import com.khanh.fooddelivery.delivery_service.exception.AppException;
+import com.khanh.fooddelivery.delivery_service.exception.ErrorCode;
 import com.khanh.fooddelivery.delivery_service.mapper.DeliveryMapper;
 import com.khanh.fooddelivery.delivery_service.model.Delivery;
 import com.khanh.fooddelivery.delivery_service.model.DeliveryOffer;
@@ -17,6 +20,7 @@ import com.khanh.fooddelivery.delivery_service.service.DeliveryMatchingService;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryOfferService;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -51,14 +55,48 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<CurrentDeliveryOfferResponse> currentOffer(Jwt jwt) {
+        UUID driverId = users.getCurrentUserId(jwt);
+        return offers.findCurrentByDriverId(
+                        driverId,
+                        DeliveryOfferStatus.PENDING,
+                        Instant.now()
+                ).stream()
+                .findFirst()
+                .flatMap(offer -> deliveries.findById(offer.getDeliveryId())
+                        .filter(delivery -> delivery.getStatus() == DeliveryStatus.MATCHING)
+                        .map(delivery -> mapper.toCurrentOffer(offer, delivery)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<DeliveryResponse> currentActiveDelivery(Jwt jwt) {
+        UUID driverId = users.getCurrentUserId(jwt);
+        return deliveries.findByDriverIdAndStatusInOrderByUpdatedAtDesc(
+                        driverId,
+                        List.of(DeliveryStatus.ASSIGNED, DeliveryStatus.PICKED_UP)
+                ).stream()
+                .findFirst()
+                .map(mapper::toResponse);
+    }
+
+    @Override
     public DeliveryResponse accept(Jwt jwt, UUID deliveryId) {
         UUID driverId = users.getCurrentUserId(jwt);
-        Delivery delivery = deliveries.findByIdForUpdate(deliveryId).orElseThrow();
+        Delivery delivery = deliveries.findByIdForUpdate(deliveryId)
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.DELIVERY_CONFLICT,
+                        "Delivery is no longer available"
+                ));
         DeliveryOffer offer = offers.findByDeliveryIdAndDriverIdAndStatus(
                 deliveryId,
                 driverId,
                 DeliveryOfferStatus.PENDING
-        ).orElseThrow();
+        ).orElseThrow(() -> new AppException(
+                ErrorCode.DELIVERY_CONFLICT,
+                "Delivery offer is no longer available"
+        ));
 
         if (delivery.getStatus() != DeliveryStatus.MATCHING
                 || !offer.getExpiresAt().isAfter(Instant.now())) {
@@ -81,7 +119,10 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
                 deliveryId,
                 driverId,
                 DeliveryOfferStatus.PENDING
-        ).orElseThrow();
+        ).orElseThrow(() -> new AppException(
+                ErrorCode.DELIVERY_CONFLICT,
+                "Delivery offer is no longer available"
+        ));
         offer.setStatus(DeliveryOfferStatus.REJECTED);
         offer.setRespondedAt(Instant.now());
         drivers.releaseOffer(bearer.getBearerToken(), driverId, deliveryId);
