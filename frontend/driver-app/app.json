@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "driver-app",
+    "slug": "driver-app",
+    "version": "1.0.0",
+    "scheme": "fooddeliverydriver",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.fooddelivery.driverapp",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Food Delivery cần vị trí để gửi các chuyến phù hợp gần bạn.",
+        "NSLocationAlwaysUsageDescription": "Food Delivery cần vị trí khi chạy nền để bạn tiếp tục nhận chuyến khi khóa màn hình.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Food Delivery cần vị trí khi chạy nền để bạn tiếp tục nhận chuyến khi khóa màn hình."
+      }
+    },
+    "android": {
+      "package": "com.fooddelivery.driverapp",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      "expo-web-browser",
+      "expo-font"
+    ]
+  }
+}
