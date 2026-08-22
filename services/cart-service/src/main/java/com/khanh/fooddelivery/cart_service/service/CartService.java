@@ -26,5 +26,5 @@ public interface CartService {
 
     CartResponse remove(Jwt jwt, UUID branchId, UUID cartItemId);
 
-    CartResponse clear(Jwt jwt, UUID branchId);
+    CartResponse clear(Jwt jwt, UUID branchId, long expectedCartVersion);
 }

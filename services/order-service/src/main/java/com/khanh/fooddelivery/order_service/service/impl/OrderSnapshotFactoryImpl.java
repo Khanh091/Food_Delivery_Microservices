@@ -15,13 +15,23 @@ import org.springframework.stereotype.Component;
 public class OrderSnapshotFactoryImpl implements OrderSnapshotFactory {
     @Override
     public Order create(UUID customerId, CheckoutPreviewResponse preview) {
-        return create(customerId, preview, PaymentMethod.COD);
+        return create(UUID.randomUUID(), customerId, preview, PaymentMethod.COD);
     }
 
     @Override
     public Order create(UUID customerId, CheckoutPreviewResponse preview, PaymentMethod paymentMethod) {
+        return create(UUID.randomUUID(), customerId, preview, paymentMethod);
+    }
+
+    @Override
+    public Order create(
+            UUID orderId,
+            UUID customerId,
+            CheckoutPreviewResponse preview,
+            PaymentMethod paymentMethod
+    ) {
         Order order = new Order();
-        order.setId(UUID.randomUUID());
+        order.setId(orderId);
         order.setCustomerId(customerId);
         order.setRestaurantId(preview.restaurant().restaurantId());
         order.setBranchId(preview.branch().branchId());

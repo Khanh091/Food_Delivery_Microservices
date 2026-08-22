@@ -8,7 +8,7 @@ import java.util.UUID;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 public interface OrderService {
-    OrderResponse create(Jwt jwt, CreateOrderRequest request);
+    OrderResponse create(Jwt jwt, CreateOrderRequest request, String idempotencyKey);
     List<OrderResponse> mine(Jwt jwt);
     List<OrderResponse> restaurant(Jwt jwt, UUID restaurantId);
     OrderResponse accept(Jwt jwt, UUID orderId);

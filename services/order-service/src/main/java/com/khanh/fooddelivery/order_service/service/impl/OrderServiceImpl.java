@@ -2,7 +2,6 @@ package com.khanh.fooddelivery.order_service.service.impl;
 
 import com.khanh.fooddelivery.order_service.client.CartServiceClient;
 import com.khanh.fooddelivery.order_service.client.PaymentServiceClient;
-import com.khanh.fooddelivery.order_service.client.dto.request.InternalCreatePaymentRequest;
 import com.khanh.fooddelivery.order_service.dto.request.CheckoutPreviewRequest;
 import com.khanh.fooddelivery.order_service.dto.request.CreateOrderRequest;
 import com.khanh.fooddelivery.order_service.dto.request.RejectOrderRequest;
@@ -15,13 +14,14 @@ import com.khanh.fooddelivery.order_service.enums.OrderStatus;
 import com.khanh.fooddelivery.order_service.enums.PaymentStatus;
 import com.khanh.fooddelivery.order_service.mapper.OrderMapper;
 import com.khanh.fooddelivery.order_service.outbox.OrderOutboxService;
+import com.khanh.fooddelivery.order_service.placement.OrderPlacementClaim;
+import com.khanh.fooddelivery.order_service.placement.OrderPlacementIdempotencyService;
 import com.khanh.fooddelivery.order_service.repository.OrderRepository;
 import com.khanh.fooddelivery.order_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.order_service.security.CurrentUserProvider;
 import com.khanh.fooddelivery.order_service.service.CheckoutPreviewService;
 import com.khanh.fooddelivery.order_service.service.OrderLifecycle;
 import com.khanh.fooddelivery.order_service.service.OrderService;
-import com.khanh.fooddelivery.order_service.service.OrderSnapshotFactory;
 import com.khanh.fooddelivery.order_service.service.RestaurantAuthorizationService;
 import feign.FeignException;
 import java.util.List;
@@ -36,7 +36,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class OrderServiceImpl implements OrderService {
 
     private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
@@ -47,7 +46,9 @@ public class OrderServiceImpl implements OrderService {
     private final CurrentBearerTokenProvider bearerTokenProvider;
     private final CartServiceClient cartClient;
     private final OrderMapper orderMapper;
-    private final OrderSnapshotFactory orderSnapshotFactory;
+    private final OrderPlacementRecoveryService orderPlacementRecoveryService;
+    private final OrderCreationTransactionService orderCreationTransactionService;
+    private final OrderPlacementIdempotencyService orderPlacementIdempotencyService;
     private final RestaurantAuthorizationService restaurantAuthorization;
     private final PaymentServiceClient paymentClient;
     private final OrderOutboxService orderOutbox;
@@ -58,67 +59,87 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse create(
             Jwt jwt,
-            CreateOrderRequest request
+            CreateOrderRequest request,
+            String idempotencyKey
     ) {
         UUID customerId =
                 currentUserProvider.getCurrentUserId(jwt);
 
-        CheckoutPreviewResponse preview =
-                checkoutPreviewService.preview(
-                        jwt,
-                        new CheckoutPreviewRequest(
-                                request.branchId(),
-                                request.cartVersion(),
-                                request.target()
-                        )
+        OrderPlacementClaim claim = orderPlacementIdempotencyService.claim(
+                customerId,
+                idempotencyKey,
+                request
+        );
+        if (claim.status() == OrderPlacementClaim.Status.COMPLETED) {
+            return recoverCompletedPlacement(claim);
+        }
+        if (claim.status() == OrderPlacementClaim.Status.IN_PROGRESS) {
+            OrderResponse recovered = findExistingOrder(claim.reservedOrderId());
+            if (recovered != null) {
+                orderPlacementIdempotencyService.recoverCompleted(
+                        claim.requestId(),
+                        claim.reservedOrderId()
                 );
-
-        validatePlaceable(preview);
-
-        Order order =
-                orderSnapshotFactory.create(
-                        customerId,
-                        preview,
-                        request.effectivePaymentMethod()
-                );
-
-        orders.saveAndFlush(order);
-
-        try {
-            var paymentResponse = paymentClient.create(internalApiKey, new InternalCreatePaymentRequest(
-                    order.getId(), order.getCustomerId(), order.getRestaurantId(), order.getBranchId(),
-                    order.getPaymentMethod(), order.getItemsSubtotal(), order.getDeliveryFee(),
-                    order.getDiscountAmount(), order.getTotalAmount(), order.getCurrency(),
-                    "order:" + order.getId() + ":payment"));
-            if (paymentResponse == null || !paymentResponse.success() || paymentResponse.data() == null) {
-                throw new AppException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
+                clearCartAfterPlacement(claim.branchId(), claim.cartVersion());
+                return recovered;
             }
-            order.setPaymentId(paymentResponse.data().id());
-            order.setPaymentStatus(paymentResponse.data().status());
-            order.setFeePolicyId(paymentResponse.data().feePolicyId());
-            order.setFeePolicyVersion(paymentResponse.data().feePolicyVersion());
-            order.setRestaurantCommissionAmount(paymentResponse.data().restaurantCommissionAmount());
-            order.setRestaurantNetAmount(paymentResponse.data().restaurantNetAmount());
-            order.setDriverCommissionAmount(paymentResponse.data().driverCommissionAmount());
-            order.setDriverNetAmount(paymentResponse.data().driverNetAmount());
-            order.setPlatformRevenueAmount(paymentResponse.data().platformRevenueAmount());
-            orders.save(order);
-        } catch (FeignException exception) {
-            throw new AppException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
+            throw new AppException(ErrorCode.ORDER_IDEMPOTENCY_IN_PROGRESS);
         }
 
+        OrderResponse recovered = findExistingOrder(claim.reservedOrderId());
+        if (recovered != null) {
+            orderPlacementIdempotencyService.markCompleted(claim.requestId(), claim.claimToken());
+            clearCartAfterPlacement(claim.branchId(), claim.cartVersion());
+            return recovered;
+        }
+
+        CheckoutPreviewResponse preview;
         try {
-            cartClient.clear(
-                    bearerTokenProvider.getBearerToken(),
-                    request.branchId()
+            preview = checkoutPreviewService.preview(
+                    jwt,
+                    new CheckoutPreviewRequest(
+                            request.branchId(),
+                            request.cartVersion(),
+                            request.target()
+                    )
             );
-        } catch (FeignException exception) {
-            throw new AppException(
-                    ErrorCode.CART_SERVICE_UNAVAILABLE
-            );
+            validatePlaceable(preview);
+        } catch (RuntimeException exception) {
+            releasePlacementClaim(claim);
+            throw exception;
         }
 
-        return orderMapper.toResponse(order);
+        OrderResponse response = orderCreationTransactionService.create(
+                claim.reservedOrderId(),
+                customerId,
+                preview,
+                request.effectivePaymentMethod()
+        );
+        orderPlacementIdempotencyService.markCompleted(claim.requestId(), claim.claimToken());
+        clearCartAfterPlacement(claim.branchId(), claim.cartVersion());
+        return response;
+    }
+
+    private OrderResponse recoverCompletedPlacement(OrderPlacementClaim claim) {
+        OrderResponse response = findExistingOrder(claim.reservedOrderId());
+        if (response == null) {
+            throw new AppException(ErrorCode.ORDER_IDEMPOTENCY_RECOVERY_FAILED);
+        }
+        clearCartAfterPlacement(claim.branchId(), claim.cartVersion());
+        return response;
+    }
+
+    private OrderResponse findExistingOrder(UUID orderId) {
+        return orderPlacementRecoveryService.findResponse(orderId);
+    }
+
+    private void releasePlacementClaim(OrderPlacementClaim claim) {
+        try {
+            orderPlacementIdempotencyService.release(claim.requestId(), claim.claimToken());
+        } catch (RuntimeException releaseFailure) {
+            log.warn("Order placement claim release failed requestId={} reasonType={}",
+                    claim.requestId(), releaseFailure.getClass().getSimpleName());
+        }
     }
 
     @Override
@@ -155,6 +176,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public OrderResponse accept(
             Jwt jwt,
             UUID orderId
@@ -171,6 +193,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public OrderResponse reject(
             Jwt jwt,
             UUID orderId,
@@ -209,6 +232,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void paymentSucceeded(UUID orderId) {
         Order order = require(orderId);
         if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
@@ -228,6 +252,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void paymentFailed(UUID orderId) {
         Order order = require(orderId);
         if (order.getPaymentStatus() == PaymentStatus.FAILED) {
@@ -242,6 +267,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void paymentCollected(UUID orderId) {
         Order order = require(orderId);
         if (order.getPaymentStatus() == PaymentStatus.COLLECTED) {
@@ -257,6 +283,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void deliveryAssigned(UUID orderId) {
         OrderLifecycle.preparing(
                 require(orderId)
@@ -264,6 +291,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void pickedUp(UUID orderId) {
         OrderLifecycle.delivering(
                 require(orderId)
@@ -271,6 +299,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void delivered(UUID orderId) {
         OrderLifecycle.completed(
                 require(orderId)
@@ -278,6 +307,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public void matchingFailed(UUID orderId) {
         Order order = require(orderId);
         if (order.getStatus() == com.khanh.fooddelivery.order_service.enums.OrderStatus.CANCELLED
@@ -325,6 +355,26 @@ public class OrderServiceImpl implements OrderService {
             throw new AppException(
                     ErrorCode.ORDER_NOT_PLACEABLE
             );
+        }
+    }
+
+    private void clearCartAfterPlacement(UUID branchId, long expectedCartVersion) {
+        try {
+            var response = cartClient.clear(
+                    bearerTokenProvider.getBearerToken(),
+                    branchId,
+                    expectedCartVersion
+            );
+            if (response == null || !response.success()) {
+                log.warn("Cart clear was not completed after order placement branchId={} expectedCartVersion={}",
+                        branchId, expectedCartVersion);
+            }
+        } catch (FeignException exception) {
+            log.warn("Cart clear failed after order placement branchId={} expectedCartVersion={} reasonType={}",
+                    branchId, expectedCartVersion, exception.getClass().getSimpleName());
+        } catch (RuntimeException exception) {
+            log.warn("Cart clear could not be attempted after order placement branchId={} expectedCartVersion={} reasonType={}",
+                    branchId, expectedCartVersion, exception.getClass().getSimpleName());
         }
     }
 

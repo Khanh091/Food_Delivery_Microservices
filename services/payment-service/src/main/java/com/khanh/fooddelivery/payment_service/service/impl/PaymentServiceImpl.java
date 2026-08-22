@@ -17,8 +17,11 @@ import com.khanh.fooddelivery.payment_service.service.FinancialBreakdown;
 import com.khanh.fooddelivery.payment_service.service.FinancialCalculator;
 import com.khanh.fooddelivery.payment_service.service.PaymentService;
 import com.khanh.fooddelivery.payment_service.service.PaymentTransactionService;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -42,6 +45,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
         Payment existing = transactions.findExisting(request.orderId(), request.idempotencyKey()).orElse(null);
         if (existing != null) {
+            validateExisting(existing, request);
             if (existing.getMethod() == PaymentMethod.ONLINE
                     && (existing.getStatus() == PaymentStatus.PENDING
                     || existing.getStatus() == PaymentStatus.PROCESSING)
@@ -53,6 +57,7 @@ public class PaymentServiceImpl implements PaymentService {
         FinancialBreakdown breakdown = calculator.calculate(
                 request, feePolicies.currentPolicy(Instant.now(clock)));
         Payment payment = transactions.createPending(request, breakdown);
+        validateExisting(payment, request);
         if (payment.getMethod() == PaymentMethod.ONLINE
                 && (payment.getProviderTransactionId() == null || payment.getProviderTransactionId().isBlank())) {
             payment = attachProviderTransaction(payment);
@@ -146,6 +151,36 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentResponse response(Payment payment) {
         FinancialSnapshot snapshot = snapshots.findByOrderId(payment.getOrderId()).orElse(null);
         return mapper.toResponse(payment, snapshot);
+    }
+
+    private void validateExisting(Payment existing, InternalCreatePaymentRequest request) {
+        PaymentMethod requestedMethod = request.method() == null ? PaymentMethod.COD : request.method();
+        String requestedCurrency = normalizeCurrency(request.currency());
+        FinancialSnapshot snapshot = snapshots.findByOrderId(existing.getOrderId()).orElse(null);
+        if (snapshot == null
+                || !Objects.equals(existing.getCustomerUserId(), request.customerUserId())
+                || !Objects.equals(existing.getRestaurantId(), request.restaurantId())
+                || existing.getMethod() != requestedMethod
+                || !sameMoney(existing.getAmount(), request.customerPayableAmount())
+                || !sameMoney(snapshot.getFoodGrossAmount(), request.foodGrossAmount())
+                || !sameMoney(snapshot.getDeliveryGrossAmount(), request.deliveryGrossAmount())
+                || !sameMoney(snapshot.getCustomerPayableAmount(), request.customerPayableAmount())
+                || !normalizeCurrency(existing.getCurrency()).equals(requestedCurrency)
+                || !normalizeCurrency(snapshot.getCurrency()).equals(requestedCurrency)) {
+            throw conflict("Payment already exists for incompatible order totals or owner");
+        }
+    }
+
+    private boolean sameMoney(BigDecimal stored, BigDecimal requested) {
+        return stored != null && requested != null && stored.compareTo(money(requested)) == 0;
+    }
+
+    private BigDecimal money(BigDecimal value) {
+        return (value == null ? BigDecimal.ZERO : value).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    private String normalizeCurrency(String value) {
+        return value == null || value.isBlank() ? "VND" : value.trim().toUpperCase(Locale.ROOT);
     }
 
     private Payment attachProviderTransaction(Payment payment) {

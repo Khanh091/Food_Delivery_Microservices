@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -73,7 +74,10 @@ public class CartController {
     }
 
     @DeleteMapping("/branches/{branchId}")
-    public ApiResponse<CartResponse> clear(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID branchId) {
-        return ApiResponse.success("Cart cleared", cartService.clear(jwt, branchId));
+    public ApiResponse<CartResponse> clear(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID branchId,
+            @RequestParam("expectedCartVersion") long expectedCartVersion) {
+        return ApiResponse.success("Cart cleared", cartService.clear(jwt, branchId, expectedCartVersion));
     }
 }

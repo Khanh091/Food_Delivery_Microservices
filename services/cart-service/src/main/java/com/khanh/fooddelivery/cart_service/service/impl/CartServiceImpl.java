@@ -163,12 +163,15 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public CartResponse clear(Jwt jwt, UUID branchId) {
+    public CartResponse clear(Jwt jwt, UUID branchId, long expectedCartVersion) {
         UUID ownerUserId = currentUserProvider.getCurrentUserId(jwt);
         for (int attempt = 0; attempt < properties.casMaxRetries(); attempt++) {
             Optional<CartSnapshot> current = carts.find(ownerUserId, branchId);
             if (current.isEmpty()) return emptyResponse(branchId);
-            if (carts.compareAndDelete(ownerUserId, branchId, current.get().cart().version())) {
+            if (current.get().cart().version() != expectedCartVersion) {
+                throw new AppException(ErrorCode.CART_VERSION_CONFLICT);
+            }
+            if (carts.compareAndDelete(ownerUserId, branchId, expectedCartVersion)) {
                 return emptyResponse(current.get().cart());
             }
         }

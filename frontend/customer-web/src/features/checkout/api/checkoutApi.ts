@@ -27,8 +27,12 @@ const unwrap = async (request: Promise<AxiosResponse<ApiResponse<CheckoutPreview
 export const getCheckoutPreview = (input: CheckoutPreviewRequest, signal?: AbortSignal) =>
   unwrap(httpClient.post<ApiResponse<CheckoutPreview>>('/api/v1/orders/checkout/preview', input, { signal }))
 
-export const createOrder = async (input: CheckoutPreviewRequest & { paymentMethod: PaymentMethod }): Promise<OrderResponse> => {
-  try { return (await httpClient.post<ApiResponse<OrderResponse>>('/api/v1/orders', input)).data.data }
+export const createOrder = async (input: CheckoutPreviewRequest & { paymentMethod: PaymentMethod }, idempotencyKey: string): Promise<OrderResponse> => {
+  try {
+    return (await httpClient.post<ApiResponse<OrderResponse>>('/api/v1/orders', input, {
+      headers: { 'Idempotency-Key': idempotencyKey },
+    })).data.data
+  }
   catch (error) { if (isAxiosError<CheckoutErrorBody>(error)) throw new CheckoutApiError(error.response?.data?.code ?? null, error.response?.status ?? null, error.response?.data?.message ?? 'Không thể đặt món lúc này.'); throw error }
 }
 
@@ -44,6 +48,11 @@ export const checkoutErrorMessage = (error: unknown): string => {
   if (code === 'CHECKOUT_017') return 'Địa chỉ này nằm ngoài phạm vi giao hàng.'
   if (code === 'CHECKOUT_018') return 'Chưa thể tính phí giao hàng lúc này. Vui lòng thử lại.'
   switch (code) {
+    case 'ORDER_007': return 'Idempotency-Key is required to place an order.'
+    case 'ORDER_008': return 'The Idempotency-Key is invalid. Please try again.'
+    case 'ORDER_009': return 'This Idempotency-Key was already used for a different order request.'
+    case 'ORDER_010': return 'This order request is still processing. Retry the same request shortly.'
+    case 'ORDER_011': return 'The order placement could not be recovered yet. Please retry.'
     case 'CHECKOUT_004': return 'Giỏ hàng này đang trống.'
     case 'CHECKOUT_005': return 'Giỏ hàng đã thay đổi. Vui lòng kiểm tra lại đơn hàng.'
     case 'CHECKOUT_006': return 'Địa chỉ đã chọn không còn khả dụng. Vui lòng chọn lại.'

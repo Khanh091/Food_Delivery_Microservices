@@ -26,6 +26,30 @@ const deliveryFeeLabel = (preview: CheckoutPreview) => {
   return preview.deliveryFee === null ? 'Chưa thể tính' : money(preview.deliveryFee, preview.currency)
 }
 
+type PlacementAttempt = { intent: string; key: string }
+const placementAttemptStorageKey = 'food-delivery:checkout:placement-attempt'
+const readPlacementAttempt = (): PlacementAttempt | null => {
+  try {
+    const value = sessionStorage.getItem(placementAttemptStorageKey)
+    if (!value) return null
+    const parsed = JSON.parse(value) as Partial<PlacementAttempt>
+    return typeof parsed.intent === 'string' && typeof parsed.key === 'string'
+      ? { intent: parsed.intent, key: parsed.key }
+      : null
+  } catch {
+    return null
+  }
+}
+const writePlacementAttempt = (attempt: PlacementAttempt) => {
+  try { sessionStorage.setItem(placementAttemptStorageKey, JSON.stringify(attempt)) } catch { }
+}
+const clearPlacementAttempt = (key: string) => {
+  try {
+    const stored = readPlacementAttempt()
+    if (stored?.key === key) sessionStorage.removeItem(placementAttemptStorageKey)
+  } catch { }
+}
+
 export function CheckoutReviewPage() {
   const { branchId } = useParams()
   const cart = useCartStore((state) => state.currentBranchId === branchId ? state.currentBranchCart : null)
@@ -57,6 +81,7 @@ export function CheckoutReviewPage() {
   const [paymentRetrying, setPaymentRetrying] = useState(false)
   const pushToast = useToastStore((state) => state.push)
   const requestGeneration = useRef(0)
+  const placementAttempt = useRef<PlacementAttempt | null>(readPlacementAttempt())
   const addressMenuRef = useRef<HTMLDivElement>(null)
   const paymentMenuRef = useRef<HTMLDivElement>(null)
   const validBranchId = isUuid(branchId)
@@ -171,12 +196,32 @@ export function CheckoutReviewPage() {
   }, [placedOrderId, paymentMethod, placedPaymentStatus])
 
   const priceChanges = useMemo(() => new Map(preview?.priceChanges.map((change) => [change.cartItemId, change]) ?? []), [preview])
+  const placementIntent = useMemo(() => {
+    if (!branchId || !preview || !deliveryTarget) return null
+    const targetId = deliveryTarget.type === 'SAVED_ADDRESS'
+      ? deliveryTarget.addressId
+      : deliveryTarget.temporaryLocationId
+    return [branchId, preview.cartVersion, deliveryTarget.type, targetId, paymentMethod].join('|')
+  }, [branchId, deliveryTarget, paymentMethod, preview])
+
+  const placementKey = () => {
+    if (!placementIntent) return null
+    if (placementAttempt.current?.intent !== placementIntent) {
+      placementAttempt.current = { intent: placementIntent, key: crypto.randomUUID() }
+      writePlacementAttempt(placementAttempt.current)
+    }
+    return placementAttempt.current.key
+  }
+
   const retryPreview = () => { setPreviewBlocked(false); setPreviewRetry((value) => value + 1) }
   const placeOrder = async () => {
     if (!preview || !branchId || !deliveryTarget || placing) return
+    const key = placementKey()
+    if (!key) return
     setPlacing(true)
     try {
-      const order = await createOrder({ branchId, cartVersion: preview.cartVersion, target: deliveryTarget, paymentMethod })
+      const order = await createOrder({ branchId, cartVersion: preview.cartVersion, target: deliveryTarget, paymentMethod }, key)
+      clearPlacementAttempt(key)
       setPlacedOrderCode(order.orderCode)
       setPlacedOrderId(order.id)
       setPlacedPaymentStatus(order.paymentStatus ?? (paymentMethod === 'ONLINE' ? 'PENDING' : 'PENDING'))

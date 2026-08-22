@@ -31,7 +31,7 @@ public class GatewaySecurityConfig {
                 "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type", "Accept"
+                "Authorization", "Content-Type", "Accept", "Idempotency-Key"
         ));
         configuration.setExposedHeaders(List.of("Location"));
         configuration.setAllowCredentials(false);

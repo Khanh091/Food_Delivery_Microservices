@@ -104,11 +104,39 @@ class CartServiceImplTests {
         CartResponse a = service.add(jwt, branchA, request(itemId, 1, List.of(), null));
         service.add(jwt, branchB, request(itemId, 2, List.of(), null));
 
-        service.updateQuantity(jwt, branchA, a.items().getFirst().cartItemId(), new UpdateCartItemQuantityRequest(3));
-        service.clear(jwt, branchA);
+        CartResponse updated = service.updateQuantity(
+                jwt, branchA, a.items().getFirst().cartItemId(), new UpdateCartItemQuantityRequest(3));
+        service.clear(jwt, branchA, updated.version());
 
         assertThat(service.get(jwt, branchA).items()).isEmpty();
         assertThat(service.get(jwt, branchB).totalQuantity()).isEqualTo(2);
+    }
+
+    @Test
+    void clearRejectsStaleCheckoutVersionAndKeepsCurrentCart() {
+        CartResponse checkoutSnapshot = service.add(jwt, branchA, request(itemId, 1, List.of(), null));
+        CartResponse current = service.updateQuantity(
+                jwt, branchA, checkoutSnapshot.items().getFirst().cartItemId(), new UpdateCartItemQuantityRequest(2));
+
+        assertThatThrownBy(() -> service.clear(jwt, branchA, checkoutSnapshot.version()))
+                .isInstanceOf(AppException.class)
+                .extracting(exception -> ((AppException) exception).getErrorCode())
+                .isEqualTo(ErrorCode.CART_VERSION_CONFLICT);
+        assertThat(service.get(jwt, branchA).version()).isEqualTo(current.version());
+        assertThat(service.get(jwt, branchA).totalQuantity()).isEqualTo(2);
+    }
+
+    @Test
+    void compareAndDeleteRaceDoesNotDeleteNewerCartVersion() {
+        CartResponse checkoutSnapshot = service.add(jwt, branchA, request(itemId, 1, List.of(), null));
+        carts.mutateBeforeNextDelete(branchA);
+
+        assertThatThrownBy(() -> service.clear(jwt, branchA, checkoutSnapshot.version()))
+                .isInstanceOf(AppException.class)
+                .extracting(exception -> ((AppException) exception).getErrorCode())
+                .isEqualTo(ErrorCode.CART_VERSION_CONFLICT);
+        assertThat(service.get(jwt, branchA).version()).isEqualTo(checkoutSnapshot.version() + 1);
+        assertThat(service.get(jwt, branchA).totalQuantity()).isEqualTo(1);
     }
 
     @Test
@@ -167,6 +195,7 @@ class CartServiceImplTests {
 
     private static final class InMemoryCartRepository implements CartRepository {
         private final Map<UUID, Cart> carts = new HashMap<>();
+        private UUID mutateBeforeDeleteBranch;
 
         @Override
         public Optional<CartSnapshot> find(UUID ownerUserId, UUID branchId) {
@@ -192,10 +221,22 @@ class CartServiceImplTests {
 
         @Override
         public boolean compareAndDelete(UUID ownerUserId, UUID branchId, long expectedVersion) {
+            if (branchId.equals(mutateBeforeDeleteBranch)) {
+                mutateBeforeDeleteBranch = null;
+                Cart current = carts.get(branchId);
+                carts.put(branchId, new Cart(
+                        current.schemaVersion(), current.ownerUserId(), current.restaurantId(), current.branchId(),
+                        current.restaurantNameSnapshot(), current.branchNameSnapshot(), current.currency(),
+                        current.items(), current.version() + 1, current.createdAt(), Instant.now()));
+            }
             Cart current = carts.get(branchId);
             if (current == null || current.version() != expectedVersion) return false;
             carts.remove(branchId);
             return true;
+        }
+
+        private void mutateBeforeNextDelete(UUID branchId) {
+            mutateBeforeDeleteBranch = branchId;
         }
     }
 }

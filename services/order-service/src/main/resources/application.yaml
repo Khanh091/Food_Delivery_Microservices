@@ -55,6 +55,8 @@ security:
 app:
   internal-api:
     key: ${INTERNAL_API_KEY:}
+  order-placement:
+    processing-lease: ${ORDER_PLACEMENT_PROCESSING_LEASE:2m}
   outbox:
     topic: ${ORDER_CONFIRMED_TOPIC:order.lifecycle.v1}
     topic-partitions: ${ORDER_CONFIRMED_TOPIC_PARTITIONS:3}

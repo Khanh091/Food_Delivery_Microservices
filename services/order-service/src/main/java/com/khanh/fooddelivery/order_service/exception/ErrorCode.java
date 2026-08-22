@@ -27,7 +27,15 @@ public enum ErrorCode {
     ORDER_TRANSITION_INVALID("ORDER_002", HttpStatus.CONFLICT, "Order status transition is invalid"),
     ORDER_ACCESS_DENIED("ORDER_003", HttpStatus.FORBIDDEN, "Order access denied"),
     ORDER_NOT_PLACEABLE("ORDER_005", HttpStatus.CONFLICT, "Order cannot be placed yet"),
-    PAYMENT_SERVICE_UNAVAILABLE("ORDER_006", HttpStatus.SERVICE_UNAVAILABLE, "Payment service is temporarily unavailable");
+    PAYMENT_SERVICE_UNAVAILABLE("ORDER_006", HttpStatus.SERVICE_UNAVAILABLE, "Payment service is temporarily unavailable"),
+    ORDER_IDEMPOTENCY_KEY_REQUIRED("ORDER_007", HttpStatus.BAD_REQUEST, "Idempotency-Key header is required"),
+    ORDER_IDEMPOTENCY_KEY_INVALID("ORDER_008", HttpStatus.BAD_REQUEST, "Idempotency-Key header is invalid"),
+    ORDER_IDEMPOTENCY_CONFLICT("ORDER_009", HttpStatus.CONFLICT,
+            "Idempotency-Key was reused for a different order request"),
+    ORDER_IDEMPOTENCY_IN_PROGRESS("ORDER_010", HttpStatus.CONFLICT,
+            "An order request with this Idempotency-Key is already processing"),
+    ORDER_IDEMPOTENCY_RECOVERY_FAILED("ORDER_011", HttpStatus.SERVICE_UNAVAILABLE,
+            "Order placement recovery is temporarily unavailable");
 
     private final String code;
     private final HttpStatus httpStatus;

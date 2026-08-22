@@ -8,4 +8,5 @@ import java.util.UUID;
 public interface OrderSnapshotFactory {
     Order create(UUID customerId, CheckoutPreviewResponse preview);
     Order create(UUID customerId, CheckoutPreviewResponse preview, PaymentMethod paymentMethod);
+    Order create(UUID orderId, UUID customerId, CheckoutPreviewResponse preview, PaymentMethod paymentMethod);
 }

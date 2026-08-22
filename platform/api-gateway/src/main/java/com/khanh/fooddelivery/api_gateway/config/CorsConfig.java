@@ -33,9 +33,10 @@ public class CorsConfig {
 
         configuration.setAllowedHeaders(
                 List.of(
-                        "Authorization",
-                        "Content-Type",
-                        "X-Request-Id"
+                    "Authorization",
+                    "Content-Type",
+                    "Idempotency-Key",
+                    "X-Request-Id"
                 )
         );
 
