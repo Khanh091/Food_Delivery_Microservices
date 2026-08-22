@@ -23,6 +23,7 @@
 .restaurant-order-item > span { color: var(--owner-text-secondary); font-size: 13px; white-space: nowrap; }
 .restaurant-order-note { font-style: italic; }
 .restaurant-order-actions { border-top: 1px solid var(--owner-border); display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; padding-top: 16px; }
+.restaurant-order-action-error { color: var(--owner-danger); flex-basis: 100%; font-size: 13px; line-height: 19px; margin: 0; }
 
 @media (max-width: 560px) {
   .restaurant-order-header { flex-direction: column; }

@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { useRestaurantOwner } from '../contexts/RestaurantOwnerContext'
-import { acceptOrder, getRestaurantOrders, rejectOrder } from '../api/orderApi'
+import { acceptOrder, getRestaurantOrders, orderActionErrorMessage, orderListErrorMessage, rejectOrder } from '../api/orderApi'
+import { RestaurantErrorState } from '../components/RestaurantErrorState'
 import type { OrderResponse } from '../../checkout/types/checkout'
+
+type OrderAction = 'accept' | 'reject'
 
 const statusLabel: Record<OrderResponse['status'], string> = {
   PENDING_PAYMENT: 'Chờ thanh toán',
@@ -62,49 +65,69 @@ const dateTime = (value: string) => new Intl.DateTimeFormat('vi-VN', {
 export function RestaurantOrdersPage() {
   const { selectedRestaurant } = useRestaurantOwner()
   const restaurantId = selectedRestaurant?.id
-  const [orders, setOrders] = useState<OrderResponse[]>([])
+  const [orders, setOrders] = useState<OrderResponse[] | null>(null)
   const [loading, setLoading] = useState(false)
-  const [busy, setBusy] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [busyActionByOrderId, setBusyActionByOrderId] = useState<Record<string, OrderAction>>({})
+  const [actionErrors, setActionErrors] = useState<Record<string, string>>({})
+  const [initialLoadError, setInitialLoadError] = useState<string | null>(null)
+  const ordersRef = useRef<OrderResponse[] | null>(null)
+  const loadGeneration = useRef(0)
 
   const load = useCallback(async () => {
+    const generation = ++loadGeneration.current
     if (!restaurantId) return
     setLoading(true)
-    setError(null)
+    setInitialLoadError(null)
     try {
-      setOrders(await getRestaurantOrders(restaurantId))
-    } catch {
-      setError('Chưa thể tải đơn hàng.')
+      const nextOrders = await getRestaurantOrders(restaurantId)
+      if (generation === loadGeneration.current) {
+        ordersRef.current = nextOrders
+        setOrders(nextOrders)
+      }
+    } catch (error) {
+      if (generation === loadGeneration.current && !ordersRef.current) setInitialLoadError(orderListErrorMessage(error))
     } finally {
-      setLoading(false)
+      if (generation === loadGeneration.current) setLoading(false)
     }
   }, [restaurantId])
 
   useEffect(() => {
+    ordersRef.current = null
+    setOrders(null)
+    setLoading(false)
+    setInitialLoadError(null)
+    setActionErrors({})
     void load()
   }, [load])
 
-  const accept = async (id: string) => {
-    setBusy(id)
-    try {
-      await acceptOrder(id)
-      await load()
-    } catch {
-      setError('Không thể nhận đơn lúc này.')
-    } finally {
-      setBusy(null)
-    }
+  const clearActionError = (id: string) => {
+    setActionErrors((current) => {
+      if (!(id in current)) return current
+      const next = { ...current }
+      delete next[id]
+      return next
+    })
   }
 
-  const reject = async (id: string) => {
-    setBusy(id)
+  const runOrderAction = async (id: string, action: OrderAction) => {
+    if (busyActionByOrderId[id]) return
+    clearActionError(id)
+    setBusyActionByOrderId((current) => ({ ...current, [id]: action }))
     try {
-      await rejectOrder(id)
-      await load()
-    } catch {
-      setError('Không thể từ chối đơn lúc này.')
+      const updatedOrder = action === 'accept' ? await acceptOrder(id) : await rejectOrder(id)
+      setOrders((current) => {
+        const nextOrders = current?.map((order) => order.id === id ? updatedOrder : order) ?? current
+        ordersRef.current = nextOrders
+        return nextOrders
+      })
+    } catch (error) {
+      setActionErrors((current) => ({ ...current, [id]: orderActionErrorMessage(error, action) }))
     } finally {
-      setBusy(null)
+      setBusyActionByOrderId((current) => {
+        const next = { ...current }
+        delete next[id]
+        return next
+      })
     }
   }
 
@@ -118,10 +141,10 @@ export function RestaurantOrdersPage() {
         </div>
       </header>
 
-      {error ? <p className="form-error" role="alert">{error}</p> : null}
-      {loading ? <p className="orders-loading">Đang tải đơn hàng…</p> : null}
+      {initialLoadError && !orders ? <RestaurantErrorState message={initialLoadError} onRetry={() => void load()} /> : null}
+      {loading && !orders ? <p className="orders-loading">Đang tải đơn hàng…</p> : null}
 
-      {!loading && !error && orders.length ? (
+      {orders?.length ? (
         <div className="owner-stack">
           {orders.map((order) => (
             <article className="owner-card restaurant-order-card" key={order.id}>
@@ -174,20 +197,21 @@ export function RestaurantOrdersPage() {
 
               {order.status === 'PENDING_RESTAURANT' ? (
                 <div className="restaurant-order-actions">
-                  <Button variant="secondary" disabled={busy === order.id} onClick={() => void reject(order.id)}>
+                  <Button variant="secondary" disabled={Boolean(busyActionByOrderId[order.id])} onClick={() => void runOrderAction(order.id, 'reject')}>
                     Từ chối
                   </Button>
-                  <Button loading={busy === order.id} onClick={() => void accept(order.id)}>
+                  <Button loading={busyActionByOrderId[order.id] === 'accept'} disabled={busyActionByOrderId[order.id] === 'reject'} onClick={() => void runOrderAction(order.id, 'accept')}>
                     Nhận đơn
                   </Button>
+                  {actionErrors[order.id] ? <p className="restaurant-order-action-error" role="alert">{actionErrors[order.id]}</p> : null}
                 </div>
-              ) : null}
+              ) : actionErrors[order.id] ? <p className="restaurant-order-action-error" role="alert">{actionErrors[order.id]}</p> : null}
             </article>
           ))}
         </div>
       ) : null}
 
-      {!loading && !error && !orders.length ? (
+      {orders?.length === 0 && !initialLoadError ? (
         <div className="owner-empty-state">
           <h2>Chưa có đơn hàng</h2>
           <p>Đơn mới sẽ xuất hiện tại đây để nhà hàng xác nhận.</p>

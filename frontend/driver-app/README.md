@@ -7,6 +7,11 @@ Keycloak host addresses for the device or emulator.
 Metro uses port `8082`; the API Gateway remains on `8081`. The `start`, `dev`,
 and `web` scripts already use Metro port `8082`.
 
+For Android emulators, run `npm run dev:android`. It configures the Keycloak
+reverse tunnel (`tcp:8180`) for every connected emulator in `device` state,
+then starts the Expo development client on Metro port `8082`. It does not
+rebuild the native app.
+
 When running Docker for a device, set the root `KEYCLOAK_PUBLIC_URL` to the
 same reachable base URL before starting Compose, and use that value as
 `EXPO_PUBLIC_KEYCLOAK_BASE_URL`. The backend issuer and Keycloak discovery must

@@ -36,6 +36,8 @@
   "scripts": {
     "start": "expo start --port 8082",
     "dev": "expo start --dev-client --port 8082",
+    "android:reverse": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"Get-Content -Raw -Encoding UTF8 scripts/android-reverse.ps1 | Invoke-Expression\"",
+    "dev:android": "npm run android:reverse && npm run dev",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web --port 8082",
