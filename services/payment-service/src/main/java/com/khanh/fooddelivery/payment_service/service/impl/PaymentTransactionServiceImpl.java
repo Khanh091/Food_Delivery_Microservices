@@ -184,6 +184,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         Payment payment = lock(orderId);
         if (payment.getMethod() == PaymentMethod.COD) {
             if (payment.getStatus() == PaymentStatus.CANCELLED) {
+                cancelSnapshot(orderId);
                 return new RefundPreparation(payment, false);
             }
             if (payment.getStatus() == PaymentStatus.COLLECTED) {
@@ -191,6 +192,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
             }
             payment.setStatus(PaymentStatus.CANCELLED);
             payment.setCancelledAt(Instant.now(clock));
+            cancelSnapshot(orderId);
             return new RefundPreparation(payment, false);
         }
         if (payment.getStatus() == PaymentStatus.REFUNDED) {
@@ -248,7 +250,11 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     @Transactional
     public Payment cancel(UUID orderId) {
         Payment payment = lock(orderId);
-        if (payment.getStatus() == PaymentStatus.CANCELLED || payment.getStatus() == PaymentStatus.REFUNDED) {
+        if (payment.getStatus() == PaymentStatus.CANCELLED) {
+            cancelSnapshot(orderId);
+            return payment;
+        }
+        if (payment.getStatus() == PaymentStatus.REFUNDED) {
             return payment;
         }
         if (payment.getStatus() == PaymentStatus.PAID || payment.getStatus() == PaymentStatus.REFUND_PENDING) {
@@ -256,6 +262,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
         }
         payment.setStatus(PaymentStatus.CANCELLED);
         payment.setCancelledAt(Instant.now(clock));
+        cancelSnapshot(orderId);
         return payment;
     }
 
@@ -312,6 +319,13 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
 
     private FinancialSnapshot snapshot(UUID orderId) {
         return snapshots.findByOrderId(orderId).orElseThrow(() -> missing("Financial snapshot not found"));
+    }
+
+    private void cancelSnapshot(UUID orderId) {
+        FinancialSnapshot snapshot = snapshots.findByOrderId(orderId).orElse(null);
+        if (snapshot != null && snapshot.getStatus() == FinancialSnapshotStatus.OPEN) {
+            snapshot.setStatus(FinancialSnapshotStatus.CANCELLED);
+        }
     }
 
     private BigDecimal money(BigDecimal value) {

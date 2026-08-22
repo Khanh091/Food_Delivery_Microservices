@@ -1,12 +1,10 @@
 package com.khanh.fooddelivery.delivery_service.service;
 
-import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryMatchingRequest;
 import com.khanh.fooddelivery.delivery_service.dto.response.*;
 import java.util.*;
 import org.springframework.security.oauth2.jwt.Jwt;
 
 public interface DeliveryLifecycleService {
-    DeliveryResponse startMatching(DeliveryMatchingRequest request);
     List<DeliveryOfferResponse> offers(Jwt jwt);
     Optional<CurrentDeliveryOfferResponse> currentOffer(Jwt jwt);
     Optional<DeliveryResponse> currentActiveDelivery(Jwt jwt);

@@ -1,9 +1,7 @@
 package com.khanh.fooddelivery.delivery_service.controller;
 
 import com.khanh.fooddelivery.delivery_service.common.response.ApiResponse;
-import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryMatchingRequest;
 import com.khanh.fooddelivery.delivery_service.dto.response.*;
-import com.khanh.fooddelivery.delivery_service.security.InternalRequestAuthenticator;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryLifecycleService;
 import java.util.List;
 import java.util.UUID;
@@ -17,17 +15,6 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class DeliveryLifecycleController {
     private final DeliveryLifecycleService lifecycle;
-    private final InternalRequestAuthenticator internalRequests;
-
-    @PostMapping("/internal/v1/deliveries/matching")
-    public ApiResponse<DeliveryResponse> matching(
-            @RequestHeader(value = "X-Internal-Api-Key", required = false) String internalApiKey,
-            @RequestBody DeliveryMatchingRequest request) {
-        internalRequests.authenticate(internalApiKey);
-        DeliveryResponse response = lifecycle.startMatching(request);
-        String message = response.status().name().equals("MATCH_FAILED") ? "No driver available" : "Driver matching started";
-        return ApiResponse.success(message, response);
-    }
 
     @GetMapping("/api/v1/deliveries/driver/offers")
     @PreAuthorize("hasRole('DRIVER')")

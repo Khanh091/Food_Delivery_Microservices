@@ -26,7 +26,6 @@ public enum ErrorCode {
     ORDER_NOT_FOUND("ORDER_001", HttpStatus.NOT_FOUND, "Order not found"),
     ORDER_TRANSITION_INVALID("ORDER_002", HttpStatus.CONFLICT, "Order status transition is invalid"),
     ORDER_ACCESS_DENIED("ORDER_003", HttpStatus.FORBIDDEN, "Order access denied"),
-    DELIVERY_SERVICE_UNAVAILABLE("ORDER_004", HttpStatus.SERVICE_UNAVAILABLE, "Delivery service is unavailable"),
     ORDER_NOT_PLACEABLE("ORDER_005", HttpStatus.CONFLICT, "Order cannot be placed yet"),
     PAYMENT_SERVICE_UNAVAILABLE("ORDER_006", HttpStatus.SERVICE_UNAVAILABLE, "Payment service is temporarily unavailable");
 

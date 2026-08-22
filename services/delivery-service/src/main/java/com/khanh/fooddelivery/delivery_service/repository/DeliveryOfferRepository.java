@@ -37,6 +37,8 @@ public interface DeliveryOfferRepository
 
     boolean existsByDeliveryIdAndStatus(UUID deliveryId, DeliveryOfferStatus status);
 
+    List<DeliveryOffer> findByDeliveryIdOrderByOfferedAtAsc(UUID deliveryId);
+
     @Query("""
             select o
             from DeliveryOffer o

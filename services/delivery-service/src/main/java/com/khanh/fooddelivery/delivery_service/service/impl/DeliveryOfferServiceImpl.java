@@ -16,7 +16,7 @@ import com.khanh.fooddelivery.delivery_service.repository.DeliveryOfferRepositor
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.delivery_service.security.CurrentUserProvider;
-import com.khanh.fooddelivery.delivery_service.service.DeliveryMatchingService;
+import com.khanh.fooddelivery.delivery_service.service.DriverDispatchService;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryOfferService;
 import java.time.Instant;
 import java.util.List;
@@ -40,7 +40,7 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
     private final CurrentBearerTokenProvider bearer;
     private final OrderServiceClient orders;
     private final DriverServiceClient drivers;
-    private final DeliveryMatchingService matching;
+    private final DriverDispatchService dispatch;
     private final DeliveryMapper mapper;
 
     @Value("${app.internal-api.key:}")
@@ -133,7 +133,8 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
         offer.setStatus(DeliveryOfferStatus.REJECTED);
         offer.setRespondedAt(Instant.now());
         drivers.releaseOffer(downstreamCredential(), driverId, deliveryId);
-        deliveries.findByIdForUpdate(deliveryId).ifPresent(matching::offerNext);
+        deliveries.findByIdForUpdate(deliveryId).ifPresent(delivery ->
+                dispatch.schedule(delivery, Instant.now()));
     }
 
     @Override
@@ -153,7 +154,8 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
                     current.getDriverId(),
                     current.getDeliveryId()
             );
-            deliveries.findByIdForUpdate(current.getDeliveryId()).ifPresent(matching::offerNext);
+            deliveries.findByIdForUpdate(current.getDeliveryId()).ifPresent(delivery ->
+                    dispatch.schedule(delivery, Instant.now()));
         }
     }
 

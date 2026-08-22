@@ -14,4 +14,7 @@ public interface OrderServiceClient {
 
     @PostMapping("/internal/v1/orders/{id}/payment-failed")
     ApiResponse<Void> paymentFailed(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable UUID id);
+
+    @PostMapping("/internal/v1/orders/{id}/payment-collected")
+    ApiResponse<Void> paymentCollected(@RequestHeader("X-Internal-Api-Key") String apiKey, @PathVariable UUID id);
 }

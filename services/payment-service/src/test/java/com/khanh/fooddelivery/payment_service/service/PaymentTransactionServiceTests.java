@@ -13,6 +13,7 @@ import com.khanh.fooddelivery.payment_service.entity.Payment;
 import com.khanh.fooddelivery.payment_service.model.PaymentMethod;
 import com.khanh.fooddelivery.payment_service.model.PaymentProvider;
 import com.khanh.fooddelivery.payment_service.model.PaymentStatus;
+import com.khanh.fooddelivery.payment_service.model.FinancialSnapshotStatus;
 import com.khanh.fooddelivery.payment_service.provider.PaymentProviderGateway;
 import com.khanh.fooddelivery.payment_service.repository.FinancialSnapshotRepository;
 import com.khanh.fooddelivery.payment_service.repository.LedgerEntryRepository;
@@ -106,6 +107,21 @@ class PaymentTransactionServiceTests {
                         () -> service.applyVerifiedWebhook(webhook(payment, "CANCELLED")))
                 .isInstanceOf(com.khanh.fooddelivery.payment_service.exception.PaymentException.class)
                 .hasMessageContaining("cannot be cancelled");
+    }
+
+    @Test
+    void cancellingPendingPaymentClosesOpenFinancialSnapshot() {
+        Payment payment = onlinePayment(PaymentStatus.PENDING);
+        FinancialSnapshot snapshot = new FinancialSnapshot();
+        snapshot.setStatus(FinancialSnapshotStatus.OPEN);
+        when(payments.findByOrderId(payment.getOrderId())).thenReturn(Optional.of(payment));
+        when(payments.findWithLockById(payment.getId())).thenReturn(Optional.of(payment));
+        when(snapshots.findByOrderId(payment.getOrderId())).thenReturn(Optional.of(snapshot));
+
+        service.cancel(payment.getOrderId());
+
+        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(snapshot.getStatus()).isEqualTo(FinancialSnapshotStatus.CANCELLED);
     }
 
     private Payment onlinePayment(PaymentStatus status) {

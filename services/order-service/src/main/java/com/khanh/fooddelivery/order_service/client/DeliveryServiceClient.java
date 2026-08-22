@@ -1,6 +1,5 @@
 package com.khanh.fooddelivery.order_service.client;
 
-import com.khanh.fooddelivery.order_service.client.dto.request.DeliveryMatchingRequest;
 import com.khanh.fooddelivery.order_service.client.dto.request.DeliveryQuoteRequest;
 import com.khanh.fooddelivery.order_service.client.dto.response.CheckoutTemporaryLocationResponse;
 import com.khanh.fooddelivery.order_service.client.dto.response.DeliveryQuoteResponse;
@@ -21,12 +20,6 @@ public interface DeliveryServiceClient {
     ApiResponse<DeliveryQuoteResponse> createQuote(
             @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
             @RequestBody DeliveryQuoteRequest request
-    );
-
-    @PostMapping("/internal/v1/deliveries/matching")
-    ApiResponse<Object> startMatching(
-            @RequestHeader("X-Internal-Api-Key") String internalApiKey,
-            @RequestBody DeliveryMatchingRequest request
     );
 
     @GetMapping("/internal/v1/delivery/checkout-locations/branches/{branchId}/current")

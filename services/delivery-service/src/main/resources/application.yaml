@@ -13,6 +13,17 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    admin:
+      fail-fast: false
 
 server:
   port: ${SERVER_PORT:8107}
@@ -26,6 +37,12 @@ security:
 app:
   internal-api:
     key: ${INTERNAL_API_KEY:}
+  kafka:
+    order-confirmed-topic: ${ORDER_CONFIRMED_TOPIC:order.lifecycle.v1}
+    order-confirmed-dlt-topic: ${ORDER_CONFIRMED_DLT_TOPIC:order.lifecycle.v1.DLT}
+    consumer-group: ${ORDER_CONFIRMED_CONSUMER_GROUP:delivery-service-order-lifecycle}
+    retry-backoff-ms: ${ORDER_CONFIRMED_RETRY_BACKOFF_MS:1000}
+    retry-max-attempts: ${ORDER_CONFIRMED_RETRY_MAX_ATTEMPTS:3}
 
 eureka:
   client:
@@ -51,6 +68,9 @@ delivery:
   dispatch:
     search-radii-meters: ${DELIVERY_DISPATCH_SEARCH_RADII_METERS:2000,4000,6000,8000}
     candidates-per-radius: ${DELIVERY_DISPATCH_CANDIDATES_PER_RADIUS:20}
+    retry-delay: ${DELIVERY_DISPATCH_RETRY_DELAY:15s}
+    max-duration: ${DELIVERY_DISPATCH_MAX_DURATION:10m}
+    scheduler-delay: ${DELIVERY_DISPATCH_SCHEDULER_DELAY:5000}
   vietmap:
     service-key: ${DELIVERY_VIETMAP_SERVICE_KEY:}
     api-base-url: ${DELIVERY_VIETMAP_API_BASE_URL:https://maps.vietmap.vn}

@@ -16,4 +16,5 @@ public interface OrderService {
     void deliveryAssigned(UUID orderId); void pickedUp(UUID orderId); void delivered(UUID orderId); void matchingFailed(UUID orderId);
     void paymentPaid(UUID orderId);
     void paymentFailed(UUID orderId);
+    void paymentCollected(UUID orderId);
 }

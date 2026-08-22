@@ -97,4 +97,14 @@ public class InternalOrderLifecycleController {
         orders.paymentFailed(id);
         return ApiResponse.success("Payment failed", null);
     }
+
+    @PostMapping("/{id}/payment-collected")
+    public ApiResponse<Void> paymentCollected(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = "X-Internal-Api-Key", required = false) String apiKey) {
+        internalRequests.authenticate("Internal " + (apiKey == null ? "" : apiKey));
+        orders.paymentCollected(id);
+        return ApiResponse.success("Payment collected", null);
+    }
 }

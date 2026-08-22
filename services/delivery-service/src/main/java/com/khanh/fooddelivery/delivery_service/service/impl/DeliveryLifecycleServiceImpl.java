@@ -4,7 +4,6 @@ import com.khanh.fooddelivery.delivery_service.client.DriverServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.OrderServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.PaymentServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.dto.request.CashActionRequest;
-import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryMatchingRequest;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryOfferResponse;
 import com.khanh.fooddelivery.delivery_service.dto.response.CurrentDeliveryOfferResponse;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryResponse;
@@ -17,7 +16,6 @@ import com.khanh.fooddelivery.delivery_service.repository.DeliveryRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.delivery_service.security.CurrentUserProvider;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryLifecycleService;
-import com.khanh.fooddelivery.delivery_service.service.DeliveryMatchingService;
 import com.khanh.fooddelivery.delivery_service.service.DeliveryOfferService;
 import java.util.List;
 import java.util.Optional;
@@ -38,18 +36,12 @@ public class DeliveryLifecycleServiceImpl implements DeliveryLifecycleService {
     private final CurrentBearerTokenProvider bearer;
     private final OrderServiceClient orders;
     private final DriverServiceClient drivers;
-    private final DeliveryMatchingService matching;
     private final DeliveryOfferService offerService;
     private final DeliveryMapper mapper;
     private final PaymentServiceClient payments;
 
     @Value("${app.internal-api.key:}")
     private String internalApiKey;
-
-    @Override
-    public DeliveryResponse startMatching(DeliveryMatchingRequest request) {
-        return matching.startMatching(request);
-    }
 
     @Override
     public List<DeliveryOfferResponse> offers(Jwt jwt) {

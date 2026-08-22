@@ -11,6 +11,13 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    admin:
+      fail-fast: false
   security:
     oauth2:
       resourceserver:
@@ -44,6 +51,17 @@ security:
 app:
   internal-api:
     key: ${INTERNAL_API_KEY:}
+  outbox:
+    topic: ${ORDER_CONFIRMED_TOPIC:order.lifecycle.v1}
+    topic-partitions: ${ORDER_CONFIRMED_TOPIC_PARTITIONS:3}
+    topic-replication-factor: ${ORDER_CONFIRMED_TOPIC_REPLICATION_FACTOR:1}
+    publisher:
+      enabled: ${ORDER_OUTBOX_PUBLISHER_ENABLED:true}
+      fixed-delay-ms: ${ORDER_OUTBOX_PUBLISHER_FIXED_DELAY_MS:1000}
+      batch-size: ${ORDER_OUTBOX_PUBLISHER_BATCH_SIZE:50}
+      send-timeout-ms: ${ORDER_OUTBOX_PUBLISHER_SEND_TIMEOUT_MS:5000}
+      processing-lease-ms: ${ORDER_OUTBOX_PUBLISHER_PROCESSING_LEASE_MS:30000}
+      retry-delay-ms: ${ORDER_OUTBOX_PUBLISHER_RETRY_DELAY_MS:5000}
 
 eureka:
   client:

@@ -15,7 +15,23 @@ public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
 
     Optional<Delivery> findByOrderId(UUID orderId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from Delivery d where d.orderId = :orderId")
+    Optional<Delivery> findByOrderIdForUpdate(@Param("orderId") UUID orderId);
+
     List<Delivery> findByStatusOrderByCreatedAtAsc(DeliveryStatus status);
+
+    @Query("""
+            select d
+            from Delivery d
+            where d.status = :status
+              and (d.nextDispatchAt is null or d.nextDispatchAt <= :now)
+            order by d.createdAt asc
+            """)
+    List<Delivery> findDueForDispatch(
+            @Param("status") DeliveryStatus status,
+            @Param("now") java.time.Instant now
+    );
 
     List<Delivery> findByDriverIdAndStatusInOrderByUpdatedAtDesc(
             UUID driverId,

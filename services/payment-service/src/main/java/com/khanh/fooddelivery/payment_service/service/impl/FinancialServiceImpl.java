@@ -41,7 +41,7 @@ public class FinancialServiceImpl implements FinancialService {
 
     @Override
     @Transactional
-    public void completeDelivery(UUID orderId, UUID deliveryId, UUID driverId) {
+    public PaymentMethod completeDelivery(UUID orderId, UUID deliveryId, UUID driverId) {
         Payment payment = payments.findByOrderId(orderId).orElseThrow(() -> missing("Payment not found"));
         payment = payments.findWithLockById(payment.getId()).orElseThrow(() -> missing("Payment not found"));
         FinancialSnapshot snapshot = snapshots.findByOrderId(orderId)
@@ -49,11 +49,12 @@ public class FinancialServiceImpl implements FinancialService {
         bindDelivery(payment, deliveryId);
         bindDriver(payment, snapshot, driverId);
 
-        if (snapshot.getStatus() == FinancialSnapshotStatus.REVERSED) {
+        if (snapshot.getStatus() == FinancialSnapshotStatus.REVERSED
+                || snapshot.getStatus() == FinancialSnapshotStatus.CANCELLED) {
             throw conflict("Financial snapshot has already been reversed");
         }
         if (snapshot.getStatus() == FinancialSnapshotStatus.FINALIZED) {
-            return;
+            return payment.getMethod();
         }
 
         if (payment.getMethod() == PaymentMethod.COD) {
@@ -87,6 +88,7 @@ public class FinancialServiceImpl implements FinancialService {
                 snapshot.getPlatformRevenueAmount(), snapshot.getCurrency(),
                 "settlement:" + payment.getId() + ":platform-revenue"));
         snapshot.setStatus(FinancialSnapshotStatus.FINALIZED);
+        return payment.getMethod();
     }
 
     private void bindDelivery(Payment payment, UUID deliveryId) {

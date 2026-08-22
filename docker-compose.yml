@@ -450,6 +450,9 @@ services:
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_CONFIRMED_TOPIC: ${ORDER_CONFIRMED_TOPIC:-order.lifecycle.v1}
+      ORDER_OUTBOX_PUBLISHER_ENABLED: ${ORDER_OUTBOX_PUBLISHER_ENABLED:-true}
     ports:
       - "${ORDER_SERVICE_PORT:-8106}:8106"
     depends_on:
@@ -466,8 +469,6 @@ services:
       catalog-service:
         condition: service_healthy
       payment-service:
-        condition: service_healthy
-      delivery-service:
         condition: service_healthy
       postgres:
         condition: service_healthy
@@ -534,6 +535,10 @@ services:
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ORDER_CONFIRMED_TOPIC: ${ORDER_CONFIRMED_TOPIC:-order.lifecycle.v1}
+      ORDER_CONFIRMED_DLT_TOPIC: ${ORDER_CONFIRMED_DLT_TOPIC:-order.lifecycle.v1.DLT}
+      ORDER_CONFIRMED_CONSUMER_GROUP: ${ORDER_CONFIRMED_CONSUMER_GROUP:-delivery-service-order-lifecycle}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       DELIVERY_VIETMAP_SERVICE_KEY: ${DELIVERY_VIETMAP_SERVICE_KEY:-}
@@ -548,6 +553,9 @@ services:
       DELIVERY_FEE_PER_KM: ${DELIVERY_FEE_PER_KM:-5000}
       DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS: ${DELIVERY_MAXIMUM_SERVICE_DISTANCE_METERS:-10000}
       DELIVERY_PRICING_POLICY_VERSION: ${DELIVERY_PRICING_POLICY_VERSION:-dev-v1}
+      DELIVERY_DISPATCH_RETRY_DELAY: ${DELIVERY_DISPATCH_RETRY_DELAY:-15s}
+      DELIVERY_DISPATCH_MAX_DURATION: ${DELIVERY_DISPATCH_MAX_DURATION:-10m}
+      DELIVERY_DISPATCH_SCHEDULER_DELAY: ${DELIVERY_DISPATCH_SCHEDULER_DELAY:-5000}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     ports:
       - "${DELIVERY_SERVICE_PORT:-8107}:8107"

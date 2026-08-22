@@ -23,7 +23,7 @@ import com.khanh.fooddelivery.delivery_service.repository.DeliveryOfferRepositor
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.delivery_service.security.CurrentUserProvider;
-import com.khanh.fooddelivery.delivery_service.service.DeliveryMatchingService;
+import com.khanh.fooddelivery.delivery_service.service.DriverDispatchService;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -57,7 +57,7 @@ class DeliveryOfferServiceImplTests {
     @Mock
     private DriverServiceClient drivers;
     @Mock
-    private DeliveryMatchingService matching;
+    private DriverDispatchService dispatch;
     @Mock
     private Jwt jwt;
 
@@ -74,7 +74,7 @@ class DeliveryOfferServiceImplTests {
                 bearer,
                 orders,
                 drivers,
-                matching,
+                dispatch,
                 Mappers.getMapper(DeliveryMapper.class)
         );
         delivery = delivery(DeliveryStatus.MATCHING);
@@ -204,17 +204,17 @@ class DeliveryOfferServiceImplTests {
     }
 
     @Test
-    void reject_releases_candidate_and_requests_the_next_nearest_driver() {
+    void reject_releases_candidate_and_schedules_the_next_dispatch() {
         offerService.reject(jwt, DELIVERY_ID);
 
         assertThat(offer.getStatus()).isEqualTo(DeliveryOfferStatus.REJECTED);
         assertThat(offer.getRespondedAt()).isNotNull();
         verify(drivers).releaseOffer("Bearer test-token", DRIVER_A, DELIVERY_ID);
-        verify(matching).offerNext(delivery);
+        verify(dispatch).schedule(eq(delivery), any(Instant.class));
     }
 
     @Test
-    void expired_offer_releases_candidate_and_requests_the_next_nearest_driver() {
+    void expired_offer_releases_candidate_and_schedules_the_next_dispatch() {
         offer.setExpiresAt(Instant.now().minusSeconds(1));
         when(offers.findExpired(any(Instant.class))).thenReturn(List.of(offer));
 
@@ -223,7 +223,7 @@ class DeliveryOfferServiceImplTests {
         assertThat(offer.getStatus()).isEqualTo(DeliveryOfferStatus.EXPIRED);
         assertThat(offer.getRespondedAt()).isNotNull();
         verify(drivers).releaseOffer("Bearer test-token", DRIVER_A, DELIVERY_ID);
-        verify(matching).offerNext(delivery);
+        verify(dispatch).schedule(eq(delivery), any(Instant.class));
     }
 
     private Delivery delivery(DeliveryStatus status) {

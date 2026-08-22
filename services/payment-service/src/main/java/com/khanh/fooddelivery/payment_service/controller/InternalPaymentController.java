@@ -8,6 +8,7 @@ import com.khanh.fooddelivery.payment_service.dto.response.PaymentResponse;
 import com.khanh.fooddelivery.payment_service.security.InternalRequestAuthenticator;
 import com.khanh.fooddelivery.payment_service.service.CodPaymentService;
 import com.khanh.fooddelivery.payment_service.service.FinancialService;
+import com.khanh.fooddelivery.payment_service.service.FinancialCompletionService;
 import com.khanh.fooddelivery.payment_service.service.PaymentService;
 import com.khanh.fooddelivery.payment_service.exception.PaymentException;
 import java.util.UUID;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalPaymentController {
     private final PaymentService payments;
     private final FinancialService financials;
+    private final FinancialCompletionService financialCompletion;
     private final CodPaymentService codPayments;
     private final InternalRequestAuthenticator authenticator;
 
@@ -72,7 +74,7 @@ public class InternalPaymentController {
             throw new PaymentException("PAYMENT_400", org.springframework.http.HttpStatus.BAD_REQUEST,
                     "Order path and request order do not match");
         }
-        financials.completeDelivery(orderId, request.deliveryId(), request.driverId());
+        financialCompletion.completeDelivery(orderId, request.deliveryId(), request.driverId());
         return ApiResponse.success("Financial positions finalized", null);
     }
 

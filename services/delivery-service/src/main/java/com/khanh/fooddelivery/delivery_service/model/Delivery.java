@@ -94,6 +94,20 @@ public class Delivery {
     @Column(nullable = false)
     private DeliveryStatus status;
 
+    /**
+     * Dispatch lifecycle metadata. These fields deliberately live on the
+     * delivery aggregate so a scheduler can resume matching after a process
+     * restart without relying on an in-memory timer.
+     */
+    private Instant matchingStartedAt;
+
+    private Instant nextDispatchAt;
+
+    private Instant dispatchDeadlineAt;
+
+    @Column(nullable = false)
+    private int dispatchAttemptCount;
+
     @Column(nullable = false)
     private String restaurantName;
 
