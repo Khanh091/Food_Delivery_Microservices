@@ -13,6 +13,10 @@ spring:
     enabled: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -62,6 +66,12 @@ app:
       send-timeout-ms: ${ORDER_OUTBOX_PUBLISHER_SEND_TIMEOUT_MS:5000}
       processing-lease-ms: ${ORDER_OUTBOX_PUBLISHER_PROCESSING_LEASE_MS:30000}
       retry-delay-ms: ${ORDER_OUTBOX_PUBLISHER_RETRY_DELAY_MS:5000}
+  kafka:
+    payment-lifecycle-topic: ${PAYMENT_LIFECYCLE_TOPIC:payment.lifecycle.v1}
+    payment-lifecycle-dlt-topic: ${PAYMENT_LIFECYCLE_DLT_TOPIC:payment.lifecycle.v1.DLT}
+    payment-lifecycle-consumer-group: ${PAYMENT_LIFECYCLE_CONSUMER_GROUP:order-service-payment-lifecycle}
+    payment-lifecycle-retry-backoff-ms: ${PAYMENT_LIFECYCLE_RETRY_BACKOFF_MS:1000}
+    payment-lifecycle-retry-max-attempts: ${PAYMENT_LIFECYCLE_RETRY_MAX_ATTEMPTS:3}
 
 eureka:
   client:

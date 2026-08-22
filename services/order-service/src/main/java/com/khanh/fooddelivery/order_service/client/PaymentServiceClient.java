@@ -24,7 +24,4 @@ public interface PaymentServiceClient {
     ApiResponse<PaymentResponse> cancel(@RequestHeader("X-Internal-Api-Key") String key,
                                         @PathVariable UUID orderId);
 
-    @PostMapping("/internal/v1/payments/orders/{orderId}/collected")
-    ApiResponse<PaymentResponse> collected(@RequestHeader("X-Internal-Api-Key") String key,
-                                           @PathVariable UUID orderId);
 }

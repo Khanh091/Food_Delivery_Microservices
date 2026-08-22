@@ -13,6 +13,7 @@ import com.khanh.fooddelivery.payment_service.entity.Payment;
 import com.khanh.fooddelivery.payment_service.model.PaymentMethod;
 import com.khanh.fooddelivery.payment_service.model.PaymentProvider;
 import com.khanh.fooddelivery.payment_service.model.PaymentStatus;
+import com.khanh.fooddelivery.payment_service.outbox.PaymentOutboxService;
 import com.khanh.fooddelivery.payment_service.model.FinancialSnapshotStatus;
 import com.khanh.fooddelivery.payment_service.provider.PaymentProviderGateway;
 import com.khanh.fooddelivery.payment_service.repository.FinancialSnapshotRepository;
@@ -37,13 +38,14 @@ class PaymentTransactionServiceTests {
     @Mock FinancialSnapshotRepository snapshots;
     @Mock LedgerEntryRepository ledgerEntries;
     @Mock LedgerService ledger;
+    @Mock PaymentOutboxService paymentOutbox;
 
     PaymentTransactionServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service = new PaymentTransactionServiceImpl(payments, snapshots, ledgerEntries, ledger,
-                new PaymentStateMachine(), new FinancialSnapshotFactory(),
+                new PaymentStateMachine(), new FinancialSnapshotFactory(), paymentOutbox,
                 Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC));
     }
 
@@ -53,13 +55,13 @@ class PaymentTransactionServiceTests {
         when(payments.findWithLockById(payment.getId())).thenReturn(Optional.of(payment));
         PaymentWebhookRequest request = webhook(payment, "SUCCESS");
 
-        PaymentTransactionService.WebhookMutation first = service.applyVerifiedWebhook(request);
-        PaymentTransactionService.WebhookMutation second = service.applyVerifiedWebhook(request);
+        Payment first = service.applyVerifiedWebhook(request);
+        Payment second = service.applyVerifiedWebhook(request);
 
-        assertThat(first.payment().getStatus()).isEqualTo(PaymentStatus.PAID);
-        assertThat(second.payment().getStatus()).isEqualTo(PaymentStatus.PAID);
-        assertThat(second.notifyOrderPaid()).isTrue();
+        assertThat(first.getStatus()).isEqualTo(PaymentStatus.PAID);
+        assertThat(second.getStatus()).isEqualTo(PaymentStatus.PAID);
         verify(ledger, times(1)).record(any());
+        verify(paymentOutbox, times(2)).publishPaymentSucceeded(payment);
     }
 
     @Test
@@ -67,22 +69,22 @@ class PaymentTransactionServiceTests {
         Payment payment = onlinePayment(PaymentStatus.PAID);
         when(payments.findWithLockById(payment.getId())).thenReturn(Optional.of(payment));
 
-        PaymentTransactionService.WebhookMutation mutation = service.applyVerifiedWebhook(webhook(payment, "FAILED"));
+        Payment mutation = service.applyVerifiedWebhook(webhook(payment, "FAILED"));
 
-        assertThat(mutation.payment().getStatus()).isEqualTo(PaymentStatus.PAID);
-        assertThat(mutation.notifyOrderFailed()).isFalse();
+        assertThat(mutation.getStatus()).isEqualTo(PaymentStatus.PAID);
         verify(ledger, never()).record(any());
+        verify(paymentOutbox, never()).publishPaymentFailed(any());
     }
 
     @Test
-    void duplicateFailureWebhookStillRetriesOrderNotification() {
+    void duplicateFailureWebhookStillEnsuresPaymentEvent() {
         Payment payment = onlinePayment(PaymentStatus.FAILED);
         when(payments.findWithLockById(payment.getId())).thenReturn(Optional.of(payment));
 
-        PaymentTransactionService.WebhookMutation mutation = service.applyVerifiedWebhook(webhook(payment, "FAILED"));
+        Payment mutation = service.applyVerifiedWebhook(webhook(payment, "FAILED"));
 
-        assertThat(mutation.payment().getStatus()).isEqualTo(PaymentStatus.FAILED);
-        assertThat(mutation.notifyOrderFailed()).isTrue();
+        assertThat(mutation.getStatus()).isEqualTo(PaymentStatus.FAILED);
+        verify(paymentOutbox).publishPaymentFailed(payment);
     }
 
     @Test
@@ -90,11 +92,11 @@ class PaymentTransactionServiceTests {
         Payment payment = onlinePayment(PaymentStatus.PENDING);
         when(payments.findWithLockById(payment.getId())).thenReturn(Optional.of(payment));
 
-        PaymentTransactionService.WebhookMutation mutation =
+        Payment mutation =
                 service.applyVerifiedWebhook(webhook(payment, "CANCELLED"));
 
-        assertThat(mutation.payment().getStatus()).isEqualTo(PaymentStatus.CANCELLED);
-        assertThat(mutation.payment().getCancelledAt()).isEqualTo(Instant.parse("2026-01-01T00:00:00Z"));
+        assertThat(mutation.getStatus()).isEqualTo(PaymentStatus.CANCELLED);
+        assertThat(mutation.getCancelledAt()).isEqualTo(Instant.parse("2026-01-01T00:00:00Z"));
         verify(ledger, never()).record(any());
     }
 

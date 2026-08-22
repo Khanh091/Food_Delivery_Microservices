@@ -78,33 +78,4 @@ public class InternalOrderLifecycleController {
         );
     }
 
-    @PostMapping("/{id}/payment-paid")
-    public ApiResponse<Void> paymentPaid(
-            @PathVariable UUID id,
-            @org.springframework.web.bind.annotation.RequestHeader(
-                    value = "X-Internal-Api-Key", required = false) String apiKey) {
-        internalRequests.authenticate("Internal " + (apiKey == null ? "" : apiKey));
-        orders.paymentPaid(id);
-        return ApiResponse.success("Payment confirmed", null);
-    }
-
-    @PostMapping("/{id}/payment-failed")
-    public ApiResponse<Void> paymentFailed(
-            @PathVariable UUID id,
-            @org.springframework.web.bind.annotation.RequestHeader(
-                    value = "X-Internal-Api-Key", required = false) String apiKey) {
-        internalRequests.authenticate("Internal " + (apiKey == null ? "" : apiKey));
-        orders.paymentFailed(id);
-        return ApiResponse.success("Payment failed", null);
-    }
-
-    @PostMapping("/{id}/payment-collected")
-    public ApiResponse<Void> paymentCollected(
-            @PathVariable UUID id,
-            @org.springframework.web.bind.annotation.RequestHeader(
-                    value = "X-Internal-Api-Key", required = false) String apiKey) {
-        internalRequests.authenticate("Internal " + (apiKey == null ? "" : apiKey));
-        orders.paymentCollected(id);
-        return ApiResponse.success("Payment collected", null);
-    }
 }

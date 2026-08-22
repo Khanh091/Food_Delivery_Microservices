@@ -21,6 +21,7 @@ import com.khanh.fooddelivery.payment_service.service.LedgerCommand;
 import com.khanh.fooddelivery.payment_service.service.LedgerService;
 import com.khanh.fooddelivery.payment_service.service.PaymentStateMachine;
 import com.khanh.fooddelivery.payment_service.service.PaymentTransactionService;
+import com.khanh.fooddelivery.payment_service.outbox.PaymentOutboxService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Clock;
@@ -43,6 +44,7 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
     private final LedgerService ledger;
     private final PaymentStateMachine stateMachine;
     private final FinancialSnapshotFactory snapshotFactory;
+    private final PaymentOutboxService paymentOutbox;
     private final Clock clock;
 
     @Override
@@ -143,11 +145,9 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
 
     @Override
     @Transactional
-    public WebhookMutation applyVerifiedWebhook(PaymentWebhookRequest request) {
+    public Payment applyVerifiedWebhook(PaymentWebhookRequest request) {
         Payment payment = lockById(request.paymentId());
         validateWebhookReference(payment, request);
-        boolean notifyPaid = false;
-        boolean notifyFailed = false;
         if ("SUCCESS".equalsIgnoreCase(request.status())) {
             if (stateMachine.canApplySuccess(payment)) {
                 payment.setStatus(PaymentStatus.PAID);
@@ -159,7 +159,9 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
                         payment.getAmount(), payment.getCurrency(),
                         "payment:" + payment.getId() + ":captured"));
             }
-            notifyPaid = true;
+            if (payment.getStatus() == PaymentStatus.PAID) {
+                paymentOutbox.publishPaymentSucceeded(payment);
+            }
         } else if ("FAILED".equalsIgnoreCase(request.status())) {
             if (stateMachine.canApplyFailure(payment)) {
                 payment.setStatus(PaymentStatus.FAILED);
@@ -167,15 +169,16 @@ public class PaymentTransactionServiceImpl implements PaymentTransactionService 
                 payment.setFailureMessage("Payment provider reported failure");
                 payment.setProviderTransactionId(request.providerTransactionId());
             }
-            // A duplicate FAILED webhook is also a retry opportunity for the order callback.
-            notifyFailed = payment.getStatus() == PaymentStatus.FAILED;
+            if (payment.getStatus() == PaymentStatus.FAILED) {
+                paymentOutbox.publishPaymentFailed(payment);
+            }
         } else {
             if (stateMachine.canApplyCancellation(payment)) {
                 payment.setStatus(PaymentStatus.CANCELLED);
                 payment.setCancelledAt(Instant.now(clock));
             }
         }
-        return new WebhookMutation(payment, notifyPaid, notifyFailed);
+        return payment;
     }
 
     @Override

@@ -11,6 +11,8 @@ import com.khanh.fooddelivery.order_service.dto.response.OrderResponse;
 import com.khanh.fooddelivery.order_service.entity.Order;
 import com.khanh.fooddelivery.order_service.exception.AppException;
 import com.khanh.fooddelivery.order_service.exception.ErrorCode;
+import com.khanh.fooddelivery.order_service.enums.OrderStatus;
+import com.khanh.fooddelivery.order_service.enums.PaymentStatus;
 import com.khanh.fooddelivery.order_service.mapper.OrderMapper;
 import com.khanh.fooddelivery.order_service.outbox.OrderOutboxService;
 import com.khanh.fooddelivery.order_service.repository.OrderRepository;
@@ -207,22 +209,51 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public void paymentPaid(UUID orderId) {
+    public void paymentSucceeded(UUID orderId) {
         Order order = require(orderId);
-        order.setPaymentStatus(com.khanh.fooddelivery.order_service.enums.PaymentStatus.PAID);
-        OrderLifecycle.paymentPaid(order);
+        if (order.getStatus() == OrderStatus.PENDING_PAYMENT) {
+            if (order.getPaymentStatus() != PaymentStatus.PENDING
+                    && order.getPaymentStatus() != PaymentStatus.PROCESSING
+                    && order.getPaymentStatus() != PaymentStatus.PAID) {
+                throw new AppException(ErrorCode.ORDER_TRANSITION_INVALID);
+            }
+            order.setPaymentStatus(PaymentStatus.PAID);
+            OrderLifecycle.paymentSucceeded(order);
+            return;
+        }
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            return;
+        }
+        throw new AppException(ErrorCode.ORDER_TRANSITION_INVALID);
     }
 
     @Override
     public void paymentFailed(UUID orderId) {
         Order order = require(orderId);
-        order.setPaymentStatus(com.khanh.fooddelivery.order_service.enums.PaymentStatus.FAILED);
+        if (order.getPaymentStatus() == PaymentStatus.FAILED) {
+            return;
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT
+                || (order.getPaymentStatus() != PaymentStatus.PENDING
+                && order.getPaymentStatus() != PaymentStatus.PROCESSING)) {
+            throw new AppException(ErrorCode.ORDER_TRANSITION_INVALID);
+        }
+        order.setPaymentStatus(PaymentStatus.FAILED);
     }
 
     @Override
     public void paymentCollected(UUID orderId) {
         Order order = require(orderId);
-        order.setPaymentStatus(com.khanh.fooddelivery.order_service.enums.PaymentStatus.COLLECTED);
+        if (order.getPaymentStatus() == PaymentStatus.COLLECTED) {
+            return;
+        }
+        if (order.getPaymentStatus() == PaymentStatus.CANCELLED
+                || order.getPaymentStatus() == PaymentStatus.FAILED
+                || order.getPaymentStatus() == PaymentStatus.REFUND_PENDING
+                || order.getPaymentStatus() == PaymentStatus.REFUNDED) {
+            throw new AppException(ErrorCode.ORDER_TRANSITION_INVALID);
+        }
+        order.setPaymentStatus(PaymentStatus.COLLECTED);
     }
 
     @Override

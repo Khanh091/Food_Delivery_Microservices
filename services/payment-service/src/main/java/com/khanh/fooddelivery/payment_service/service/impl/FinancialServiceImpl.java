@@ -15,6 +15,7 @@ import com.khanh.fooddelivery.payment_service.service.FinancialService;
 import com.khanh.fooddelivery.payment_service.service.LedgerCommand;
 import com.khanh.fooddelivery.payment_service.service.LedgerService;
 import com.khanh.fooddelivery.payment_service.service.PaymentStateMachine;
+import com.khanh.fooddelivery.payment_service.outbox.PaymentOutboxService;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,7 @@ public class FinancialServiceImpl implements FinancialService {
     private final LedgerService ledger;
     private final PaymentStateMachine stateMachine;
     private final FinancialFactsAssembler factsAssembler;
+    private final PaymentOutboxService paymentOutbox;
 
     @Override
     @Transactional(readOnly = true)
@@ -88,6 +90,9 @@ public class FinancialServiceImpl implements FinancialService {
                 snapshot.getPlatformRevenueAmount(), snapshot.getCurrency(),
                 "settlement:" + payment.getId() + ":platform-revenue"));
         snapshot.setStatus(FinancialSnapshotStatus.FINALIZED);
+        if (payment.getMethod() == PaymentMethod.COD) {
+            paymentOutbox.publishPaymentCollected(payment);
+        }
         return payment.getMethod();
     }
 

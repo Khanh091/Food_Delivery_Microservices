@@ -1,7 +1,5 @@
 package com.khanh.fooddelivery.payment_service.service.impl;
 
-import com.khanh.fooddelivery.payment_service.client.OrderServiceClient;
-import com.khanh.fooddelivery.payment_service.config.InternalApiProperties;
 import com.khanh.fooddelivery.payment_service.dto.request.InternalCreatePaymentRequest;
 import com.khanh.fooddelivery.payment_service.dto.request.PaymentWebhookRequest;
 import com.khanh.fooddelivery.payment_service.dto.response.PaymentResponse;
@@ -35,8 +33,6 @@ public class PaymentServiceImpl implements PaymentService {
     private final FinancialCalculator calculator;
     private final PaymentMapper mapper;
     private final PaymentProviderResolver providers;
-    private final OrderServiceClient orders;
-    private final InternalApiProperties internalApi;
     private final Clock clock;
 
     @Override
@@ -117,13 +113,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw invalid("Webhook verification failed");
         }
 
-        PaymentTransactionService.WebhookMutation mutation = transactions.applyVerifiedWebhook(request);
-        if (mutation.notifyOrderPaid()) {
-            notifyOrderPaid(mutation.payment().getOrderId());
-        } else if (mutation.notifyOrderFailed()) {
-            notifyOrderFailed(mutation.payment().getOrderId());
-        }
-        return response(mutation.payment());
+        return response(transactions.applyVerifiedWebhook(request));
     }
 
     @Override
@@ -151,28 +141,6 @@ public class PaymentServiceImpl implements PaymentService {
             return refund(orderId);
         }
         return response(transactions.cancel(orderId));
-    }
-
-    private void notifyOrderPaid(UUID orderId) {
-        try {
-            var response = orders.paymentPaid(internalApi.getKey(), orderId);
-            if (response == null || !response.success()) {
-                throw new IllegalStateException("Order payment callback was rejected");
-            }
-        } catch (RuntimeException exception) {
-            throw providerUnavailable("Payment was recorded but order confirmation is retryable", exception);
-        }
-    }
-
-    private void notifyOrderFailed(UUID orderId) {
-        try {
-            var response = orders.paymentFailed(internalApi.getKey(), orderId);
-            if (response == null || !response.success()) {
-                throw new IllegalStateException("Order payment failure callback was rejected");
-            }
-        } catch (RuntimeException exception) {
-            throw providerUnavailable("Payment failure was recorded but order notification is retryable", exception);
-        }
     }
 
     private PaymentResponse response(Payment payment) {

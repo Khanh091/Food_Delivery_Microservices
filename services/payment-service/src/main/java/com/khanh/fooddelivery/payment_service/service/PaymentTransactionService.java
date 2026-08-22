@@ -22,7 +22,7 @@ public interface PaymentTransactionService {
 
     Payment markProviderCreateFailed(UUID paymentId, String failureMessage);
 
-    WebhookMutation applyVerifiedWebhook(PaymentWebhookRequest request);
+    Payment applyVerifiedWebhook(PaymentWebhookRequest request);
 
     RefundPreparation prepareRefund(UUID orderId);
 
@@ -35,9 +35,6 @@ public interface PaymentTransactionService {
     Payment findByOrder(UUID orderId);
 
     Payment findByOrderForOwner(UUID customerId, UUID orderId);
-
-    record WebhookMutation(Payment payment, boolean notifyOrderPaid, boolean notifyOrderFailed) {
-    }
 
     record RefundPreparation(Payment payment, boolean providerCallRequired) {
     }

@@ -139,6 +139,48 @@ class OrderServiceImplTests {
         assertThat(order.getPaymentStatus()).isEqualTo(PaymentStatus.COLLECTED);
     }
 
+    @Test
+    void paymentSucceededMovesPendingPaymentOrderAndDuplicateIsNoOp() {
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+
+        service.paymentSucceeded(ORDER_ID);
+        service.paymentSucceeded(ORDER_ID);
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_RESTAURANT);
+        assertThat(order.getPaymentStatus()).isEqualTo(PaymentStatus.PAID);
+    }
+
+    @Test
+    void paymentSucceededAfterOrderAdvancedIsNoOp() {
+        order.setStatus(OrderStatus.CONFIRMED);
+        order.setPaymentStatus(PaymentStatus.PAID);
+
+        service.paymentSucceeded(ORDER_ID);
+
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CONFIRMED);
+        assertThat(order.getPaymentStatus()).isEqualTo(PaymentStatus.PAID);
+    }
+
+    @Test
+    void paymentFailedUpdatesPendingPaymentProjection() {
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
+        order.setPaymentStatus(PaymentStatus.PROCESSING);
+
+        service.paymentFailed(ORDER_ID);
+
+        assertThat(order.getPaymentStatus()).isEqualTo(PaymentStatus.FAILED);
+    }
+
+    @Test
+    void paymentEventCannotApplyImpossibleTransition() {
+        order.setStatus(OrderStatus.PENDING_RESTAURANT);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.paymentSucceeded(ORDER_ID))
+                .isInstanceOf(com.khanh.fooddelivery.order_service.exception.AppException.class);
+    }
+
     private PaymentResponse payment(PaymentStatus status) {
         return new PaymentResponse(
                 UUID.randomUUID(), ORDER_ID, order.getPaymentMethod(), status,

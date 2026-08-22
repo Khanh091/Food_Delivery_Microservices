@@ -12,6 +12,7 @@ import com.khanh.fooddelivery.payment_service.model.FinancialSnapshotStatus;
 import com.khanh.fooddelivery.payment_service.model.PaymentMethod;
 import com.khanh.fooddelivery.payment_service.model.PaymentProvider;
 import com.khanh.fooddelivery.payment_service.model.PaymentStatus;
+import com.khanh.fooddelivery.payment_service.outbox.PaymentOutboxService;
 import com.khanh.fooddelivery.payment_service.repository.FinancialSnapshotRepository;
 import com.khanh.fooddelivery.payment_service.repository.PaymentRepository;
 import com.khanh.fooddelivery.payment_service.service.impl.FinancialServiceImpl;
@@ -29,13 +30,14 @@ class FinancialServiceTests {
     @Mock PaymentRepository payments;
     @Mock FinancialSnapshotRepository snapshots;
     @Mock LedgerService ledger;
+    @Mock PaymentOutboxService paymentOutbox;
 
     FinancialServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service = new FinancialServiceImpl(payments, snapshots, ledger, new PaymentStateMachine(),
-                new FinancialFactsAssembler());
+                new FinancialFactsAssembler(), paymentOutbox);
     }
 
     @Test
@@ -68,6 +70,26 @@ class FinancialServiceTests {
         service.completeDelivery(orderId, UUID.randomUUID(), UUID.randomUUID());
 
         verify(ledger, times(0)).record(any(LedgerCommand.class));
+    }
+
+    @Test
+    void codCompletionCreatesCollectedProjectionEventOnlyOnce() {
+        UUID orderId = UUID.randomUUID();
+        UUID deliveryId = UUID.randomUUID();
+        UUID driverId = UUID.randomUUID();
+        Payment payment = payment(orderId, PaymentMethod.COD, PaymentStatus.COLLECTED);
+        payment.setRestaurantAdvanceConfirmedAt(java.time.Instant.now());
+        payment.setCashCollectedAt(java.time.Instant.now());
+        FinancialSnapshot snapshot = snapshot(orderId);
+        when(payments.findByOrderId(orderId)).thenReturn(Optional.of(payment));
+        when(payments.findWithLockById(payment.getId())).thenReturn(Optional.of(payment));
+        when(snapshots.findByOrderId(orderId)).thenReturn(Optional.of(snapshot));
+
+        service.completeDelivery(orderId, deliveryId, driverId);
+        service.completeDelivery(orderId, deliveryId, driverId);
+
+        assertThat(snapshot.getStatus()).isEqualTo(FinancialSnapshotStatus.FINALIZED);
+        verify(paymentOutbox, times(1)).publishPaymentCollected(payment);
     }
 
     private Payment payment(UUID orderId, PaymentMethod method, PaymentStatus status) {
