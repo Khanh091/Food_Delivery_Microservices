@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.khanh.fooddelivery.notification_service.entity.NotificationDelivery;
 import com.khanh.fooddelivery.notification_service.entity.NotificationDeliveryStatus;
-import com.khanh.fooddelivery.notification_service.event.DeliveryLifecycleEvent;
+import com.khanh.fooddelivery.notification_service.event.DeliveryOfferCreatedEvent;
 import com.khanh.fooddelivery.notification_service.repository.NotificationDeliveryRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -34,7 +34,7 @@ class NotificationDeliveryStateServiceImplTests {
     private NotificationDeliveryRepository notifications;
 
     private NotificationDeliveryStateServiceImpl states;
-    private DeliveryLifecycleEvent event;
+    private DeliveryOfferCreatedEvent event;
 
     @BeforeEach
     void setUp() {
@@ -72,8 +72,46 @@ class NotificationDeliveryStateServiceImplTests {
     }
 
     @Test
+    void existingPendingRecordIsPreparedForAnotherPushAttempt() {
+        NotificationDelivery existing = notification(NotificationDeliveryStatus.PENDING, event.payload().expiresAt());
+        existing.setAttemptCount(2);
+        when(notifications.findBySourceEventId(EVENT_ID)).thenReturn(Optional.of(existing));
+
+        NotificationDelivery prepared = states.prepare(event);
+
+        assertThat(prepared.getStatus()).isEqualTo(NotificationDeliveryStatus.PENDING);
+        assertThat(prepared.getAttemptCount()).isEqualTo(3);
+    }
+
+    @Test
+    void existingFailedRecordIsPreparedForAnotherPushAttempt() {
+        NotificationDelivery existing = notification(NotificationDeliveryStatus.FAILED, event.payload().expiresAt());
+        existing.setAttemptCount(1);
+        existing.setLastError("Expo unavailable");
+        when(notifications.findBySourceEventId(EVENT_ID)).thenReturn(Optional.of(existing));
+
+        NotificationDelivery prepared = states.prepare(event);
+
+        assertThat(prepared.getStatus()).isEqualTo(NotificationDeliveryStatus.PENDING);
+        assertThat(prepared.getAttemptCount()).isEqualTo(2);
+        assertThat(prepared.getLastError()).isNull();
+    }
+
+    @Test
+    void duplicateSkippedEventIsAReadOnlyNoOp() {
+        NotificationDelivery existing = notification(NotificationDeliveryStatus.SKIPPED, event.payload().expiresAt());
+        existing.setAttemptCount(1);
+        when(notifications.findBySourceEventId(EVENT_ID)).thenReturn(Optional.of(existing));
+
+        NotificationDelivery prepared = states.prepare(event);
+
+        assertThat(prepared.getStatus()).isEqualTo(NotificationDeliveryStatus.SKIPPED);
+        assertThat(prepared.getAttemptCount()).isEqualTo(1);
+    }
+
+    @Test
     void expiredEventIsMarkedSkippedWithoutAttempt() {
-        DeliveryLifecycleEvent expired = event(NOW);
+        DeliveryOfferCreatedEvent expired = event(NOW);
         when(notifications.findBySourceEventId(EVENT_ID)).thenReturn(Optional.empty());
         when(notifications.save(any(NotificationDelivery.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -95,14 +133,14 @@ class NotificationDeliveryStateServiceImplTests {
                 .hasMessageContaining("identity changed");
     }
 
-    private DeliveryLifecycleEvent event(Instant expiresAt) {
-        return new DeliveryLifecycleEvent(
+    private DeliveryOfferCreatedEvent event(Instant expiresAt) {
+        return new DeliveryOfferCreatedEvent(
                 EVENT_ID,
-                DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED,
+                DeliveryOfferCreatedEvent.EVENT_TYPE,
                 NOW,
                 OFFER_ID,
-                DeliveryLifecycleEvent.VERSION,
-                new DeliveryLifecycleEvent.Payload(OFFER_ID, DELIVERY_ID, DRIVER_ID, expiresAt)
+                DeliveryOfferCreatedEvent.VERSION,
+                new DeliveryOfferCreatedEvent.Payload(OFFER_ID, DELIVERY_ID, DRIVER_ID, expiresAt)
         );
     }
 

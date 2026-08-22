@@ -4,7 +4,7 @@ import com.khanh.fooddelivery.notification_service.client.ExpoPushClient;
 import com.khanh.fooddelivery.notification_service.entity.NotificationDelivery;
 import com.khanh.fooddelivery.notification_service.entity.NotificationDeliveryStatus;
 import com.khanh.fooddelivery.notification_service.entity.PushDevice;
-import com.khanh.fooddelivery.notification_service.event.DeliveryLifecycleEvent;
+import com.khanh.fooddelivery.notification_service.event.DeliveryOfferCreatedEvent;
 import com.khanh.fooddelivery.notification_service.repository.PushDeviceRepository;
 import com.khanh.fooddelivery.notification_service.service.DriverOfferNotificationService;
 import com.khanh.fooddelivery.notification_service.service.NotificationDeliveryStateService;
@@ -24,7 +24,7 @@ public class DriverOfferNotificationServiceImpl implements DriverOfferNotificati
     private final ExpoPushClient expo;
 
     @Override
-    public void notifyDriverOffer(DeliveryLifecycleEvent event) {
+    public void notifyDriverOffer(DeliveryOfferCreatedEvent event) {
         NotificationDelivery notification = states.prepare(event);
         if (notification.getStatus() == NotificationDeliveryStatus.SENT
                 || notification.getStatus() == NotificationDeliveryStatus.SKIPPED) {

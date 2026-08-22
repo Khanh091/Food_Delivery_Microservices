@@ -2,7 +2,7 @@ package com.khanh.fooddelivery.notification_service.service.impl;
 
 import com.khanh.fooddelivery.notification_service.entity.NotificationDelivery;
 import com.khanh.fooddelivery.notification_service.entity.NotificationDeliveryStatus;
-import com.khanh.fooddelivery.notification_service.event.DeliveryLifecycleEvent;
+import com.khanh.fooddelivery.notification_service.event.DeliveryOfferCreatedEvent;
 import com.khanh.fooddelivery.notification_service.repository.NotificationDeliveryRepository;
 import com.khanh.fooddelivery.notification_service.service.NotificationDeliveryStateService;
 import java.time.Clock;
@@ -21,8 +21,8 @@ public class NotificationDeliveryStateServiceImpl implements NotificationDeliver
 
     @Override
     @Transactional
-    public NotificationDelivery prepare(DeliveryLifecycleEvent event) {
-        DeliveryLifecycleEvent.Payload payload = event.payload();
+    public NotificationDelivery prepare(DeliveryOfferCreatedEvent event) {
+        DeliveryOfferCreatedEvent.Payload payload = event.payload();
         NotificationDelivery notification = notifications.findBySourceEventId(event.eventId())
                 .orElseGet(() -> create(event));
         validateIdentity(notification, event);
@@ -79,8 +79,8 @@ public class NotificationDeliveryStateServiceImpl implements NotificationDeliver
         });
     }
 
-    private NotificationDelivery create(DeliveryLifecycleEvent event) {
-        DeliveryLifecycleEvent.Payload payload = event.payload();
+    private NotificationDelivery create(DeliveryOfferCreatedEvent event) {
+        DeliveryOfferCreatedEvent.Payload payload = event.payload();
         NotificationDelivery notification = new NotificationDelivery();
         notification.setId(UUID.randomUUID());
         notification.setSourceEventId(event.eventId());
@@ -93,8 +93,8 @@ public class NotificationDeliveryStateServiceImpl implements NotificationDeliver
         return notifications.save(notification);
     }
 
-    private void validateIdentity(NotificationDelivery notification, DeliveryLifecycleEvent event) {
-        DeliveryLifecycleEvent.Payload payload = event.payload();
+    private void validateIdentity(NotificationDelivery notification, DeliveryOfferCreatedEvent event) {
+        DeliveryOfferCreatedEvent.Payload payload = event.payload();
         if (!Objects.equals(notification.getOfferId(), payload.offerId())
                 || !Objects.equals(notification.getDeliveryId(), payload.deliveryId())
                 || !Objects.equals(notification.getDriverId(), payload.driverId())

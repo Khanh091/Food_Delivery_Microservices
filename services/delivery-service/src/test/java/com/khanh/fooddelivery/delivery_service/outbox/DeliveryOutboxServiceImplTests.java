@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.khanh.fooddelivery.delivery_service.event.DeliveryLifecycleEvent;
+import com.khanh.fooddelivery.delivery_service.event.DeliveryOfferCreatedEvent;
 import com.khanh.fooddelivery.delivery_service.model.DeliveryOffer;
 import java.time.Clock;
 import java.time.Instant;
@@ -49,7 +49,7 @@ class DeliveryOutboxServiceImplTests {
         when(repository.existsByAggregateTypeAndAggregateIdAndEventType(
                 "DELIVERY_OFFER",
                 offer.getId(),
-                DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED
+                DeliveryOfferCreatedEvent.EVENT_TYPE
         )).thenReturn(false);
 
         service.publishDeliveryOfferCreated(offer);
@@ -58,7 +58,7 @@ class DeliveryOutboxServiceImplTests {
         verify(repository).save(captor.capture());
         DeliveryOutboxEvent outbox = captor.getValue();
         assertThat(outbox.getAggregateId()).isEqualTo(offer.getId());
-        assertThat(outbox.getEventType()).isEqualTo(DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED);
+        assertThat(outbox.getEventType()).isEqualTo(DeliveryOfferCreatedEvent.EVENT_TYPE);
         assertThat(outbox.getPayload().get("eventId").asText()).isNotBlank();
         assertThat(outbox.getPayload().get("payload").get("offerId").asText())
                 .isEqualTo(offer.getId().toString());
@@ -74,7 +74,7 @@ class DeliveryOutboxServiceImplTests {
         when(repository.existsByAggregateTypeAndAggregateIdAndEventType(
                 "DELIVERY_OFFER",
                 offer.getId(),
-                DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED
+                DeliveryOfferCreatedEvent.EVENT_TYPE
         )).thenReturn(true);
 
         service.publishDeliveryOfferCreated(offer);

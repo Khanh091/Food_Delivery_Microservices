@@ -21,9 +21,9 @@ public class DeliveryOfferCreatedConsumer {
             containerFactory = "deliveryLifecycleKafkaListenerContainerFactory"
     )
     public void consume(String message) {
-        DeliveryLifecycleEvent event;
+        DeliveryOfferCreatedEvent event;
         try {
-            event = objectMapper.readValue(message, DeliveryLifecycleEvent.class);
+            event = objectMapper.readValue(message, DeliveryOfferCreatedEvent.class);
             validate(event);
         } catch (Exception exception) {
             log.error("Invalid delivery lifecycle event reasonType={}", exception.getClass().getSimpleName());
@@ -35,13 +35,13 @@ public class DeliveryOfferCreatedConsumer {
         notifications.notifyDriverOffer(event);
     }
 
-    private void validate(DeliveryLifecycleEvent event) {
+    private void validate(DeliveryOfferCreatedEvent event) {
         if (event == null
                 || event.eventId() == null
                 || event.occurredAt() == null
                 || event.aggregateId() == null
-                || event.version() != DeliveryLifecycleEvent.VERSION
-                || !DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED.equals(event.eventType())
+                || event.version() != DeliveryOfferCreatedEvent.VERSION
+                || !DeliveryOfferCreatedEvent.EVENT_TYPE.equals(event.eventType())
                 || event.payload() == null
                 || event.payload().offerId() == null
                 || event.payload().deliveryId() == null

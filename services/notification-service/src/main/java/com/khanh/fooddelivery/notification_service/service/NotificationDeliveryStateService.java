@@ -1,12 +1,12 @@
 package com.khanh.fooddelivery.notification_service.service;
 
 import com.khanh.fooddelivery.notification_service.entity.NotificationDelivery;
-import com.khanh.fooddelivery.notification_service.event.DeliveryLifecycleEvent;
+import com.khanh.fooddelivery.notification_service.event.DeliveryOfferCreatedEvent;
 import java.util.UUID;
 
 public interface NotificationDeliveryStateService {
 
-    NotificationDelivery prepare(DeliveryLifecycleEvent event);
+    NotificationDelivery prepare(DeliveryOfferCreatedEvent event);
 
     void markSent(UUID notificationId);
 

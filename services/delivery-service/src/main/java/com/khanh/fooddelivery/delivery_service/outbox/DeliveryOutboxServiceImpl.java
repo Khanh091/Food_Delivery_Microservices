@@ -1,7 +1,7 @@
 package com.khanh.fooddelivery.delivery_service.outbox;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.khanh.fooddelivery.delivery_service.event.DeliveryLifecycleEvent;
+import com.khanh.fooddelivery.delivery_service.event.DeliveryOfferCreatedEvent;
 import com.khanh.fooddelivery.delivery_service.model.DeliveryOffer;
 import java.time.Clock;
 import java.time.Instant;
@@ -27,20 +27,20 @@ public class DeliveryOutboxServiceImpl implements DeliveryOutboxService {
         if (repository.existsByAggregateTypeAndAggregateIdAndEventType(
                 AGGREGATE_TYPE,
                 offer.getId(),
-                DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED
+                DeliveryOfferCreatedEvent.EVENT_TYPE
         )) {
             return;
         }
 
         Instant occurredAt = clock.instant();
         UUID eventId = UUID.randomUUID();
-        DeliveryLifecycleEvent event = new DeliveryLifecycleEvent(
+        DeliveryOfferCreatedEvent event = new DeliveryOfferCreatedEvent(
                 eventId,
-                DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED,
+                DeliveryOfferCreatedEvent.EVENT_TYPE,
                 occurredAt,
                 offer.getId(),
-                DeliveryLifecycleEvent.VERSION,
-                new DeliveryLifecycleEvent.Payload(
+                DeliveryOfferCreatedEvent.VERSION,
+                new DeliveryOfferCreatedEvent.Payload(
                         offer.getId(),
                         offer.getDeliveryId(),
                         offer.getDriverId(),
@@ -52,7 +52,7 @@ public class DeliveryOutboxServiceImpl implements DeliveryOutboxService {
         outbox.setId(eventId);
         outbox.setAggregateType(AGGREGATE_TYPE);
         outbox.setAggregateId(offer.getId());
-        outbox.setEventType(DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED);
+        outbox.setEventType(DeliveryOfferCreatedEvent.EVENT_TYPE);
         outbox.setPayload(objectMapper.valueToTree(event));
         outbox.setCreatedAt(occurredAt);
         outbox.setAttemptCount(0);

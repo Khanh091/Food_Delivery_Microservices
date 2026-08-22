@@ -13,7 +13,7 @@ import com.khanh.fooddelivery.notification_service.client.ExpoPushClient;
 import com.khanh.fooddelivery.notification_service.entity.NotificationDelivery;
 import com.khanh.fooddelivery.notification_service.entity.NotificationDeliveryStatus;
 import com.khanh.fooddelivery.notification_service.entity.PushDevice;
-import com.khanh.fooddelivery.notification_service.event.DeliveryLifecycleEvent;
+import com.khanh.fooddelivery.notification_service.event.DeliveryOfferCreatedEvent;
 import com.khanh.fooddelivery.notification_service.repository.PushDeviceRepository;
 import com.khanh.fooddelivery.notification_service.service.NotificationDeliveryStateService;
 import java.time.Instant;
@@ -41,18 +41,18 @@ class DriverOfferNotificationServiceImplTests {
     private ExpoPushClient expo;
 
     private DriverOfferNotificationServiceImpl service;
-    private DeliveryLifecycleEvent event;
+    private DeliveryOfferCreatedEvent event;
 
     @BeforeEach
     void setUp() {
         service = new DriverOfferNotificationServiceImpl(states, devices, expo);
-        event = new DeliveryLifecycleEvent(
+        event = new DeliveryOfferCreatedEvent(
                 EVENT_ID,
-                DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED,
+                DeliveryOfferCreatedEvent.EVENT_TYPE,
                 Instant.parse("2026-08-23T10:15:30Z"),
                 OFFER_ID,
-                DeliveryLifecycleEvent.VERSION,
-                new DeliveryLifecycleEvent.Payload(
+                DeliveryOfferCreatedEvent.VERSION,
+                new DeliveryOfferCreatedEvent.Payload(
                         OFFER_ID,
                         DELIVERY_ID,
                         DRIVER_ID,
@@ -112,6 +112,21 @@ class DriverOfferNotificationServiceImplTests {
 
         verify(states).markFailed(eq(notification.getId()), any(Throwable.class));
         verify(states, never()).markSent(notification.getId());
+    }
+
+    @Test
+    void failedStateIsStillEligibleForAnotherPushAttempt() {
+        NotificationDelivery notification = notification(NotificationDeliveryStatus.FAILED);
+        PushDevice device = device();
+        when(states.prepare(event)).thenReturn(notification);
+        when(devices.findByDriverIdAndActiveTrue(DRIVER_ID)).thenReturn(List.of(device));
+        when(expo.send(any(), any(), any(), anyMap()))
+                .thenReturn(ExpoPushClient.DeliveryResult.SENT);
+
+        service.notifyDriverOffer(event);
+
+        verify(expo).send(eq(device.getExpoPushToken()), any(), any(), anyMap());
+        verify(states).markSent(notification.getId());
     }
 
     @Test

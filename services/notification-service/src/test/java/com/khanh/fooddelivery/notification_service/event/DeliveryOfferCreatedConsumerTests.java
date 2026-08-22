@@ -22,20 +22,20 @@ class DeliveryOfferCreatedConsumerTests {
 
     private DeliveryOfferCreatedConsumer consumer;
     private ObjectMapper objectMapper;
-    private DeliveryLifecycleEvent event;
+    private DeliveryOfferCreatedEvent event;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         consumer = new DeliveryOfferCreatedConsumer(objectMapper, notifications);
         UUID offerId = UUID.randomUUID();
-        event = new DeliveryLifecycleEvent(
+        event = new DeliveryOfferCreatedEvent(
                 UUID.randomUUID(),
-                DeliveryLifecycleEvent.DELIVERY_OFFER_CREATED,
+                DeliveryOfferCreatedEvent.EVENT_TYPE,
                 Instant.parse("2026-08-23T10:15:30Z"),
                 offerId,
-                DeliveryLifecycleEvent.VERSION,
-                new DeliveryLifecycleEvent.Payload(
+                DeliveryOfferCreatedEvent.VERSION,
+                new DeliveryOfferCreatedEvent.Payload(
                         offerId,
                         UUID.randomUUID(),
                         UUID.randomUUID(),
@@ -60,7 +60,7 @@ class DeliveryOfferCreatedConsumerTests {
 
     @Test
     void impossibleAggregateIdentityIsRejected() throws Exception {
-        DeliveryLifecycleEvent invalid = new DeliveryLifecycleEvent(
+        DeliveryOfferCreatedEvent invalid = new DeliveryOfferCreatedEvent(
                 event.eventId(),
                 event.eventType(),
                 event.occurredAt(),
