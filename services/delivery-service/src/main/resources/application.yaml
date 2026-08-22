@@ -43,6 +43,17 @@ app:
     consumer-group: ${ORDER_CONFIRMED_CONSUMER_GROUP:delivery-service-order-lifecycle}
     retry-backoff-ms: ${ORDER_CONFIRMED_RETRY_BACKOFF_MS:1000}
     retry-max-attempts: ${ORDER_CONFIRMED_RETRY_MAX_ATTEMPTS:3}
+  outbox:
+    topic: ${DELIVERY_LIFECYCLE_TOPIC:delivery.lifecycle.v1}
+    topic-partitions: ${DELIVERY_LIFECYCLE_TOPIC_PARTITIONS:3}
+    topic-replication-factor: ${DELIVERY_LIFECYCLE_TOPIC_REPLICATION_FACTOR:1}
+    publisher:
+      enabled: ${DELIVERY_OUTBOX_PUBLISHER_ENABLED:true}
+      fixed-delay-ms: ${DELIVERY_OUTBOX_PUBLISHER_DELAY_MS:1000}
+      batch-size: ${DELIVERY_OUTBOX_PUBLISHER_BATCH_SIZE:50}
+      send-timeout-ms: ${DELIVERY_OUTBOX_PUBLISHER_SEND_TIMEOUT_MS:5000}
+      processing-lease-ms: ${DELIVERY_OUTBOX_PUBLISHER_LEASE_MS:30000}
+      retry-delay-ms: ${DELIVERY_OUTBOX_PUBLISHER_RETRY_DELAY_MS:5000}
 
 eureka:
   client:

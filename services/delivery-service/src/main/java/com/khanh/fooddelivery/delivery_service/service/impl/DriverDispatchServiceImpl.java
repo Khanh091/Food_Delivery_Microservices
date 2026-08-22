@@ -13,7 +13,7 @@ import com.khanh.fooddelivery.delivery_service.repository.DeliveryRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
 import com.khanh.fooddelivery.delivery_service.exception.AppException;
 import com.khanh.fooddelivery.delivery_service.service.DriverDispatchService;
-import com.khanh.fooddelivery.delivery_service.service.event.DeliveryOfferCreatedEvent;
+import com.khanh.fooddelivery.delivery_service.outbox.DeliveryOutboxService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
@@ -24,9 +24,10 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +40,7 @@ public class DriverDispatchServiceImpl implements DriverDispatchService {
     private final OrderServiceClient orders;
     private final DriverServiceClient drivers;
     private final TrackingServiceClient tracking;
-    private final ApplicationEventPublisher events;
+    private final DeliveryOutboxService outbox;
 
     @Value("${delivery.offer.ttl:45s}")
     private Duration offerTtl;
@@ -98,8 +99,10 @@ public class DriverDispatchServiceImpl implements DriverDispatchService {
             offer.setDriverId(driverId);
             offer.setStatus(DeliveryOfferStatus.PENDING);
             offer.setExpiresAt(now.plus(offerTtl));
+            boolean offerPersisted = false;
             try {
                 offers.save(offer);
+                offerPersisted = true;
             } catch (RuntimeException exception) {
                 // Reservation is an external side effect. Release it when the
                 // local offer cannot be persisted so a retry cannot strand the
@@ -112,12 +115,25 @@ public class DriverDispatchServiceImpl implements DriverDispatchService {
                 }
                 throw exception;
             }
+            try {
+                outbox.publishDeliveryOfferCreated(offer);
+            } catch (RuntimeException exception) {
+                // Offer and outbox must commit together. Release the external
+                // reservation before rolling the local transaction back.
+                try {
+                    drivers.releaseOffer(credential, driverId, delivery.getId());
+                } catch (RuntimeException releaseException) {
+                    log.error("Could not release reservation after outbox persistence failure deliveryId={} driverId={}",
+                            delivery.getId(), driverId, releaseException);
+                }
+                if (offerPersisted && TransactionSynchronizationManager.isActualTransactionActive()) {
+                    TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                }
+                log.warn("Delivery offer outbox persistence failed deliveryId={} driverId={} reasonType={}",
+                        delivery.getId(), driverId, exception.getClass().getSimpleName());
+                return;
+            }
             delivery.setNextDispatchAt(null);
-            events.publishEvent(new DeliveryOfferCreatedEvent(
-                    driverId,
-                    offer.getId(),
-                    delivery.getId()
-            ));
         } catch (RuntimeException exception) {
             scheduleOrFinalize(delivery, now);
             log.warn("Driver dispatch attempt failed deliveryId={} attempt={} reasonType={}",

@@ -22,6 +22,7 @@ import com.khanh.fooddelivery.delivery_service.model.DeliveryStatus;
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryOfferRepository;
 import com.khanh.fooddelivery.delivery_service.repository.DeliveryRepository;
 import com.khanh.fooddelivery.delivery_service.security.CurrentBearerTokenProvider;
+import com.khanh.fooddelivery.delivery_service.outbox.DeliveryOutboxService;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
@@ -33,7 +34,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,14 +49,14 @@ class DriverDispatchServiceImplTests {
     @Mock private OrderServiceClient orders;
     @Mock private DriverServiceClient drivers;
     @Mock private TrackingServiceClient tracking;
-    @Mock private ApplicationEventPublisher events;
+    @Mock private DeliveryOutboxService outbox;
 
     private DriverDispatchServiceImpl dispatch;
     private Delivery delivery;
 
     @BeforeEach
     void setUp() {
-        dispatch = new DriverDispatchServiceImpl(deliveries, offers, bearer, orders, drivers, tracking, events);
+        dispatch = new DriverDispatchServiceImpl(deliveries, offers, bearer, orders, drivers, tracking, outbox);
         ReflectionTestUtils.setField(dispatch, "offerTtl", Duration.ofSeconds(45));
         ReflectionTestUtils.setField(dispatch, "searchRadii", List.of(2000d, 4000d, 6000d, 8000d));
         ReflectionTestUtils.setField(dispatch, "candidatesPerRadius", 20L);
@@ -95,6 +95,7 @@ class DriverDispatchServiceImplTests {
         assertThat(delivery.getNextDispatchAt()).isNull();
         verify(drivers).reserveOffer("Bearer test-token", DRIVER_A, DELIVERY_ID);
         verify(offers).save(any(DeliveryOffer.class));
+        verify(outbox).publishDeliveryOfferCreated(any(DeliveryOffer.class));
     }
 
     @Test

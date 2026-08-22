@@ -9,6 +9,17 @@ spring:
     hibernate:
       ddl-auto: validate
     open-in-view: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9094}
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    admin:
+      fail-fast: false
 
 server:
   port: ${SERVER_PORT:8112}
@@ -20,8 +31,12 @@ security:
     jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/food-delivery/protocol/openid-connect/certs}
 
 app:
-  internal-api:
-    key: ${INTERNAL_API_KEY:}
+  kafka:
+    delivery-lifecycle-topic: ${DELIVERY_LIFECYCLE_TOPIC:delivery.lifecycle.v1}
+    delivery-lifecycle-dlt-topic: ${DELIVERY_LIFECYCLE_DLT_TOPIC:delivery.lifecycle.v1.DLT}
+    delivery-lifecycle-consumer-group: ${DELIVERY_LIFECYCLE_CONSUMER_GROUP:notification-service-delivery-lifecycle}
+    retry-backoff-ms: ${DELIVERY_LIFECYCLE_RETRY_BACKOFF_MS:1000}
+    retry-max-attempts: ${DELIVERY_LIFECYCLE_RETRY_MAX_ATTEMPTS:3}
 
 notification:
   expo:
