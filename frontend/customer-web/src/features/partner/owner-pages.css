@@ -3,6 +3,34 @@
 .owner-overview-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
 .owner-stack { display: grid; gap: 16px; }
 
+.restaurant-orders-page .form-error { margin-bottom: 16px; }
+.orders-loading { color: var(--owner-text-secondary); }
+.restaurant-order-card { display: grid; gap: 20px; padding: 20px; }
+.restaurant-order-header { align-items: flex-start; display: flex; gap: 16px; justify-content: space-between; }
+.restaurant-order-code-row { align-items: center; display: flex; flex-wrap: wrap; gap: 10px; }
+.restaurant-order-code-row h2 { color: var(--owner-text); font-size: 17px; line-height: 24px; margin: 0; }
+.restaurant-order-header p { color: var(--owner-text-secondary); font-size: 13px; margin: 5px 0 0; }
+.restaurant-order-total { color: var(--owner-primary); font-size: 18px; white-space: nowrap; }
+.restaurant-order-section { border-top: 1px solid var(--owner-border); padding-top: 16px; }
+.restaurant-order-section-label { color: var(--owner-text-muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; margin: 0 0 7px; }
+.restaurant-order-recipient { color: var(--owner-text); font-size: 15px; font-weight: 600; margin: 0; }
+.restaurant-order-address-label { color: var(--owner-text-secondary); font-size: 12px; margin: 5px 0 0; }
+.restaurant-order-address { color: var(--owner-text); font-size: 14px; line-height: 22px; margin: 3px 0 0; overflow-wrap: anywhere; }
+.restaurant-order-items { display: grid; gap: 10px; }
+.restaurant-order-item { align-items: start; display: flex; gap: 16px; justify-content: space-between; }
+.restaurant-order-item strong { color: var(--owner-text); font-size: 14px; font-weight: 600; }
+.restaurant-order-item p { color: var(--owner-text-secondary); font-size: 13px; line-height: 20px; margin: 4px 0 0; }
+.restaurant-order-item > span { color: var(--owner-text-secondary); font-size: 13px; white-space: nowrap; }
+.restaurant-order-note { font-style: italic; }
+.restaurant-order-actions { border-top: 1px solid var(--owner-border); display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; padding-top: 16px; }
+
+@media (max-width: 560px) {
+  .restaurant-order-header { flex-direction: column; }
+  .restaurant-order-total { font-size: 17px; }
+  .restaurant-order-actions { justify-content: stretch; }
+  .restaurant-order-actions .ui-button { flex: 1; }
+}
+
 .owner-status-list { display: grid; gap: 10px; }
 .owner-status-item {
   align-items: center;

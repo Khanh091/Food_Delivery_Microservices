@@ -40,6 +40,29 @@
 .checkout-address-selected { color: var(--color-primary-strong); font-weight: 800; }
 .checkout-address-menu-footer { border-top: 1px solid var(--color-border); display: flex; gap: var(--space-4); justify-content: space-between; margin-top: 4px; padding: 11px 10px 5px; }
 .checkout-address-menu-footer a { color: var(--color-primary); font-size: .8rem; font-weight: 720; text-decoration: none; }
+.checkout-payment-card, .checkout-promotion-card { display: grid; gap: 10px; }
+.checkout-summary .checkout-payment-card, .checkout-summary .checkout-promotion-card { background: var(--color-surface-subtle); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: none; padding: 12px; }
+.checkout-summary-section-heading { align-items: baseline; display: flex; gap: 8px; justify-content: space-between; }
+.checkout-summary-section-heading span { color: var(--color-text-secondary); font-size: .72rem; font-weight: 720; letter-spacing: .06em; text-transform: uppercase; }
+.checkout-summary-section-heading strong { color: var(--color-ink); font-size: .9rem; }
+.checkout-payment-select { position: relative; }
+.checkout-payment-trigger { align-items: center; background: var(--color-surface); border: 1px solid var(--color-border-strong); border-radius: 10px; color: var(--color-ink); cursor: pointer; display: grid; font: inherit; gap: 9px; grid-template-columns: auto minmax(0, 1fr) auto; padding: 8px 10px; text-align: left; width: 100%; }
+.checkout-payment-trigger:hover, .checkout-payment-trigger[aria-expanded="true"] { border-color: var(--color-primary); }
+.checkout-payment-trigger:focus-visible, .checkout-payment-menu button:focus-visible { outline: 3px solid rgba(7, 91, 216, .2); outline-offset: 2px; }
+.checkout-payment-option-icon { align-items: center; background: var(--color-primary-soft); border-radius: 9px; color: var(--color-primary-strong); display: flex; flex: 0 0 32px; height: 32px; justify-content: center; width: 32px; }
+.checkout-payment-option-icon.cash { background: var(--color-success-soft); color: var(--color-success); }
+.checkout-payment-option-icon.online { background: var(--color-primary-soft); color: var(--color-primary-strong); }
+.checkout-payment-option-icon svg { height: 17px; width: 17px; }
+.checkout-payment-option-copy { display: grid; gap: 3px; min-width: 0; }
+.checkout-payment-option-copy strong { color: var(--color-ink); font-size: .84rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.checkout-payment-option-copy small { color: var(--color-text-secondary); font-size: .78rem; font-weight: 550; }
+.checkout-payment-chevron { color: var(--color-text-secondary); height: 18px; transition: transform 180ms ease; width: 18px; }
+.checkout-payment-chevron.open { transform: rotate(180deg); }
+.checkout-payment-menu { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 10px; box-shadow: 0 16px 34px rgba(23, 42, 73, .16); display: grid; gap: 2px; left: 0; margin-top: 5px; padding: 4px; position: absolute; right: 0; top: 100%; z-index: 25; }
+.checkout-payment-menu button { align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--color-ink); cursor: pointer; display: grid; font: inherit; gap: 9px; grid-template-columns: auto minmax(0, 1fr) auto; padding: 6px 7px; text-align: left; width: 100%; }
+.checkout-payment-menu button:hover, .checkout-payment-menu button.selected { background: var(--color-primary-soft); }
+.checkout-payment-selected { color: var(--color-primary-strong); font-size: 1.05rem; font-weight: 800; min-width: 18px; text-align: center; }
+.checkout-promotion-empty { border: 1px dashed var(--color-border-strong); border-radius: 9px; color: var(--color-text-secondary); font-size: .76rem; line-height: 1.4; margin: 0; padding: 9px 10px; }
 .checkout-location-status, .checkout-location-message, .checkout-location-success, .checkout-location-error { font-size: .8rem; margin: 10px 0 0; }
 .checkout-location-status { color: var(--color-text-secondary); }
 .checkout-location-status.confirmed, .checkout-location-success { color: var(--color-success); }

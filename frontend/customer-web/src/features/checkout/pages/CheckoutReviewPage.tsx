@@ -5,12 +5,14 @@ import { addressLabel, addressSummary } from '../../address/types/address'
 import { useCartStore } from '../../cart/stores/cartStore'
 import { ChevronDownIcon } from '../../../components/icons/ChevronDownIcon'
 import { CrosshairIcon } from '../../../components/icons/CrosshairIcon'
+import { CardIcon } from '../../../components/icons/CardIcon'
+import { WalletIcon } from '../../../components/icons/WalletIcon'
 import { DeliveryLocationPicker } from '../../delivery/components/DeliveryLocationPicker'
 import { getCheckoutTemporaryLocation, saveCheckoutTemporaryLocation } from '../../delivery/api/deliveryApi'
 import type { CheckoutTemporaryLocation, ReverseGeocodeCandidate } from '../../delivery/types/delivery'
 import { useToastStore } from '../../toast/stores/toastStore'
-import { CheckoutApiError, checkoutErrorMessage, createOrder, getCheckoutPreview } from '../api/checkoutApi'
-import type { CheckoutDeliveryTargetRequest, CheckoutPreview, CheckoutPreviewItem } from '../types/checkout'
+import { CheckoutApiError, checkoutErrorMessage, createOrder, getCheckoutPreview, getPaymentStatus, retryPayment } from '../api/checkoutApi'
+import type { CheckoutDeliveryTargetRequest, CheckoutPreview, CheckoutPreviewItem, PaymentMethod, PaymentStatus } from '../types/checkout'
 
 const isUuid = (value: string | undefined) => Boolean(value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value))
 const money = (amount: number, currency: string | null) => {
@@ -47,10 +49,16 @@ export function CheckoutReviewPage() {
   const [locationError, setLocationError] = useState<string | null>(null)
   const [locationSaving, setLocationSaving] = useState(false)
   const [placing, setPlacing] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD')
+  const [paymentMenuOpen, setPaymentMenuOpen] = useState(false)
   const [placedOrderCode, setPlacedOrderCode] = useState<string | null>(null)
+  const [placedOrderId, setPlacedOrderId] = useState<string | null>(null)
+  const [placedPaymentStatus, setPlacedPaymentStatus] = useState<PaymentStatus | null>(null)
+  const [paymentRetrying, setPaymentRetrying] = useState(false)
   const pushToast = useToastStore((state) => state.push)
   const requestGeneration = useRef(0)
   const addressMenuRef = useRef<HTMLDivElement>(null)
+  const paymentMenuRef = useRef<HTMLDivElement>(null)
   const validBranchId = isUuid(branchId)
   const selectedAddress = deliveryTarget?.type === 'SAVED_ADDRESS'
     ? addresses.find((address) => address.id === deliveryTarget.addressId) ?? null
@@ -93,10 +101,12 @@ export function CheckoutReviewPage() {
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
       if (!addressMenuRef.current?.contains(event.target as Node)) setAddressMenuOpen(false)
+      if (!paymentMenuRef.current?.contains(event.target as Node)) setPaymentMenuOpen(false)
     }
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setAddressMenuOpen(false)
+        setPaymentMenuOpen(false)
         setLocationPickerOpen(false)
       }
     }
@@ -141,20 +151,63 @@ export function CheckoutReviewPage() {
     return () => controller.abort()
   }, [addresses, branchId, cart, deliveryTarget, loadAddresses, loadBranchCart, previewBlocked, previewRetry, validBranchId])
 
+  useEffect(() => {
+    if (!placedOrderId || paymentMethod !== 'ONLINE' || placedPaymentStatus === 'PAID' || placedPaymentStatus === 'FAILED' || placedPaymentStatus === 'CANCELLED' || placedPaymentStatus === 'REFUNDED') return undefined
+    let active = true
+    const poll = async () => {
+      try {
+        const payment = await getPaymentStatus(placedOrderId)
+        if (active) setPlacedPaymentStatus(payment.status)
+      } catch {
+        // A temporary polling failure must not change the authoritative status shown to the customer.
+      }
+    }
+    void poll()
+    const timer = window.setInterval(() => { void poll() }, 4000)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+    }
+  }, [placedOrderId, paymentMethod, placedPaymentStatus])
+
   const priceChanges = useMemo(() => new Map(preview?.priceChanges.map((change) => [change.cartItemId, change]) ?? []), [preview])
   const retryPreview = () => { setPreviewBlocked(false); setPreviewRetry((value) => value + 1) }
   const placeOrder = async () => {
     if (!preview || !branchId || !deliveryTarget || placing) return
     setPlacing(true)
-    try { const order = await createOrder({ branchId, cartVersion: preview.cartVersion, target: deliveryTarget }); setPlacedOrderCode(order.orderCode); pushToast('success', `Đã đặt đơn ${order.orderCode}`); void loadBranchCart(branchId) }
+    try {
+      const order = await createOrder({ branchId, cartVersion: preview.cartVersion, target: deliveryTarget, paymentMethod })
+      setPlacedOrderCode(order.orderCode)
+      setPlacedOrderId(order.id)
+      setPlacedPaymentStatus(order.paymentStatus ?? (paymentMethod === 'ONLINE' ? 'PENDING' : 'PENDING'))
+      pushToast('success', paymentMethod === 'ONLINE' ? `Đơn ${order.orderCode} đang chờ thanh toán.` : `Đã đặt đơn ${order.orderCode}`)
+      void loadBranchCart(branchId)
+    }
     catch (error) { pushToast('error', checkoutErrorMessage(error)) }
     finally { setPlacing(false) }
+  }
+  const retryOnlinePayment = async () => {
+    if (!placedOrderId || paymentRetrying) return
+    setPaymentRetrying(true)
+    try {
+      const payment = await retryPayment(placedOrderId)
+      setPlacedPaymentStatus(payment.status)
+      pushToast('success', 'Đã tạo lại phiên thanh toán. Vui lòng hoàn tất thanh toán.')
+    } catch (error) {
+      pushToast('error', error instanceof Error ? error.message : 'Không thể tạo lại phiên thanh toán.')
+    } finally {
+      setPaymentRetrying(false)
+    }
   }
   const selectAddress = (addressId: string) => {
     setDeliveryTarget({ type: 'SAVED_ADDRESS', addressId })
     setPreviewBlocked(false)
     setAddressMenuOpen(false)
     setLocationError(null)
+  }
+  const selectPaymentMethod = (method: PaymentMethod) => {
+    setPaymentMethod(method)
+    setPaymentMenuOpen(false)
   }
   const confirmLocation = async (location: ReverseGeocodeCandidate) => {
     if (!branchId || locationSaving) return
@@ -240,7 +293,38 @@ export function CheckoutReviewPage() {
             {!deliveryTarget && addresses.length > 0 ? <p className="checkout-waiting">Chọn một địa chỉ để kiểm tra đơn hàng.</p> : preview ? <div className="checkout-item-list">{preview.items.map((item) => { const change = priceChanges.get(item.cartItemId); const options = groupedOptions(item); return <article key={item.cartItemId} className="checkout-item">{item.imageUrl ? <img src={item.imageUrl} alt={item.name} /> : <span className="checkout-item-placeholder" aria-hidden="true">{item.name.slice(0, 1).toUpperCase()}</span>}<div><h3>{item.name}</h3>{Object.entries(options).map(([group, values]) => <p key={group}><strong>{group}:</strong> {values.join(', ')}</p>)}{item.note && <p className="checkout-item-note">{item.note}</p>}<span>{item.quantity} × {change ? <><del>{money(change.previousUnitPrice, preview.currency)}</del> {money(change.currentUnitPrice, preview.currency)}</> : money(item.unitPrice, preview.currency)}</span></div><strong>{money(item.lineTotal, preview.currency)}</strong></article> })}</div> : <p className="checkout-waiting">Đang chờ dữ liệu kiểm tra đơn hàng.</p>}
           </section>
         </div>
-        <aside className="checkout-summary"><h2>Thanh toán</h2>{placedOrderCode ? <p className="checkout-delivery-note">Đã đặt đơn <strong>{placedOrderCode}</strong>. Nhà hàng sẽ xác nhận sớm.</p> : preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Phí giao hàng</span><span>{deliveryFeeLabel(preview)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div><button type="button" className="button primary" disabled={!preview.canPlaceOrder || placing} onClick={() => void placeOrder()}>{placing ? 'Đang đặt món…' : 'Đặt món'}</button></> : <p className="checkout-waiting">{deliveryTarget ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}</aside>
+        <aside className="checkout-summary">
+          {!placedOrderCode && preview && <>
+            <section className="checkout-payment-card">
+              <div className="checkout-summary-section-heading"><span>Thanh toán</span><strong>Phương thức</strong></div>
+              <div className="checkout-payment-select" ref={paymentMenuRef}>
+                <button type="button" className="checkout-payment-trigger" aria-expanded={paymentMenuOpen} aria-haspopup="listbox" aria-controls="checkout-payment-list" onClick={() => setPaymentMenuOpen((open) => !open)}>
+                  <span className={`checkout-payment-option-icon ${paymentMethod === 'COD' ? 'cash' : 'online'}`} aria-hidden="true">{paymentMethod === 'COD' ? <WalletIcon /> : <CardIcon />}</span>
+                  <span className="checkout-payment-option-copy"><strong>{paymentMethod === 'COD' ? 'Tiền mặt' : 'Online'}</strong></span>
+                  <ChevronDownIcon className={`checkout-payment-chevron${paymentMenuOpen ? ' open' : ''}`} />
+                </button>
+                {paymentMenuOpen && <div id="checkout-payment-list" className="checkout-payment-menu" role="listbox" aria-label="Chọn phương thức thanh toán">
+                  <button type="button" role="option" aria-selected={paymentMethod === 'COD'} className={paymentMethod === 'COD' ? 'selected' : ''} onClick={() => selectPaymentMethod('COD')}>
+                    <span className="checkout-payment-option-icon cash" aria-hidden="true"><WalletIcon /></span>
+                    <span className="checkout-payment-option-copy"><strong>Tiền mặt</strong></span>
+                    <span className="checkout-payment-selected" aria-hidden="true">{paymentMethod === 'COD' ? '✓' : ''}</span>
+                  </button>
+                  <button type="button" role="option" aria-selected={paymentMethod === 'ONLINE'} className={paymentMethod === 'ONLINE' ? 'selected' : ''} onClick={() => selectPaymentMethod('ONLINE')}>
+                    <span className="checkout-payment-option-icon online" aria-hidden="true"><CardIcon /></span>
+                    <span className="checkout-payment-option-copy"><strong>Online</strong></span>
+                    <span className="checkout-payment-selected" aria-hidden="true">{paymentMethod === 'ONLINE' ? '✓' : ''}</span>
+                  </button>
+                </div>}
+              </div>
+            </section>
+            <section className="checkout-promotion-card">
+              <div className="checkout-summary-section-heading"><span>Ưu đãi</span><strong>Khuyến mãi</strong></div>
+              <p className="checkout-promotion-empty">Mã khuyến mãi sẽ xuất hiện tại đây khi có ưu đãi phù hợp.</p>
+            </section>
+          </>}
+          <h2>Thanh toán</h2>
+          {placedOrderCode ? <div className="checkout-delivery-note"><p>Đơn <strong>{placedOrderCode}</strong> đã được tạo.</p>{paymentMethod === 'ONLINE' ? <><p>{placedPaymentStatus === 'PAID' ? 'Thanh toán thành công. Nhà hàng sẽ xác nhận đơn.' : placedPaymentStatus === 'FAILED' ? 'Thanh toán chưa thành công.' : 'Đang chờ cổng thanh toán xác nhận.'}</p>{placedPaymentStatus === 'FAILED' ? <button type="button" className="button secondary" disabled={paymentRetrying} onClick={() => void retryOnlinePayment()}>{paymentRetrying ? 'Đang tạo lại…' : 'Thử thanh toán lại'}</button> : null}</> : <p>Nhà hàng sẽ xác nhận sớm.</p>}</div> : preview ? <><div><span>Tạm tính</span><strong>{money(preview.itemsSubtotal, preview.currency)}</strong></div><div><span>Phí giao hàng</span><span>{deliveryFeeLabel(preview)}</span></div><div className="checkout-summary-total"><span>Tổng số tiền</span><strong>{preview.totalAmount === null ? 'Chưa xác định' : money(preview.totalAmount, preview.currency)}</strong></div><button type="button" className="button primary" disabled={!preview.canPlaceOrder || placing} onClick={() => void placeOrder()}>{placing ? 'Đang đặt món…' : paymentMethod === 'ONLINE' ? 'Tiếp tục thanh toán' : 'Đặt món'}</button></> : <p className="checkout-waiting">{deliveryTarget ? 'Đang kiểm tra đơn hàng…' : 'Chọn địa chỉ để xem tóm tắt đơn hàng.'}</p>}
+        </aside>
       </div>
     </div>
     {locationPickerOpen && <DeliveryLocationPicker initialLocation={pickerInitialLocation} onConfirm={(location) => void confirmLocation(location)} onClose={() => setLocationPickerOpen(false)} />}
