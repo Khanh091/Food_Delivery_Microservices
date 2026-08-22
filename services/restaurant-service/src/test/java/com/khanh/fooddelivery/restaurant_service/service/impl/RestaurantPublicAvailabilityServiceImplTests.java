@@ -89,6 +89,10 @@ class RestaurantPublicAvailabilityServiceImplTests {
         branch.setRestaurant(restaurant);
         branch.setName("Branch");
         branch.setAcceptingOrders(true);
+        branch.setAddressLine("120 Nguyen Trai");
+        branch.setWard("Ward 1");
+        branch.setDistrict("District 1");
+        branch.setCity("Ho Chi Minh City");
         branch.setLatitude(java.math.BigDecimal.valueOf(10.75));
         branch.setLongitude(java.math.BigDecimal.valueOf(106.66));
         when(branchRepository.findByIdWithRestaurant(branchId)).thenReturn(Optional.of(branch));
@@ -98,6 +102,10 @@ class RestaurantPublicAvailabilityServiceImplTests {
         assertEquals(restaurantId, response.restaurantId());
         assertEquals(branchId, response.branchId());
         assertEquals(java.math.BigDecimal.valueOf(10.75), response.latitude());
+        assertEquals("120 Nguyen Trai", response.addressLine());
+        assertEquals("Ward 1", response.ward());
+        assertEquals("District 1", response.district());
+        assertEquals("Ho Chi Minh City", response.city());
         assertTrue(response.acceptingOrders());
     }
 

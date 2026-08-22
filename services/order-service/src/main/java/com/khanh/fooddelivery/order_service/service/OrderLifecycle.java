@@ -7,6 +7,7 @@ import com.khanh.fooddelivery.order_service.exception.ErrorCode;
 
 public final class OrderLifecycle {
     private OrderLifecycle() {}
+    public static void paymentPaid(Order order) { move(order, OrderStatus.PENDING_PAYMENT, OrderStatus.PENDING_RESTAURANT); }
     public static void accept(Order order) { move(order, OrderStatus.PENDING_RESTAURANT, OrderStatus.CONFIRMED); }
     public static void reject(Order order) { move(order, OrderStatus.PENDING_RESTAURANT, OrderStatus.REJECTED); }
     public static void preparing(Order order) { move(order, OrderStatus.CONFIRMED, OrderStatus.PREPARING); }

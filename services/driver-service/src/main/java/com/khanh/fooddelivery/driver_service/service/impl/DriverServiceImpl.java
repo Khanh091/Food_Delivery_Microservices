@@ -97,7 +97,7 @@ public class DriverServiceImpl implements DriverService {
     @Transactional(readOnly = true)
     public List<UUID> available() {
         return availability
-                .findTop10ByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc()
+                .findByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc()
                 .stream()
                 .filter(row -> profiles.findByUserId(row.getUserId())
                         .map(profile -> profile.getStatus() == DriverStatus.ACTIVE)

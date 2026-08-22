@@ -21,6 +21,22 @@ public interface DeliveryOfferRepository
             DeliveryOfferStatus status
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select o
+            from DeliveryOffer o
+            where o.deliveryId = :deliveryId
+              and o.driverId = :driverId
+              and o.status = :status
+            """)
+    Optional<DeliveryOffer> findByDeliveryIdAndDriverIdAndStatusForUpdate(
+            @Param("deliveryId") UUID deliveryId,
+            @Param("driverId") UUID driverId,
+            @Param("status") DeliveryOfferStatus status
+    );
+
+    boolean existsByDeliveryIdAndStatus(UUID deliveryId, DeliveryOfferStatus status);
+
     @Query("""
             select o
             from DeliveryOffer o

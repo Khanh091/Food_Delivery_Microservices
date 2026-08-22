@@ -87,6 +87,12 @@ class DeliveryOfferServiceImplTests {
                 DRIVER_A,
                 DeliveryOfferStatus.PENDING
         )).thenReturn(Optional.of(offer));
+        lenient().when(offers.findByDeliveryIdAndDriverIdAndStatusForUpdate(
+                DELIVERY_ID,
+                DRIVER_A,
+                DeliveryOfferStatus.PENDING
+        )).thenReturn(Optional.of(offer));
+        lenient().when(offers.findByIdForUpdate(offer.getId())).thenReturn(Optional.of(offer));
     }
 
     @Test
@@ -117,6 +123,10 @@ class DeliveryOfferServiceImplTests {
         assertThat(current).isPresent();
         assertThat(current.orElseThrow().offerId()).isEqualTo(offer.getId());
         assertThat(current.orElseThrow().deliveryId()).isEqualTo(DELIVERY_ID);
+        assertThat(current.orElseThrow().pickupAddress()).isEqualTo("120 Nguyen Trai, District 1");
+        assertThat(current.orElseThrow().customerAddressLabel()).isEqualTo("Công ty");
+        assertThat(current.orElseThrow().customerAddress()).isEqualTo("97 Man Thien, Thu Duc");
+        assertThat(current.orElseThrow().customerLatitude()).isEqualByComparingTo("10.7");
         verify(offers).findCurrentByDriverId(eq(DRIVER_A), eq(DeliveryOfferStatus.PENDING), any(Instant.class));
     }
 
@@ -138,7 +148,7 @@ class DeliveryOfferServiceImplTests {
     @Test
     void wrong_driver_cannot_accept_another_drivers_offer() {
         when(users.getCurrentUserId(jwt)).thenReturn(DRIVER_B);
-        when(offers.findByDeliveryIdAndDriverIdAndStatus(
+        when(offers.findByDeliveryIdAndDriverIdAndStatusForUpdate(
                 DELIVERY_ID,
                 DRIVER_B,
                 DeliveryOfferStatus.PENDING
@@ -157,7 +167,7 @@ class DeliveryOfferServiceImplTests {
 
     @Test
     void second_accept_cannot_reassign_an_already_accepted_offer() {
-        when(offers.findByDeliveryIdAndDriverIdAndStatus(
+        when(offers.findByDeliveryIdAndDriverIdAndStatusForUpdate(
                 DELIVERY_ID,
                 DRIVER_A,
                 DeliveryOfferStatus.PENDING
@@ -184,8 +194,9 @@ class DeliveryOfferServiceImplTests {
         delivery.setDriverId(DRIVER_A);
 
         assertThatThrownBy(() -> offerService.accept(jwt, DELIVERY_ID))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Delivery offer is no longer active");
+                .isInstanceOf(AppException.class)
+                .extracting(error -> ((AppException) error).getErrorCode())
+                .isEqualTo(ErrorCode.DELIVERY_CONFLICT);
 
         assertThat(offer.getStatus()).isEqualTo(DeliveryOfferStatus.PENDING);
         verify(drivers, never()).acceptOffer(anyString(), any(UUID.class), any(UUID.class));
@@ -220,6 +231,13 @@ class DeliveryOfferServiceImplTests {
         value.setId(DELIVERY_ID);
         value.setOrderId(ORDER_ID);
         value.setStatus(status);
+        value.setRestaurantName("Restaurant");
+        value.setBranchName("Branch");
+        value.setPickupAddress("120 Nguyen Trai, District 1");
+        value.setCustomerAddressLabel("Công ty");
+        value.setCustomerAddress("97 Man Thien, Thu Duc");
+        value.setCustomerLatitude(new java.math.BigDecimal("10.7"));
+        value.setCustomerLongitude(new java.math.BigDecimal("106.7"));
         return value;
     }
 

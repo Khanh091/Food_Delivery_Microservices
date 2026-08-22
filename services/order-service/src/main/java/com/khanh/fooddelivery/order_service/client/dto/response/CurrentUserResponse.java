@@ -3,5 +3,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.UUID;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record CurrentUserResponse(UUID id) {
+public record CurrentUserResponse(
+        UUID id,
+        String phoneNumber,
+        String fullName,
+        String username,
+        String email
+) {
 }

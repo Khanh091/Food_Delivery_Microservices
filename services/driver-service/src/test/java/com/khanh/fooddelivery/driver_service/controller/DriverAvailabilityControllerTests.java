@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import com.khanh.fooddelivery.driver_service.dto.request.DriverRegistrationRequest;
 import com.khanh.fooddelivery.driver_service.model.VehicleType;
 import com.khanh.fooddelivery.driver_service.security.CanonicalUserIdResolver;
+import com.khanh.fooddelivery.driver_service.security.InternalRequestAuthenticator;
 import com.khanh.fooddelivery.driver_service.service.DriverService;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,8 @@ class DriverAvailabilityControllerTests {
     private DriverService drivers;
     @Mock
     private CanonicalUserIdResolver currentUser;
+    @Mock
+    private InternalRequestAuthenticator internalRequests;
 
     @Test
     void registration_passes_resolved_canonical_user_id_to_driver_service() {
@@ -38,7 +41,7 @@ class DriverAvailabilityControllerTests {
                 new DriverRegistrationRequest(VehicleType.MOTORBIKE, "29C127836");
         when(currentUser.resolve(jwt)).thenReturn(CANONICAL_USER_ID);
 
-        new DriverAvailabilityController(drivers, currentUser).register(jwt, request);
+        new DriverAvailabilityController(drivers, currentUser, internalRequests).register(jwt, request);
 
         verify(drivers).register(CANONICAL_USER_ID, request);
     }

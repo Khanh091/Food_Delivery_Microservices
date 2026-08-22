@@ -4,6 +4,7 @@ import com.khanh.fooddelivery.tracking_service.dto.request.DriverLocationUpdateR
 import com.khanh.fooddelivery.tracking_service.dto.response.DriverLocationResponse;
 import com.khanh.fooddelivery.tracking_service.dto.response.NearestDriverResponse;
 import com.khanh.fooddelivery.tracking_service.service.DriverLocationService;
+import com.khanh.fooddelivery.tracking_service.security.InternalRequestAuthenticator;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class DriverLocationController {
 
     private final DriverLocationService locations;
+    private final InternalRequestAuthenticator internalRequests;
 
     @PutMapping("/api/v1/tracking/drivers/me/location")
     @PreAuthorize("hasRole('DRIVER')")
@@ -36,8 +38,12 @@ public class DriverLocationController {
             @RequestParam BigDecimal latitude,
             @RequestParam BigDecimal longitude,
             @RequestParam double radiusMeters,
-            @RequestParam(defaultValue = "20") long limit
+            @RequestParam(defaultValue = "20") long limit,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization
     ) {
+        internalRequests.authenticate(authorization);
         return locations.nearest(latitude, longitude, radiusMeters, limit);
     }
 

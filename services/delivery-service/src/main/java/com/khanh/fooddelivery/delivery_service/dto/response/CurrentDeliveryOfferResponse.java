@@ -19,6 +19,37 @@ public record CurrentDeliveryOfferResponse(
         String branchName,
         BigDecimal pickupLatitude,
         BigDecimal pickupLongitude,
-        String customerAddress
+        String pickupAddress,
+        String customerAddressLabel,
+        String customerAddress,
+        BigDecimal customerLatitude,
+        BigDecimal customerLongitude,
+        String paymentMethod,
+        BigDecimal requiredRestaurantAdvance,
+        BigDecimal customerCashToCollect,
+        BigDecimal driverGrossEarning,
+        BigDecimal restaurantCommissionAmount,
+        BigDecimal driverCommissionAmount,
+        BigDecimal driverNetEarning,
+        BigDecimal restaurantNetAmount,
+        BigDecimal platformRevenueAmount,
+        boolean restaurantAdvanceConfirmed,
+        boolean customerCashCollected
 ) {
+    public CurrentDeliveryOfferResponse(
+            UUID offerId,
+            UUID deliveryId,
+            Instant offeredAt,
+            Instant expiresAt,
+            DeliveryStatus deliveryStatus,
+            String restaurantName,
+            String branchName,
+            BigDecimal pickupLatitude,
+            BigDecimal pickupLongitude,
+            String customerAddress
+    ) {
+        this(offerId, deliveryId, offeredAt, expiresAt, deliveryStatus, restaurantName, branchName,
+                pickupLatitude, pickupLongitude, null, null, customerAddress, null, null,
+                null, null, null, null, null, null, null, null, null, false, false);
+    }
 }

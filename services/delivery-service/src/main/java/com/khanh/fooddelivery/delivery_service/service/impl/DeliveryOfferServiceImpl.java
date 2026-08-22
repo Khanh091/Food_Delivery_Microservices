@@ -25,6 +25,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +42,9 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
     private final DriverServiceClient drivers;
     private final DeliveryMatchingService matching;
     private final DeliveryMapper mapper;
+
+    @Value("${app.internal-api.key:}")
+    private String internalApiKey;
 
     @Override
     @Transactional(readOnly = true)
@@ -89,7 +93,7 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
                         ErrorCode.DELIVERY_CONFLICT,
                         "Delivery is no longer available"
                 ));
-        DeliveryOffer offer = offers.findByDeliveryIdAndDriverIdAndStatus(
+        DeliveryOffer offer = offers.findByDeliveryIdAndDriverIdAndStatusForUpdate(
                 deliveryId,
                 driverId,
                 DeliveryOfferStatus.PENDING
@@ -100,22 +104,25 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
 
         if (delivery.getStatus() != DeliveryStatus.MATCHING
                 || !offer.getExpiresAt().isAfter(Instant.now())) {
-            throw new IllegalStateException("Delivery offer is no longer active");
+            throw new AppException(
+                    ErrorCode.DELIVERY_CONFLICT,
+                    "Delivery offer is no longer active"
+            );
         }
 
-        drivers.acceptOffer(bearer.getBearerToken(), driverId, deliveryId);
+        drivers.acceptOffer(downstreamCredential(), driverId, deliveryId);
         offer.setStatus(DeliveryOfferStatus.ACCEPTED);
         offer.setRespondedAt(Instant.now());
         delivery.setDriverId(driverId);
         delivery.setStatus(DeliveryStatus.ASSIGNED);
-        orders.assigned(bearer.getBearerToken(), delivery.getOrderId());
+        orders.assigned(downstreamCredential(), delivery.getOrderId());
         return mapper.toResponse(delivery);
     }
 
     @Override
     public void reject(Jwt jwt, UUID deliveryId) {
         UUID driverId = users.getCurrentUserId(jwt);
-        DeliveryOffer offer = offers.findByDeliveryIdAndDriverIdAndStatus(
+        DeliveryOffer offer = offers.findByDeliveryIdAndDriverIdAndStatusForUpdate(
                 deliveryId,
                 driverId,
                 DeliveryOfferStatus.PENDING
@@ -125,7 +132,7 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
         ));
         offer.setStatus(DeliveryOfferStatus.REJECTED);
         offer.setRespondedAt(Instant.now());
-        drivers.releaseOffer(bearer.getBearerToken(), driverId, deliveryId);
+        drivers.releaseOffer(downstreamCredential(), driverId, deliveryId);
         deliveries.findByIdForUpdate(deliveryId).ifPresent(matching::offerNext);
     }
 
@@ -133,14 +140,31 @@ public class DeliveryOfferServiceImpl implements DeliveryOfferService {
     @Scheduled(fixedDelay = 30000)
     public void expireOffers() {
         for (DeliveryOffer offer : offers.findExpired(Instant.now())) {
-            offer.setStatus(DeliveryOfferStatus.EXPIRED);
-            offer.setRespondedAt(Instant.now());
+            DeliveryOffer current = offers.findByIdForUpdate(offer.getId()).orElse(null);
+            if (current == null
+                    || current.getStatus() != DeliveryOfferStatus.PENDING
+                    || current.getExpiresAt().isAfter(Instant.now())) {
+                continue;
+            }
+            current.setStatus(DeliveryOfferStatus.EXPIRED);
+            current.setRespondedAt(Instant.now());
             drivers.releaseOffer(
-                    bearer.getBearerToken(),
-                    offer.getDriverId(),
-                    offer.getDeliveryId()
+                    downstreamCredential(),
+                    current.getDriverId(),
+                    current.getDeliveryId()
             );
-            deliveries.findByIdForUpdate(offer.getDeliveryId()).ifPresent(matching::offerNext);
+            deliveries.findByIdForUpdate(current.getDeliveryId()).ifPresent(matching::offerNext);
+        }
+    }
+
+    private String downstreamCredential() {
+        try {
+            return bearer.getBearerToken();
+        } catch (AppException exception) {
+            if (internalApiKey == null || internalApiKey.isBlank()) {
+                throw exception;
+            }
+            return "Internal " + internalApiKey;
         }
     }
 }

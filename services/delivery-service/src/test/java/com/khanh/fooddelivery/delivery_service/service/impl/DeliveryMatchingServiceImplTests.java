@@ -93,6 +93,7 @@ class DeliveryMatchingServiceImplTests {
         ReflectionTestUtils.setField(matching, "offerTtl", java.time.Duration.ofSeconds(45));
         ReflectionTestUtils.setField(matching, "searchRadii", List.of(2000d, 4000d, 6000d, 8000d));
         ReflectionTestUtils.setField(matching, "candidatesPerRadius", 20L);
+        ReflectionTestUtils.setField(matching, "internalApiKey", "internal-test-key");
 
         when(bearer.getBearerToken()).thenReturn("Bearer test-token");
         lenient().when(deliveries.save(any(Delivery.class)))
@@ -103,7 +104,7 @@ class DeliveryMatchingServiceImplTests {
             offerRows.add(offer);
             return offer;
         });
-        lenient().when(restaurants.getOrderingContext(anyString(), any(UUID.class)))
+        lenient().when(restaurants.getOrderingContext(any(), any(), any(UUID.class)))
                 .thenReturn(ApiResponse.success(
                         "Ordering context",
                         new RestaurantBranchOrderingContextResponse(
@@ -114,6 +115,10 @@ class DeliveryMatchingServiceImplTests {
                                 "Branch",
                                 true,
                                 true,
+                                "120 Nguyen Trai",
+                                "Ward 1",
+                                "District 1",
+                                "Ho Chi Minh City",
                                 new BigDecimal("10.0000"),
                                 new BigDecimal("20.0000")
                         )
@@ -130,6 +135,11 @@ class DeliveryMatchingServiceImplTests {
         DeliveryResponse response = matching.startMatching(request());
 
         assertThat(response.status()).isEqualTo(DeliveryStatus.MATCHING);
+        assertThat(response.customerAddress()).isEqualTo("10 Delivery Street, Ward 2, District 2, Ho Chi Minh City");
+        assertThat(response.customerAddressLabel()).isEqualTo("Công ty");
+        assertThat(response.pickupAddress()).isEqualTo("120 Nguyen Trai, Ward 1, District 1, Ho Chi Minh City");
+        assertThat(response.customerLatitude()).isEqualByComparingTo("10.1000");
+        assertThat(response.customerLongitude()).isEqualByComparingTo("20.1000");
         assertThat(offerRows).singleElement()
                 .extracting(DeliveryOffer::getDriverId)
                 .isEqualTo(DRIVER_A);
@@ -212,6 +222,35 @@ class DeliveryMatchingServiceImplTests {
     }
 
     @Test
+    void keeps_legacy_delivery_valid_when_only_address_label_is_available() {
+        when(deliveries.findByOrderId(ORDER_ID)).thenReturn(Optional.empty());
+        when(drivers.available("Bearer test-token")).thenReturn(List.of(DRIVER_A));
+        when(tracking.nearest(anyString(), any(), any(), anyDouble(), anyLong()))
+                .thenReturn(nearest(DRIVER_A));
+
+        DeliveryMatchingRequest legacyRequest = new DeliveryMatchingRequest(
+                ORDER_ID,
+                RESTAURANT_ID,
+                BRANCH_ID,
+                CUSTOMER_ID,
+                "Restaurant",
+                "Branch",
+                "Nhà",
+                null,
+                new BigDecimal("10.1000"),
+                new BigDecimal("20.1000")
+        );
+
+        matching.startMatching(legacyRequest);
+
+        assertThat(offerRows).singleElement();
+        org.mockito.ArgumentCaptor<Delivery> deliveryCaptor =
+                org.mockito.ArgumentCaptor.forClass(Delivery.class);
+        verify(deliveries).save(deliveryCaptor.capture());
+        assertThat(deliveryCaptor.getValue().getCustomerAddress()).isEqualTo("Nhà");
+    }
+
+    @Test
     void tracking_failure_does_not_select_fallback_or_mark_delivery_failed() {
         Delivery delivery = matchingDelivery();
         when(drivers.available("Bearer test-token")).thenReturn(List.of(DRIVER_A));
@@ -283,7 +322,8 @@ class DeliveryMatchingServiceImplTests {
                 CUSTOMER_ID,
                 "Restaurant",
                 "Branch",
-                "10 Delivery Street",
+                "Công ty",
+                "10 Delivery Street, Ward 2, District 2, Ho Chi Minh City",
                 new BigDecimal("10.1000"),
                 new BigDecimal("20.1000")
         );

@@ -5,6 +5,8 @@ import com.khanh.fooddelivery.order_service.entity.Order;
 import com.khanh.fooddelivery.order_service.entity.OrderItem;
 import com.khanh.fooddelivery.order_service.entity.OrderItemOption;
 import com.khanh.fooddelivery.order_service.enums.OrderStatus;
+import com.khanh.fooddelivery.order_service.enums.PaymentMethod;
+import com.khanh.fooddelivery.order_service.enums.PaymentStatus;
 import com.khanh.fooddelivery.order_service.service.OrderSnapshotFactory;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,11 @@ import org.springframework.stereotype.Component;
 public class OrderSnapshotFactoryImpl implements OrderSnapshotFactory {
     @Override
     public Order create(UUID customerId, CheckoutPreviewResponse preview) {
+        return create(customerId, preview, PaymentMethod.COD);
+    }
+
+    @Override
+    public Order create(UUID customerId, CheckoutPreviewResponse preview, PaymentMethod paymentMethod) {
         Order order = new Order();
         order.setId(UUID.randomUUID());
         order.setCustomerId(customerId);
@@ -21,7 +28,10 @@ public class OrderSnapshotFactoryImpl implements OrderSnapshotFactory {
         order.setOrderCode(orderCode(order.getId()));
         order.setRestaurantName(preview.restaurant().restaurantName());
         order.setBranchName(preview.branch().branchName());
-        order.setStatus(OrderStatus.PENDING_RESTAURANT);
+        order.setStatus(paymentMethod == PaymentMethod.ONLINE
+                ? OrderStatus.PENDING_PAYMENT : OrderStatus.PENDING_RESTAURANT);
+        order.setPaymentMethod(paymentMethod);
+        order.setPaymentStatus(PaymentStatus.PENDING);
         order.setCurrency(preview.currency());
         order.setItemsSubtotal(preview.itemsSubtotal());
         order.setDeliveryFee(preview.deliveryFee());
@@ -32,6 +42,7 @@ public class OrderSnapshotFactoryImpl implements OrderSnapshotFactory {
         order.setRecipientName(address.recipientName());
         order.setRecipientPhone(address.recipientPhone());
         order.setAddressLine(address.addressLine());
+        order.setFormattedAddress(address.formattedAddress());
         order.setWard(address.ward());
         order.setDistrict(address.district());
         order.setCity(address.city());

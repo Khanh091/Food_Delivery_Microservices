@@ -14,7 +14,8 @@ public interface RestaurantServiceClient {
 
     @GetMapping("/internal/v1/restaurants/branches/{branchId}/ordering-context")
     ApiResponse<RestaurantBranchOrderingContextResponse> getOrderingContext(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @RequestHeader(value = "X-Internal-Api-Key", required = false) String internalApiKey,
             @PathVariable UUID branchId
     );
 }

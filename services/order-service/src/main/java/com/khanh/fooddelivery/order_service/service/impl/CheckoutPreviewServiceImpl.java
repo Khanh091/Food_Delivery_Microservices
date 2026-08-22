@@ -144,15 +144,40 @@ public class CheckoutPreviewServiceImpl implements CheckoutPreviewService {
                 throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
             }
             CheckoutTemporaryLocationResponse location = response.data();
+            ApiResponse<CurrentUserResponse> currentUserResponse = userServiceClient.getCurrentUser(bearer);
+            if (currentUserResponse == null || !currentUserResponse.success()
+                    || currentUserResponse.data() == null
+                    || currentUserResponse.data().id() == null) {
+                throw new AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
+            }
+            CurrentUserResponse currentUser = currentUserResponse.data();
+            String recipientName = firstNonBlank(currentUser.fullName(), currentUser.username(), currentUser.email());
+            String recipientPhone = firstNonBlank(currentUser.phoneNumber(), currentUser.email());
+            if (recipientName == null || recipientPhone == null) {
+                throw new AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
+            }
+            String formattedAddress = firstNonBlank(
+                    location.formattedAddress(),
+                    com.khanh.fooddelivery.order_service.common.address.AddressFormatter.format(
+                            location.addressLine(), location.ward(), location.district(), location.city()));
             return new CheckoutPreviewResponse.CheckoutAddressSnapshot(
                     "TEMPORARY_LOCATION", null, location.id(), "TEMPORARY", null, "Vị trí hiện tại",
-                    null, null, location.addressLine(), location.ward(), location.district(), location.city(),
-                    location.latitude(), location.longitude(), null, null, null, null, null);
+                    recipientName, recipientPhone, location.addressLine(), location.ward(), location.district(), location.city(),
+                    location.latitude(), location.longitude(), null, null, null, null, null, formattedAddress);
         } catch (FeignException.NotFound exception) {
             throw new AppException(ErrorCode.ADDRESS_NOT_FOUND);
         } catch (FeignException exception) {
             throw new AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
         }
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     private RestaurantBranchCartAvailabilityResponse requireRestaurant(

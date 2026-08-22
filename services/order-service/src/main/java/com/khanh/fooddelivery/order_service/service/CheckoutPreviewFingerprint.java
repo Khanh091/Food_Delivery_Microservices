@@ -35,6 +35,7 @@ public class CheckoutPreviewFingerprint {
                 address.temporaryLocationId() == null ? "" : address.temporaryLocationId().toString(),
                 String.valueOf(address.version()),
                 text(address.recipientName()), text(address.recipientPhone()), text(address.addressLine()),
+                text(address.formattedAddress()),
                 text(address.ward()), text(address.district()), text(address.city()),
                 money(address.latitude()), money(address.longitude()), text(address.buildingName()),
                 text(address.floor()), text(address.entrance()), text(address.deliveryNote()),

@@ -16,7 +16,7 @@ public interface DriverAvailabilityRepository
     Optional<DriverAvailability> findByUserId(UUID userId);
 
     List<DriverAvailability>
-    findTop10ByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc();
+    findByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc();
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

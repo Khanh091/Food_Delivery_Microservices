@@ -77,6 +77,10 @@ public class RestaurantPublicAvailabilityServiceImpl implements RestaurantPublic
                 branch.getName(),
                 branch.getStatus() == RestaurantBranchStatus.ACTIVE,
                 branch.isAcceptingOrders(),
+                branch.getAddressLine(),
+                branch.getWard(),
+                branch.getDistrict(),
+                branch.getCity(),
                 branch.getLatitude(),
                 branch.getLongitude());
     }

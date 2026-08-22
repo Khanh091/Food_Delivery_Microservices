@@ -14,5 +14,7 @@ public interface DeliveryLifecycleService {
     void reject(Jwt jwt, UUID deliveryId);
     DeliveryResponse pickup(Jwt jwt, UUID deliveryId);
     DeliveryResponse delivered(Jwt jwt, UUID deliveryId);
+    DeliveryResponse confirmRestaurantPayment(Jwt jwt, UUID deliveryId);
+    DeliveryResponse collectCash(Jwt jwt, UUID deliveryId);
     void expireOffers();
 }

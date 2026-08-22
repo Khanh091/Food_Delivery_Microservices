@@ -47,6 +47,49 @@ public class Delivery {
 
     private BigDecimal pickupLongitude;
 
+    @Column(length = 1500)
+    private String pickupAddress;
+
+    @Column(length = 500)
+    private String customerAddressLabel;
+
+    private BigDecimal customerLatitude;
+
+    private BigDecimal customerLongitude;
+
+    @Column(length = 16)
+    private String paymentMethod;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal requiredRestaurantAdvance;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal customerCashToCollect;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal driverGrossEarning;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal restaurantCommissionAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal driverCommissionAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal driverNetEarning;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal restaurantNetAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal platformRevenueAmount;
+
+    @Column(nullable = false)
+    private boolean restaurantAdvanceConfirmed;
+
+    @Column(nullable = false)
+    private boolean customerCashCollected;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DeliveryStatus status;

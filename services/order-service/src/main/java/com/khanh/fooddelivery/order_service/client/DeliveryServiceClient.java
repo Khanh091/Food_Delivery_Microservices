@@ -25,7 +25,7 @@ public interface DeliveryServiceClient {
 
     @PostMapping("/internal/v1/deliveries/matching")
     ApiResponse<Object> startMatching(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorization,
+            @RequestHeader("X-Internal-Api-Key") String internalApiKey,
             @RequestBody DeliveryMatchingRequest request
     );
 

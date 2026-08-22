@@ -6,6 +6,7 @@ import com.khanh.fooddelivery.driver_service.dto.request.DriverStatusUpdateReque
 import com.khanh.fooddelivery.driver_service.dto.response.DriverAvailabilityResponse;
 import com.khanh.fooddelivery.driver_service.dto.response.DriverProfileResponse;
 import com.khanh.fooddelivery.driver_service.security.CanonicalUserIdResolver;
+import com.khanh.fooddelivery.driver_service.security.InternalRequestAuthenticator;
 import com.khanh.fooddelivery.driver_service.service.DriverService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -28,6 +29,7 @@ public class DriverAvailabilityController {
 
     private final DriverService drivers;
     private final CanonicalUserIdResolver canonicalUserIdResolver;
+    private final InternalRequestAuthenticator internalRequests;
 
     @PostMapping("/api/v1/drivers/me/profile")
     public DriverProfileResponse register(
@@ -75,44 +77,71 @@ public class DriverAvailabilityController {
     }
 
     @GetMapping("/internal/v1/drivers/available")
-    public List<UUID> available() {
+    public List<UUID> available(
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization
+    ) {
+        internalRequests.authenticate(authorization);
         return drivers.available();
     }
 
     @GetMapping("/internal/v1/drivers/{driverId}/active")
-    public boolean active(@PathVariable UUID driverId) {
+    public boolean active(
+            @PathVariable UUID driverId,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization
+    ) {
+        internalRequests.authenticate(authorization);
         return drivers.active(driverId);
     }
 
     @PostMapping("/internal/v1/drivers/{driverId}/offers/{deliveryId}/reserve")
     public void reserveOffer(
             @PathVariable UUID driverId,
-            @PathVariable UUID deliveryId
+            @PathVariable UUID deliveryId,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization
     ) {
+        internalRequests.authenticate(authorization);
         drivers.reserveOffer(driverId, deliveryId);
     }
 
     @PostMapping("/internal/v1/drivers/{driverId}/offers/{deliveryId}/accept")
     public void acceptOffer(
             @PathVariable UUID driverId,
-            @PathVariable UUID deliveryId
+            @PathVariable UUID deliveryId,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization
     ) {
+        internalRequests.authenticate(authorization);
         drivers.acceptOffer(driverId, deliveryId);
     }
 
     @PostMapping("/internal/v1/drivers/{driverId}/offers/{deliveryId}/release")
     public void releaseOffer(
             @PathVariable UUID driverId,
-            @PathVariable UUID deliveryId
+            @PathVariable UUID deliveryId,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization
     ) {
+        internalRequests.authenticate(authorization);
         drivers.releaseOffer(driverId, deliveryId);
     }
 
     @PostMapping("/internal/v1/drivers/{driverId}/release/{deliveryId}")
     public void releaseDelivery(
             @PathVariable UUID driverId,
-            @PathVariable UUID deliveryId
+            @PathVariable UUID deliveryId,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization
     ) {
+        internalRequests.authenticate(authorization);
         drivers.releaseDelivery(driverId, deliveryId);
     }
 

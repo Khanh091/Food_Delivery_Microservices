@@ -10,8 +10,41 @@ public record DeliveryMatchingRequest(
         UUID customerId,
         String restaurantName,
         String branchName,
+        String customerAddressLabel,
         String customerAddress,
         BigDecimal customerLatitude,
-        BigDecimal customerLongitude
+        BigDecimal customerLongitude,
+        String paymentMethod,
+        BigDecimal requiredRestaurantAdvance,
+        BigDecimal customerCashToCollect,
+        BigDecimal driverGrossEarning,
+        BigDecimal restaurantCommissionAmount,
+        BigDecimal driverCommissionAmount,
+        BigDecimal driverNetEarning,
+        BigDecimal restaurantNetAmount,
+        BigDecimal platformRevenueAmount
 ) {
+    public DeliveryMatchingRequest(
+            UUID orderId,
+            UUID restaurantId,
+            UUID branchId,
+            UUID customerId,
+            String restaurantName,
+            String branchName,
+            String customerAddress,
+            BigDecimal customerLatitude,
+            BigDecimal customerLongitude
+    ) {
+        this(orderId, restaurantId, branchId, customerId, restaurantName, branchName, null,
+                customerAddress, customerLatitude, customerLongitude, null, null, null, null, null, null, null, null, null);
+    }
+
+    public DeliveryMatchingRequest(
+            UUID orderId, UUID restaurantId, UUID branchId, UUID customerId,
+            String restaurantName, String branchName, String customerAddressLabel,
+            String customerAddress, BigDecimal customerLatitude, BigDecimal customerLongitude
+    ) {
+        this(orderId, restaurantId, branchId, customerId, restaurantName, branchName, customerAddressLabel,
+                customerAddress, customerLatitude, customerLongitude, null, null, null, null, null, null, null, null, null);
+    }
 }

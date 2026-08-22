@@ -101,10 +101,15 @@ class DriverLocationServiceImplTests {
                 eq(new Point(20.5678, 10.1234)),
                 eq(CANONICAL_USER_ID.toString())
         );
+        ArgumentCaptor<Map> metadataValues = ArgumentCaptor.forClass(Map.class);
         verify(metadata).putAll(
                 eq("tracking:driver:location:" + CANONICAL_USER_ID),
-                any(Map.class)
+                metadataValues.capture()
         );
+        assertThat(metadataValues.getValue())
+                .containsEntry("accuracy", "8.0")
+                .containsEntry("recordedAt", recordedAt.toString())
+                .containsKey("updatedAt");
         verify(redis).expire(eq("tracking:driver:location:" + CANONICAL_USER_ID), eq(Duration.ofSeconds(135)));
     }
 
@@ -221,6 +226,27 @@ class DriverLocationServiceImplTests {
         assertThat(radius.getValue().getValue()).isEqualTo(2d);
         assertThat(searchArgs.getValue().getSortDirection()).isEqualTo(Sort.Direction.ASC);
         assertThat(searchArgs.getValue().getLimit()).isEqualTo(20L);
+    }
+
+    @Test
+    void nearest_excludes_geo_member_when_location_metadata_is_missing() {
+        when(geo.search(
+                eq("tracking:drivers:geo"),
+                any(),
+                any(Distance.class),
+                any(GeoSearchCommandArgs.class)
+        )).thenReturn(new GeoResults<>(List.of(result(DRIVER_A, 30))));
+        when(metadata.entries("tracking:driver:location:" + DRIVER_A))
+                .thenReturn(Map.of());
+
+        List<NearestDriverResponse> result = locations.nearest(
+                new BigDecimal("21.0285"),
+                new BigDecimal("105.8542"),
+                8000,
+                20
+        );
+
+        assertThat(result).isEmpty();
     }
 
     @Test

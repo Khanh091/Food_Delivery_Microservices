@@ -65,14 +65,14 @@ class DriverServiceImplTests {
         DriverAvailability inactive = row(OTHER_DRIVER_ID, true, null, null);
         DriverAvailability active = row(DRIVER_ID, true, null, null);
         when(availability
-                .findTop10ByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc())
+                .findByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc())
                 .thenReturn(List.of(inactive, active));
         when(profiles.findByUserId(OTHER_DRIVER_ID)).thenReturn(Optional.of(profile(OTHER_DRIVER_ID, DriverStatus.PENDING)));
         when(profiles.findByUserId(DRIVER_ID)).thenReturn(Optional.of(profile(DRIVER_ID, DriverStatus.ACTIVE)));
 
         assertThat(service.available()).containsExactly(DRIVER_ID);
         verify(availability)
-                .findTop10ByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc();
+                .findByAvailableTrueAndActiveDeliveryIdIsNullAndPendingOfferDeliveryIdIsNullOrderByUpdatedAtAsc();
     }
 
     @Test

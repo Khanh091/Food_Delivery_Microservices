@@ -44,6 +44,8 @@ public class SecurityConfig {
                                 "/actuator/info"
                         )
                         .permitAll()
+                        .requestMatchers("/internal/v1/**")
+                        .permitAll()
                         .anyRequest()
                         .authenticated()
                 )

@@ -1,5 +1,6 @@
 package com.khanh.fooddelivery.order_service.dto.response;
 
+import com.khanh.fooddelivery.order_service.common.address.AddressFormatter;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -29,7 +30,18 @@ public record CheckoutPreviewResponse(
             String targetType, UUID addressId, UUID temporaryLocationId, String labelType, String customLabel, String displayLabel,
             String recipientName, String recipientPhone, String addressLine, String ward, String district,
             String city, BigDecimal latitude, BigDecimal longitude, String buildingName, String floor,
-            String entrance, String deliveryNote, Long version) {}
+            String entrance, String deliveryNote, Long version, String formattedAddress) {
+        public CheckoutAddressSnapshot(
+                String targetType, UUID addressId, UUID temporaryLocationId, String labelType, String customLabel,
+                String displayLabel, String recipientName, String recipientPhone, String addressLine, String ward,
+                String district, String city, BigDecimal latitude, BigDecimal longitude, String buildingName,
+                String floor, String entrance, String deliveryNote, Long version) {
+            this(targetType, addressId, temporaryLocationId, labelType, customLabel, displayLabel, recipientName,
+                    recipientPhone, addressLine, ward, district, city, latitude, longitude, buildingName, floor,
+                    entrance, deliveryNote, version, AddressFormatter.format(
+                            addressLine, ward, district, city, buildingName, floor, entrance));
+        }
+    }
 
     public record CheckoutRestaurantSnapshot(UUID restaurantId, String restaurantName) {}
 

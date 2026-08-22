@@ -78,7 +78,7 @@ class DeliveryQuoteServiceImplTests {
         );
         when(currentUser.getCurrentUserId(jwt)).thenReturn(ownerId);
         when(bearer.getBearerToken()).thenReturn("Bearer token");
-        when(restaurants.getOrderingContext(anyString(), any())).thenReturn(success(new RestaurantBranchOrderingContextResponse(
+        when(restaurants.getOrderingContext(anyString(), any(), any())).thenReturn(success(new RestaurantBranchOrderingContextResponse(
                 UUID.randomUUID(), "Restaurant", true, branchId, "Branch", true, true,
                 BigDecimal.valueOf(10.7), BigDecimal.valueOf(106.7))));
         lenient().when(users.getOwnedAddress(anyString(), any())).thenReturn(success(

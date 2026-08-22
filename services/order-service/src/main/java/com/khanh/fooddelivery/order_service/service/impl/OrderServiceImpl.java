@@ -2,7 +2,10 @@ package com.khanh.fooddelivery.order_service.service.impl;
 
 import com.khanh.fooddelivery.order_service.client.CartServiceClient;
 import com.khanh.fooddelivery.order_service.client.DeliveryServiceClient;
+import com.khanh.fooddelivery.order_service.client.PaymentServiceClient;
 import com.khanh.fooddelivery.order_service.client.dto.request.DeliveryMatchingRequest;
+import com.khanh.fooddelivery.order_service.client.dto.request.InternalCreatePaymentRequest;
+import com.khanh.fooddelivery.order_service.common.address.AddressFormatter;
 import com.khanh.fooddelivery.order_service.dto.request.CheckoutPreviewRequest;
 import com.khanh.fooddelivery.order_service.dto.request.CreateOrderRequest;
 import com.khanh.fooddelivery.order_service.dto.request.RejectOrderRequest;
@@ -24,7 +27,10 @@ import feign.FeignException;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class OrderServiceImpl implements OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderServiceImpl.class);
 
     private final OrderRepository orders;
     private final CheckoutPreviewService checkoutPreviewService;
@@ -42,6 +50,10 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderSnapshotFactory orderSnapshotFactory;
     private final RestaurantAuthorizationService restaurantAuthorization;
+    private final PaymentServiceClient paymentClient;
+
+    @Value("${app.internal-api.key:}")
+    private String internalApiKey;
 
     @Override
     public OrderResponse create(
@@ -66,10 +78,34 @@ public class OrderServiceImpl implements OrderService {
         Order order =
                 orderSnapshotFactory.create(
                         customerId,
-                        preview
+                        preview,
+                        request.effectivePaymentMethod()
                 );
 
         orders.saveAndFlush(order);
+
+        try {
+            var paymentResponse = paymentClient.create(internalApiKey, new InternalCreatePaymentRequest(
+                    order.getId(), order.getCustomerId(), order.getRestaurantId(), order.getBranchId(),
+                    order.getPaymentMethod(), order.getItemsSubtotal(), order.getDeliveryFee(),
+                    order.getDiscountAmount(), order.getTotalAmount(), order.getCurrency(),
+                    "order:" + order.getId() + ":payment"));
+            if (paymentResponse == null || !paymentResponse.success() || paymentResponse.data() == null) {
+                throw new AppException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
+            }
+            order.setPaymentId(paymentResponse.data().id());
+            order.setPaymentStatus(paymentResponse.data().status());
+            order.setFeePolicyId(paymentResponse.data().feePolicyId());
+            order.setFeePolicyVersion(paymentResponse.data().feePolicyVersion());
+            order.setRestaurantCommissionAmount(paymentResponse.data().restaurantCommissionAmount());
+            order.setRestaurantNetAmount(paymentResponse.data().restaurantNetAmount());
+            order.setDriverCommissionAmount(paymentResponse.data().driverCommissionAmount());
+            order.setDriverNetAmount(paymentResponse.data().driverNetAmount());
+            order.setPlatformRevenueAmount(paymentResponse.data().platformRevenueAmount());
+            orders.save(order);
+        } catch (FeignException exception) {
+            throw new AppException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
+        }
 
         try {
             cartClient.clear(
@@ -113,6 +149,7 @@ public class OrderServiceImpl implements OrderService {
                         restaurantId
                 )
                 .stream()
+                .filter(order -> order.getStatus() != com.khanh.fooddelivery.order_service.enums.OrderStatus.PENDING_PAYMENT)
                 .map(orderMapper::toResponse)
                 .toList();
     }
@@ -129,9 +166,13 @@ public class OrderServiceImpl implements OrderService {
                 );
         OrderLifecycle.accept(order);
         orders.saveAndFlush(order);
+        if (internalApiKey == null || internalApiKey.isBlank()) {
+            log.error("Delivery matching credential is not configured orderId={}", order.getId());
+            throw new AppException(ErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
+        }
         try {
-            deliveryClient.startMatching(
-                    bearerTokenProvider.getBearerToken(),
+            var response = deliveryClient.startMatching(
+                    internalApiKey,
                     new DeliveryMatchingRequest(
                             order.getId(),
                             order.getRestaurantId(),
@@ -140,16 +181,57 @@ public class OrderServiceImpl implements OrderService {
                             order.getRestaurantName(),
                             order.getBranchName(),
                             order.getAddressDisplayLabel(),
+                            deliveryAddress(order),
                             order.getLatitude(),
                             order.getLongitude()
                     )
             );
+            if (response == null || !response.success() || response.data() == null) {
+                log.warn("Delivery matching returned an unsuccessful response orderId={} code={}",
+                        order.getId(), response == null ? "null" : response.code());
+                throw new AppException(ErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
+            }
         } catch (FeignException exception) {
-            throw new AppException(
-                    ErrorCode.DELIVERY_SERVICE_UNAVAILABLE
-            );
+            logDeliveryFailure(exception, order.getId());
+            throw mapDeliveryFailure(exception);
         }
         return orderMapper.toResponse(order);
+    }
+
+    private void logDeliveryFailure(FeignException exception, UUID orderId) {
+        String endpoint = exception.request() == null
+                ? "delivery-service"
+                : exception.request().url();
+        String body = exception.contentUTF8();
+        if (body == null || body.isBlank()) {
+            body = "<empty>";
+        } else {
+            body = body
+                    .replaceAll("(?i)(Bearer\\s+)[^\\s\\\"\\\\]+", "$1[REDACTED]")
+                    .replaceAll("(?i)(Internal\\s+)[^\\s\\\"\\\\]+", "$1[REDACTED]")
+                    .replaceAll("(?i)(\\\"(?:authorization|x-internal-api-key|api_key|access_token|refresh_token|token|secret|password|apiKey|key)\\\"\\s*:\\s*\\\")[^\\\"]*(\\\")", "$1[REDACTED]$2")
+                    .replaceAll("[\\r\\n]+", " ");
+            if (body.length() > 512) {
+                body = body.substring(0, 512);
+            }
+        }
+        log.warn("Delivery matching failed orderId={} status={} endpoint={} body={}",
+                orderId, exception.status(), endpoint, body);
+    }
+
+    private AppException mapDeliveryFailure(FeignException exception) {
+        return switch (exception.status()) {
+            case 400, 422 -> new AppException(
+                    ErrorCode.INVALID_REQUEST,
+                    "Delivery matching request was rejected");
+            case 401, 403 -> new AppException(
+                    ErrorCode.ACCESS_DENIED,
+                    "Delivery service rejected the internal request");
+            case 409 -> new AppException(
+                    ErrorCode.ORDER_TRANSITION_INVALID,
+                    "Delivery matching conflict");
+            default -> new AppException(ErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
+        };
     }
 
     @Override
@@ -168,7 +250,39 @@ public class OrderServiceImpl implements OrderService {
         order.setRejectionReason(
                 normalizeReason(request.reason())
         );
+        if (order.getPaymentStatus() == com.khanh.fooddelivery.order_service.enums.PaymentStatus.PAID) {
+            try {
+                var payment = paymentClient.refund(internalApiKey, order.getId());
+                if (payment != null && payment.data() != null) {
+                    order.setPaymentStatus(payment.data().status());
+                }
+            } catch (FeignException exception) {
+                throw new AppException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
+            }
+        } else if (order.getPaymentMethod() == com.khanh.fooddelivery.order_service.enums.PaymentMethod.COD) {
+            try {
+                var payment = paymentClient.cancel(internalApiKey, order.getId());
+                if (payment != null && payment.data() != null) {
+                    order.setPaymentStatus(payment.data().status());
+                }
+            } catch (FeignException exception) {
+                throw new AppException(ErrorCode.PAYMENT_SERVICE_UNAVAILABLE);
+            }
+        }
         return orderMapper.toResponse(order);
+    }
+
+    @Override
+    public void paymentPaid(UUID orderId) {
+        Order order = require(orderId);
+        order.setPaymentStatus(com.khanh.fooddelivery.order_service.enums.PaymentStatus.PAID);
+        OrderLifecycle.paymentPaid(order);
+    }
+
+    @Override
+    public void paymentFailed(UUID orderId) {
+        Order order = require(orderId);
+        order.setPaymentStatus(com.khanh.fooddelivery.order_service.enums.PaymentStatus.FAILED);
     }
 
     @Override
@@ -239,5 +353,12 @@ public class OrderServiceImpl implements OrderService {
         return reason == null || reason.isBlank()
                 ? null
                 : reason.trim();
+    }
+
+    private String deliveryAddress(Order order) {
+        if (order.getFormattedAddress() != null && !order.getFormattedAddress().isBlank()) {
+            return order.getFormattedAddress();
+        }
+        return AddressFormatter.format(order.getAddressLine(), order.getWard(), order.getDistrict(), order.getCity());
     }
 }

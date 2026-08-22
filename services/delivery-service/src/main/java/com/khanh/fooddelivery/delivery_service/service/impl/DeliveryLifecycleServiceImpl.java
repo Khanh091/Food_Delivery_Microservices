@@ -2,6 +2,8 @@ package com.khanh.fooddelivery.delivery_service.service.impl;
 
 import com.khanh.fooddelivery.delivery_service.client.DriverServiceClient;
 import com.khanh.fooddelivery.delivery_service.client.OrderServiceClient;
+import com.khanh.fooddelivery.delivery_service.client.PaymentServiceClient;
+import com.khanh.fooddelivery.delivery_service.client.dto.request.CashActionRequest;
 import com.khanh.fooddelivery.delivery_service.dto.request.DeliveryMatchingRequest;
 import com.khanh.fooddelivery.delivery_service.dto.response.DeliveryOfferResponse;
 import com.khanh.fooddelivery.delivery_service.dto.response.CurrentDeliveryOfferResponse;
@@ -23,6 +25,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -38,6 +41,10 @@ public class DeliveryLifecycleServiceImpl implements DeliveryLifecycleService {
     private final DeliveryMatchingService matching;
     private final DeliveryOfferService offerService;
     private final DeliveryMapper mapper;
+    private final PaymentServiceClient payments;
+
+    @Value("${app.internal-api.key:}")
+    private String internalApiKey;
 
     @Override
     public DeliveryResponse startMatching(DeliveryMatchingRequest request) {
@@ -73,7 +80,13 @@ public class DeliveryLifecycleServiceImpl implements DeliveryLifecycleService {
     public DeliveryResponse pickup(Jwt jwt, UUID deliveryId) {
         Delivery delivery = mine(jwt, deliveryId);
         if (delivery.getStatus() != DeliveryStatus.ASSIGNED) {
-            throw new IllegalStateException("Delivery cannot be picked up");
+            throw new AppException(
+                    ErrorCode.DELIVERY_CONFLICT,
+                    "Delivery cannot be picked up"
+            );
+        }
+        if ("COD".equals(delivery.getPaymentMethod()) && !delivery.isRestaurantAdvanceConfirmed()) {
+            throw new AppException(ErrorCode.DELIVERY_CONFLICT, "Restaurant advance must be confirmed first");
         }
         delivery.setStatus(DeliveryStatus.PICKED_UP);
         orders.pickedUp(bearer.getBearerToken(), delivery.getOrderId());
@@ -84,11 +97,48 @@ public class DeliveryLifecycleServiceImpl implements DeliveryLifecycleService {
     public DeliveryResponse delivered(Jwt jwt, UUID deliveryId) {
         Delivery delivery = mine(jwt, deliveryId);
         if (delivery.getStatus() != DeliveryStatus.PICKED_UP) {
-            throw new IllegalStateException("Delivery cannot be completed");
+            throw new AppException(
+                    ErrorCode.DELIVERY_CONFLICT,
+                    "Delivery cannot be completed"
+            );
+        }
+        if ("COD".equals(delivery.getPaymentMethod()) && !delivery.isCustomerCashCollected()) {
+            throw new AppException(ErrorCode.DELIVERY_CONFLICT, "Customer cash must be collected first");
+        }
+        if (delivery.getPaymentMethod() != null) {
+            payments.deliveryCompleted(paymentCredential(), delivery.getOrderId(),
+                    new CashActionRequest(delivery.getOrderId(), deliveryId, delivery.getDriverId(),
+                            "delivery:" + deliveryId + ":completed"));
         }
         delivery.setStatus(DeliveryStatus.DELIVERED);
         orders.delivered(bearer.getBearerToken(), delivery.getOrderId());
         drivers.release(bearer.getBearerToken(), delivery.getDriverId(), deliveryId);
+        return mapper.toResponse(delivery);
+    }
+
+    @Override
+    public DeliveryResponse confirmRestaurantPayment(Jwt jwt, UUID deliveryId) {
+        Delivery delivery = mine(jwt, deliveryId);
+        if (delivery.getStatus() != DeliveryStatus.ASSIGNED || !"COD".equals(delivery.getPaymentMethod())) {
+            throw new AppException(ErrorCode.DELIVERY_CONFLICT, "Restaurant cash advance is not available");
+        }
+        payments.restaurantAdvance(paymentCredential(), deliveryId,
+                new CashActionRequest(delivery.getOrderId(), deliveryId, delivery.getDriverId(),
+                        "delivery:" + deliveryId + ":advance"));
+        delivery.setRestaurantAdvanceConfirmed(true);
+        return mapper.toResponse(delivery);
+    }
+
+    @Override
+    public DeliveryResponse collectCash(Jwt jwt, UUID deliveryId) {
+        Delivery delivery = mine(jwt, deliveryId);
+        if (delivery.getStatus() != DeliveryStatus.PICKED_UP || !"COD".equals(delivery.getPaymentMethod())) {
+            throw new AppException(ErrorCode.DELIVERY_CONFLICT, "Customer cash collection is not available");
+        }
+        payments.cashCollected(paymentCredential(), deliveryId,
+                new CashActionRequest(delivery.getOrderId(), deliveryId, delivery.getDriverId(),
+                        "delivery:" + deliveryId + ":cash-collected"));
+        delivery.setCustomerCashCollected(true);
         return mapper.toResponse(delivery);
     }
 
@@ -104,8 +154,28 @@ public class DeliveryLifecycleServiceImpl implements DeliveryLifecycleService {
                         "Delivery is no longer available"
                 ));
         if (!users.getCurrentUserId(jwt).equals(delivery.getDriverId())) {
-            throw new IllegalStateException("Not assigned driver");
+            throw new AppException(
+                    ErrorCode.ACCESS_DENIED,
+                    "Only the assigned driver can update this delivery"
+            );
         }
         return delivery;
+    }
+
+    private String downstreamCredential() {
+        try {
+            return bearer.getBearerToken();
+        } catch (AppException exception) {
+            if (internalApiKey == null || internalApiKey.isBlank()) throw exception;
+            return "Internal " + internalApiKey;
+        }
+    }
+
+    private String paymentCredential() {
+        if (internalApiKey == null || internalApiKey.isBlank()) {
+            throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE,
+                    "Payment service internal credential is not configured");
+        }
+        return internalApiKey;
     }
 }

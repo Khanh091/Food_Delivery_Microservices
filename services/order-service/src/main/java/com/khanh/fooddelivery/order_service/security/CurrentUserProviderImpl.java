@@ -17,20 +17,19 @@ public class CurrentUserProviderImpl implements CurrentUserProvider {
 
     @Override
     public UUID getCurrentUserId(Jwt jwt) {
-        String claim = jwt.getClaimAsString("user_id");
-        if (claim != null && !claim.isBlank()) return parse(claim);
+        if (jwt == null || jwt.getTokenValue() == null || jwt.getTokenValue().isBlank()) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
         try {
-            CurrentUserResponse current = userServiceClient
-                    .getCurrentUser("Bearer " + jwt.getTokenValue()).data();
+            var response = userServiceClient
+                    .getCurrentUser("Bearer " + jwt.getTokenValue());
+            CurrentUserResponse current = response == null || !response.success()
+                    ? null
+                    : response.data();
             if (current == null || current.id() == null) throw new AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
             return current.id();
         } catch (FeignException exception) {
             throw new AppException(ErrorCode.USER_SERVICE_UNAVAILABLE);
         }
-    }
-
-    private UUID parse(String value) {
-        try { return UUID.fromString(value); }
-        catch (IllegalArgumentException exception) { throw new AppException(ErrorCode.UNAUTHENTICATED, "Invalid user_id claim"); }
     }
 }

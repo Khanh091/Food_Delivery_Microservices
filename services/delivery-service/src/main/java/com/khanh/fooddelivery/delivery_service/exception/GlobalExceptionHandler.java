@@ -1,6 +1,7 @@
 package com.khanh.fooddelivery.delivery_service.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
     @ExceptionHandler(AppException.class)
     ResponseEntity<ErrorResponse> app(AppException exception, HttpServletRequest request) {
@@ -35,6 +37,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ErrorResponse> unexpected(Exception exception, HttpServletRequest request) {
+        log.error(
+                "Unhandled delivery request failure path={} exception={} message={}",
+                request.getRequestURI(),
+                exception.getClass().getName(),
+                exception.getMessage(),
+                exception
+        );
         return out(ErrorCode.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_SERVER_ERROR.getDefaultMessage(), request);
     }
 

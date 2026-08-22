@@ -79,7 +79,7 @@ public class DeliveryQuoteServiceImpl implements DeliveryQuoteService {
     private RestaurantBranchOrderingContextResponse requireBranch(String bearer, UUID branchId) {
         try {
             ApiResponse<RestaurantBranchOrderingContextResponse> response =
-                    restaurantServiceClient.getOrderingContext(bearer, branchId);
+                    restaurantServiceClient.getOrderingContext(bearer, null, branchId);
             if (response == null || !response.success() || response.data() == null) {
                 throw new AppException(ErrorCode.DELIVERY_PROVIDER_UNAVAILABLE);
             }

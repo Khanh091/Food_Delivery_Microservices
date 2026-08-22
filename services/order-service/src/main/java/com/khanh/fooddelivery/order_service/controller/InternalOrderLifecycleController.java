@@ -2,6 +2,7 @@ package com.khanh.fooddelivery.order_service.controller;
 
 import com.khanh.fooddelivery.order_service.common.response.ApiResponse;
 import com.khanh.fooddelivery.order_service.service.OrderService;
+import com.khanh.fooddelivery.order_service.security.InternalRequestAuthenticator;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,9 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class InternalOrderLifecycleController {
 
     private final OrderService orders;
+    private final InternalRequestAuthenticator internalRequests;
 
     @PostMapping("/{id}/driver-assigned")
-    public ApiResponse<Void> assigned(@PathVariable UUID id) {
+    public ApiResponse<Void> assigned(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization) {
+        internalRequests.authenticate(authorization);
         orders.deliveryAssigned(id);
 
         return ApiResponse.success(
@@ -27,7 +34,12 @@ public class InternalOrderLifecycleController {
     }
 
     @PostMapping("/{id}/picked-up")
-    public ApiResponse<Void> pickup(@PathVariable UUID id) {
+    public ApiResponse<Void> pickup(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization) {
+        internalRequests.authenticate(authorization);
         orders.pickedUp(id);
 
         return ApiResponse.success(
@@ -37,7 +49,12 @@ public class InternalOrderLifecycleController {
     }
 
     @PostMapping("/{id}/delivered")
-    public ApiResponse<Void> delivered(@PathVariable UUID id) {
+    public ApiResponse<Void> delivered(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization) {
+        internalRequests.authenticate(authorization);
         orders.delivered(id);
 
         return ApiResponse.success(
@@ -47,12 +64,37 @@ public class InternalOrderLifecycleController {
     }
 
     @PostMapping("/{id}/matching-failed")
-    public ApiResponse<Void> failed(@PathVariable UUID id) {
+    public ApiResponse<Void> failed(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = org.springframework.http.HttpHeaders.AUTHORIZATION,
+                    required = false) String authorization) {
+        internalRequests.authenticate(authorization);
         orders.matchingFailed(id);
 
         return ApiResponse.success(
                 "Order cancelled",
                 null
         );
+    }
+
+    @PostMapping("/{id}/payment-paid")
+    public ApiResponse<Void> paymentPaid(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = "X-Internal-Api-Key", required = false) String apiKey) {
+        internalRequests.authenticate("Internal " + (apiKey == null ? "" : apiKey));
+        orders.paymentPaid(id);
+        return ApiResponse.success("Payment confirmed", null);
+    }
+
+    @PostMapping("/{id}/payment-failed")
+    public ApiResponse<Void> paymentFailed(
+            @PathVariable UUID id,
+            @org.springframework.web.bind.annotation.RequestHeader(
+                    value = "X-Internal-Api-Key", required = false) String apiKey) {
+        internalRequests.authenticate("Internal " + (apiKey == null ? "" : apiKey));
+        orders.paymentFailed(id);
+        return ApiResponse.success("Payment failed", null);
     }
 }

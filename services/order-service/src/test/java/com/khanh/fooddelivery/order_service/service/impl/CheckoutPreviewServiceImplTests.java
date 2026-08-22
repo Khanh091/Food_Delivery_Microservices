@@ -79,6 +79,8 @@ class CheckoutPreviewServiceImplTests {
         assertThat(preview.totalAmount()).isEqualByComparingTo("15110");
         assertThat(preview.discountAmount()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(preview.canPlaceOrder()).isTrue();
+        assertThat(preview.address().formattedAddress())
+                .isEqualTo("1 Nguyen Trai, District 1, Ho Chi Minh City");
         assertThat(preview.priceChanges()).singleElement()
                 .satisfies(change -> assertThat(change.currentUnitPrice()).isEqualByComparingTo("55"));
         verify(catalog, times(1)).validateCheckoutItems(anyString(), any());
@@ -131,6 +133,8 @@ class CheckoutPreviewServiceImplTests {
     @Test
     void temporaryTargetUsesItsServerOwnedReferenceWithoutLoadingAnySavedAddress() {
         UUID temporaryLocationId = UUID.randomUUID();
+        when(users.getCurrentUser("Bearer token")).thenReturn(success(
+                new CurrentUserResponse(ownerId, "+84912345678", "Nguyen Van Khanh", "84912345678", "customer@example.com")));
         when(delivery.getCurrentCheckoutLocation("Bearer token", branchId)).thenReturn(success(
                 new CheckoutTemporaryLocationResponse(
                         temporaryLocationId, branchId, "Temporary location", "Temporary location", null, null, null,
@@ -142,6 +146,9 @@ class CheckoutPreviewServiceImplTests {
         assertThat(preview.address().targetType()).isEqualTo("TEMPORARY_LOCATION");
         assertThat(preview.address().addressId()).isNull();
         assertThat(preview.address().temporaryLocationId()).isEqualTo(temporaryLocationId);
+        assertThat(preview.address().recipientName()).isEqualTo("Nguyen Van Khanh");
+        assertThat(preview.address().formattedAddress()).isEqualTo("Temporary location");
+        assertThat(preview.address().recipientPhone()).isEqualTo("+84912345678");
         assertThat(preview.deliveryQuoteStatus())
                 .isEqualTo(com.khanh.fooddelivery.order_service.dto.response.DeliveryQuoteStatus.AVAILABLE);
         verify(users, never()).getOwnedAddress(anyString(), any());

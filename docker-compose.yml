@@ -449,6 +449,7 @@ services:
       KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     ports:
       - "${ORDER_SERVICE_PORT:-8106}:8106"
     depends_on:
@@ -464,6 +465,8 @@ services:
         condition: service_healthy
       catalog-service:
         condition: service_healthy
+      payment-service:
+        condition: service_healthy
       delivery-service:
         condition: service_healthy
       postgres:
@@ -472,6 +475,44 @@ services:
       - food-delivery-network
     healthcheck:
       test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8106/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: food-delivery-payment-service
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 8109
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payment_db
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      EUREKA_SERVER_URL: http://discovery-service:8761/eureka/
+      EUREKA_INSTANCE_HOSTNAME: payment-service
+      KEYCLOAK_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/food-delivery
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/food-delivery/protocol/openid-connect/certs
+      KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
+      PAYMENT_MOCK_WEBHOOK_SECRET: ${PAYMENT_MOCK_WEBHOOK_SECRET:-dev-mock-secret}
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-8109}:8109"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8109/actuator/health"]
       interval: 15s
       timeout: 5s
       retries: 12
@@ -524,6 +565,8 @@ services:
       tracking-service:
         condition: service_healthy
       notification-service:
+        condition: service_healthy
+      payment-service:
         condition: service_healthy
     networks:
       - food-delivery-network
@@ -584,6 +627,7 @@ services:
       KEYCLOAK_AUDIENCE: ${KEYCLOAK_AUDIENCE:-food-delivery-api}
       DRIVER_LOCATION_STALE_AFTER: ${DRIVER_LOCATION_STALE_AFTER:-45s}
       DRIVER_LOCATION_MAX_ACCURACY_METERS: ${DRIVER_LOCATION_MAX_ACCURACY_METERS:-100}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-}
     ports:
       - "${TRACKING_SERVICE_PORT:-8111}:8111"
     depends_on:

@@ -1,6 +1,8 @@
 package com.khanh.fooddelivery.order_service.entity;
 
 import com.khanh.fooddelivery.order_service.enums.OrderStatus;
+import com.khanh.fooddelivery.order_service.enums.PaymentMethod;
+import com.khanh.fooddelivery.order_service.enums.PaymentStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -57,6 +59,35 @@ public class Order {
     @Column(nullable = false)
     private OrderStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private PaymentMethod paymentMethod;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 24)
+    private PaymentStatus paymentStatus;
+
+    private UUID paymentId;
+
+    private UUID feePolicyId;
+
+    private Integer feePolicyVersion;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal restaurantCommissionAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal restaurantNetAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal driverCommissionAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal driverNetAmount;
+
+    @Column(precision = 19, scale = 2)
+    private BigDecimal platformRevenueAmount;
+
     @Column(nullable = false)
     private String currency;
 
@@ -83,6 +114,9 @@ public class Order {
 
     @Column(nullable = false, length = 1000)
     private String addressLine;
+
+    @Column(length = 1500)
+    private String formattedAddress;
 
     private String ward;
 

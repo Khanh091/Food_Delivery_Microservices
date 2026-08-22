@@ -9,10 +9,13 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface OrderMapper {
+    @Mapping(source = "formattedAddress", target = "formattedAddress")
     OrderResponse toResponse(Order order);
 
     @Mapping(source = "itemName", target = "name")
     OrderResponse.Item toItem(OrderItem item);
 
+    @Mapping(source = "optionGroupName", target = "groupName")
+    @Mapping(source = "optionValueName", target = "valueName")
     OrderResponse.Option toOption(OrderItemOption option);
 }

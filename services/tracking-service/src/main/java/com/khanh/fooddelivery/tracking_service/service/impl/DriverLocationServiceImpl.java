@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResult;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DriverLocationServiceImpl implements DriverLocationService {
 
     private static final String GEO_KEY = "tracking:drivers:geo";
@@ -71,6 +73,7 @@ public class DriverLocationServiceImpl implements DriverLocationService {
                 key(driverId),
                 Map.of(
                         "accuracy", request.accuracyMeters().toString(),
+                        "recordedAt", recordedAt.toString(),
                         "updatedAt", updatedAt.toString()
                 )
         );
@@ -131,33 +134,130 @@ public class DriverLocationServiceImpl implements DriverLocationService {
             return List.of();
         }
 
-        Instant cutoff = Instant.now().minus(staleAfter);
-        return results.getContent().stream()
-                .map(result -> candidate(result, cutoff))
+        Instant now = Instant.now();
+        Instant cutoff = now.minus(staleAfter);
+        log.debug(
+                "Nearest driver search lat={} lon={} radiusMeters={} limit={} geoCandidates={}",
+                latitude,
+                longitude,
+                radiusMeters,
+                limit,
+                results.getContent().size()
+        );
+        List<NearestDriverResponse> eligible = results.getContent().stream()
+                .map(result -> candidate(result, cutoff, now))
                 .flatMap(Optional::stream)
                 .toList();
+        if (eligible.isEmpty()) {
+            log.info(
+                    "Nearest driver search returned no eligible candidates geoCandidates={} staleAfterSeconds={} maxAccuracyMeters={}",
+                    results.getContent().size(),
+                    staleAfter.toSeconds(),
+                    maxAccuracy
+            );
+        }
+        return eligible;
     }
 
     private Optional<NearestDriverResponse> candidate(
             GeoResult<RedisGeoCommands.GeoLocation<String>> result,
-            Instant cutoff
+            Instant cutoff,
+            Instant now
     ) {
+        String member = result.getContent().getName();
+        UUID driverId;
         try {
-            UUID driverId = UUID.fromString(result.getContent().getName());
-            Map<Object, Object> metadata = redis.opsForHash().entries(key(driverId));
-            Instant updatedAt = Instant.parse((String) metadata.get("updatedAt"));
-            double accuracy = Double.parseDouble((String) metadata.get("accuracy"));
-            if (updatedAt.isBefore(cutoff) || accuracy > maxAccuracy) {
-                return Optional.empty();
-            }
-            return Optional.of(new NearestDriverResponse(
-                    driverId,
-                    distanceMeters(result.getDistance()),
-                    updatedAt
-            ));
-        } catch (Exception ignored) {
+            driverId = UUID.fromString(member);
+        } catch (IllegalArgumentException exception) {
+            log.warn("Nearest driver candidate excluded reason=invalid_geo_member member={}", member);
             return Optional.empty();
         }
+
+        Map<Object, Object> metadata;
+        try {
+            metadata = redis.opsForHash().entries(key(driverId));
+        } catch (RuntimeException exception) {
+            log.warn(
+                    "Nearest driver candidate excluded driverId={} reason=metadata_lookup_failed exception={}",
+                    driverId,
+                    exception.getClass().getSimpleName()
+            );
+            return Optional.empty();
+        }
+
+        if (metadata == null) {
+            log.debug(
+                    "Nearest driver candidate excluded driverId={} reason=missing_location_metadata metadataKey={}",
+                    driverId,
+                    key(driverId)
+            );
+            return Optional.empty();
+        }
+        Object updatedAtValue = metadata.get("updatedAt");
+        Object accuracyValue = metadata.get("accuracy");
+        if (updatedAtValue == null || accuracyValue == null) {
+            log.debug(
+                    "Nearest driver candidate excluded driverId={} reason=missing_location_metadata metadataKey={}",
+                    driverId,
+                    key(driverId)
+            );
+            return Optional.empty();
+        }
+
+        Instant updatedAt;
+        try {
+            updatedAt = Instant.parse(updatedAtValue.toString());
+        } catch (RuntimeException exception) {
+            log.debug(
+                    "Nearest driver candidate excluded driverId={} reason=invalid_updated_at value={}",
+                    driverId,
+                    updatedAtValue
+            );
+            return Optional.empty();
+        }
+
+        double accuracy;
+        try {
+            accuracy = Double.parseDouble(accuracyValue.toString());
+        } catch (RuntimeException exception) {
+            log.debug(
+                    "Nearest driver candidate excluded driverId={} reason=invalid_accuracy value={}",
+                    driverId,
+                    accuracyValue
+            );
+            return Optional.empty();
+        }
+
+        if (updatedAt.isBefore(cutoff)) {
+            log.debug(
+                    "Nearest driver candidate excluded driverId={} reason=stale ageSeconds={}",
+                    driverId,
+                    Math.max(0, Duration.between(updatedAt, now).toSeconds())
+            );
+            return Optional.empty();
+        }
+        if (accuracy > maxAccuracy) {
+            log.debug(
+                    "Nearest driver candidate excluded driverId={} reason=accuracy_too_low accuracyMeters={} maxAccuracyMeters={}",
+                    driverId,
+                    accuracy,
+                    maxAccuracy
+            );
+            return Optional.empty();
+        }
+
+        log.debug(
+                "Nearest driver candidate eligible driverId={} distanceMeters={} ageSeconds={} accuracyMeters={}",
+                driverId,
+                distanceMeters(result.getDistance()),
+                Math.max(0, Duration.between(updatedAt, now).toSeconds()),
+                accuracy
+        );
+        return Optional.of(new NearestDriverResponse(
+                driverId,
+                distanceMeters(result.getDistance()),
+                updatedAt
+        ));
     }
 
     private long distanceMeters(Distance distance) {
