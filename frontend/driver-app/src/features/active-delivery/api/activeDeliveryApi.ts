@@ -18,3 +18,17 @@ export function deliverDelivery(deliveryId: string) {
     {},
   );
 }
+
+export function confirmRestaurantPayment(deliveryId: string) {
+  return apiPost<ActiveDelivery>(
+    `/api/v1/deliveries/${deliveryId}/restaurant-payment-confirmed`,
+    {},
+  );
+}
+
+export function collectCustomerCash(deliveryId: string) {
+  return apiPost<ActiveDelivery>(
+    `/api/v1/deliveries/${deliveryId}/cash-collected`,
+    {},
+  );
+}

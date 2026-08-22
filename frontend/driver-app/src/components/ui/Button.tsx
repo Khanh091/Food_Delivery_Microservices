@@ -46,16 +46,14 @@ export function Button({
       ) : (
         icon
       )}
-      {!loading && (
-        <Text
-          style={[
-            styles.label,
-            styles[`${variant}Label` as keyof typeof styles],
-          ]}
-        >
-          {label}
-        </Text>
-      )}
+      <Text
+        style={[
+          styles.label,
+          styles[`${variant}Label` as keyof typeof styles],
+        ]}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }

@@ -13,6 +13,8 @@ import { useAuth } from "../../../auth/hooks/useAuth";
 import { useAvailability } from "../../availability/store/AvailabilityProvider";
 import { useDriverProfile } from "../../driver-profile/hooks";
 import {
+  collectCustomerCash,
+  confirmRestaurantPayment,
   deliverDelivery,
   getCurrentActiveDelivery,
   pickupDelivery,
@@ -33,8 +35,63 @@ import {
   subscribeToNotificationSignals,
 } from "../../notifications/services/notificationService";
 
-type DeliveryAction = "accepting" | "rejecting" | "picking-up" | "delivering" | null;
+type DeliveryAction = "accepting" | "rejecting" | "confirming-advance" | "collecting-cash" | "picking-up" | "delivering" | null;
 type PushState = "idle" | "registering" | "ready" | "denied" | "error";
+
+const sameOffer = (
+  current: CurrentDeliveryOffer | null,
+  next: CurrentDeliveryOffer | null,
+): boolean => {
+  if (current === next) return true;
+  if (!current || !next) return current === next;
+  return (
+    current.offerId === next.offerId &&
+    current.deliveryId === next.deliveryId &&
+    current.expiresAt === next.expiresAt &&
+    current.deliveryStatus === next.deliveryStatus &&
+    current.restaurantName === next.restaurantName &&
+    current.branchName === next.branchName &&
+    current.pickupAddress === next.pickupAddress &&
+    current.pickupLatitude === next.pickupLatitude &&
+    current.pickupLongitude === next.pickupLongitude &&
+    current.customerAddressLabel === next.customerAddressLabel &&
+    current.customerAddress === next.customerAddress &&
+    current.customerLatitude === next.customerLatitude &&
+    current.customerLongitude === next.customerLongitude &&
+    current.paymentMethod === next.paymentMethod &&
+    current.requiredRestaurantAdvance === next.requiredRestaurantAdvance &&
+    current.customerCashToCollect === next.customerCashToCollect &&
+    current.driverNetEarning === next.driverNetEarning
+  );
+};
+
+const sameActiveDelivery = (
+  current: ActiveDelivery | null,
+  next: ActiveDelivery | null,
+): boolean => {
+  if (current === next) return true;
+  if (!current || !next) return current === next;
+  return (
+    current.id === next.id &&
+    current.version === next.version &&
+    current.status === next.status &&
+    current.driverId === next.driverId &&
+    current.pickupAddress === next.pickupAddress &&
+    current.pickupLatitude === next.pickupLatitude &&
+    current.pickupLongitude === next.pickupLongitude &&
+    current.customerAddressLabel === next.customerAddressLabel &&
+    current.customerAddress === next.customerAddress &&
+    current.customerLatitude === next.customerLatitude &&
+    current.customerLongitude === next.customerLongitude &&
+    current.updatedAt === next.updatedAt &&
+    current.paymentMethod === next.paymentMethod &&
+    current.requiredRestaurantAdvance === next.requiredRestaurantAdvance &&
+    current.customerCashToCollect === next.customerCashToCollect &&
+    current.driverNetEarning === next.driverNetEarning &&
+    current.restaurantAdvanceConfirmed === next.restaurantAdvanceConfirmed &&
+    current.customerCashCollected === next.customerCashCollected
+  );
+};
 
 interface DeliveryStateContextValue {
   currentOffer: CurrentDeliveryOffer | null;
@@ -49,6 +106,8 @@ interface DeliveryStateContextValue {
   rejectOffer: () => Promise<void>;
   pickup: () => Promise<void>;
   delivered: () => Promise<void>;
+  confirmAdvance: () => Promise<void>;
+  collectCash: () => Promise<void>;
   unregisterPushDevice: () => Promise<void>;
 }
 
@@ -83,37 +142,71 @@ export function DeliveryStateProvider({
   const deviceRef = useRef<PushDeviceResponse | null>(null);
   const mountedRef = useRef(true);
   const refreshInFlightRef = useRef<Promise<void> | null>(null);
+  const stateGenerationRef = useRef(0);
+  const refreshEpochRef = useRef(0);
+  const [appInForeground, setAppInForeground] = useState(
+    AppState.currentState === "active",
+  );
 
   const refreshState = useCallback(async () => {
+    const generation = stateGenerationRef.current;
+    const epoch = refreshEpochRef.current;
+    const isCurrent = () =>
+      mountedRef.current &&
+      generation === stateGenerationRef.current &&
+      epoch === refreshEpochRef.current;
+
     if (authStatus !== "authenticated" || profile?.status !== "ACTIVE") {
-      setCurrentOffer(null);
-      setActiveDelivery(null);
+      if (mountedRef.current) {
+        setCurrentOffer(null);
+        setActiveDelivery(null);
+        setError(null);
+      }
       return;
     }
     if (refreshInFlightRef.current) return refreshInFlightRef.current;
     setLoading(true);
-    const request = (async () => {
+    let request: Promise<void> | null = null;
+    request = (async () => {
       try {
-        const [active, offer] = await Promise.all([
-          getCurrentActiveDelivery(),
-          getCurrentDeliveryOffer(),
-        ]);
-        if (!mountedRef.current) return;
-        setActiveDelivery(active);
-        setCurrentOffer(offer);
+        const active = await getCurrentActiveDelivery();
+        if (!isCurrent()) return;
+
+        if (active) {
+          setActiveDelivery((current) =>
+            sameActiveDelivery(current, active) ? current : active,
+          );
+          setCurrentOffer((current) => (current === null ? current : null));
+        } else {
+          setActiveDelivery((current) =>
+            current === null ? current : null,
+          );
+          const offer = await getCurrentDeliveryOffer();
+          if (!isCurrent()) return;
+          setCurrentOffer((current) =>
+            sameOffer(current, offer) ? current : offer,
+          );
+        }
         setError(null);
       } catch (cause) {
-        if (mountedRef.current) {
+        if (isCurrent()) {
           setError(friendlyError(cause, "Không thể cập nhật chuyến giao."));
         }
       } finally {
-        refreshInFlightRef.current = null;
-        if (mountedRef.current) setLoading(false);
+        if (request && refreshInFlightRef.current === request) {
+          refreshInFlightRef.current = null;
+        }
+        if (isCurrent()) setLoading(false);
       }
     })();
     refreshInFlightRef.current = request;
     return request;
   }, [authStatus, profile?.status]);
+
+  const invalidateRefresh = useCallback(() => {
+    refreshEpochRef.current += 1;
+    refreshInFlightRef.current = null;
+  }, []);
 
   const ensurePushRegistration = useCallback(async () => {
     if (pushState === "registering" || pushState === "ready") return;
@@ -150,10 +243,17 @@ export function DeliveryStateProvider({
 
   useEffect(() => {
     mountedRef.current = true;
+    const generation = ++stateGenerationRef.current;
     if (profile?.status !== "ACTIVE" || authStatus !== "authenticated") {
       setCurrentOffer(null);
       setActiveDelivery(null);
+      setError(null);
       return () => {
+        if (stateGenerationRef.current === generation) {
+          stateGenerationRef.current += 1;
+          refreshEpochRef.current += 1;
+          refreshInFlightRef.current = null;
+        }
         mountedRef.current = false;
       };
     }
@@ -162,20 +262,32 @@ export function DeliveryStateProvider({
       void refreshState();
     });
     return () => {
+      if (stateGenerationRef.current === generation) {
+        stateGenerationRef.current += 1;
+        refreshEpochRef.current += 1;
+        refreshInFlightRef.current = null;
+      }
       mountedRef.current = false;
       unsubscribe();
     };
   }, [authStatus, profile?.status, refreshState]);
 
   useEffect(() => {
-    if (!availability?.available) return;
+    if (!availability?.available || !appInForeground) return;
     if (pushState === "idle") requestPushPermission();
     const interval = setInterval(() => void refreshState(), 15000);
     return () => clearInterval(interval);
-  }, [availability?.available, pushState, refreshState, requestPushPermission]);
+  }, [
+    appInForeground,
+    availability?.available,
+    pushState,
+    refreshState,
+    requestPushPermission,
+  ]);
 
   useEffect(() => {
     const listener = (state: AppStateStatus) => {
+      setAppInForeground(state === "active");
       if (state === "active") void refreshState();
     };
     const subscription = AppState.addEventListener("change", listener);
@@ -186,14 +298,16 @@ export function DeliveryStateProvider({
     const offer = currentOffer;
     if (!offer || action) return;
     if (new Date(offer.expiresAt).getTime() <= Date.now()) {
-      setCurrentOffer(null);
+      invalidateRefresh();
       await refreshState();
       return;
     }
+    invalidateRefresh();
     setAction("accepting");
     setError(null);
     try {
       await acceptDeliveryOffer(offer.deliveryId);
+      setCurrentOffer(null);
       await Promise.all([refreshState(), refreshAvailability()]);
     } catch (cause) {
       setError(friendlyError(cause, "Không thể nhận chuyến này."));
@@ -201,11 +315,12 @@ export function DeliveryStateProvider({
     } finally {
       if (mountedRef.current) setAction(null);
     }
-  }, [action, currentOffer, refreshAvailability, refreshState]);
+  }, [action, currentOffer, invalidateRefresh, refreshAvailability, refreshState]);
 
   const rejectOffer = useCallback(async () => {
     const offer = currentOffer;
     if (!offer || action) return;
+    invalidateRefresh();
     setAction("rejecting");
     setError(null);
     try {
@@ -218,11 +333,12 @@ export function DeliveryStateProvider({
     } finally {
       if (mountedRef.current) setAction(null);
     }
-  }, [action, currentOffer, refreshState]);
+  }, [action, currentOffer, invalidateRefresh, refreshState]);
 
   const pickup = useCallback(async () => {
     const delivery = activeDelivery;
     if (!delivery || delivery.status !== "ASSIGNED" || action) return;
+    invalidateRefresh();
     setAction("picking-up");
     setError(null);
     try {
@@ -234,11 +350,12 @@ export function DeliveryStateProvider({
     } finally {
       if (mountedRef.current) setAction(null);
     }
-  }, [action, activeDelivery, refreshAvailability, refreshState]);
+  }, [action, activeDelivery, invalidateRefresh, refreshAvailability, refreshState]);
 
   const delivered = useCallback(async () => {
     const delivery = activeDelivery;
     if (!delivery || delivery.status !== "PICKED_UP" || action) return;
+    invalidateRefresh();
     setAction("delivering");
     setError(null);
     try {
@@ -250,7 +367,41 @@ export function DeliveryStateProvider({
     } finally {
       if (mountedRef.current) setAction(null);
     }
-  }, [action, activeDelivery, refreshAvailability, refreshState]);
+  }, [action, activeDelivery, invalidateRefresh, refreshAvailability, refreshState]);
+
+  const confirmAdvance = useCallback(async () => {
+    const delivery = activeDelivery;
+    if (!delivery || delivery.status !== "ASSIGNED" || delivery.paymentMethod !== "COD" || action) return;
+    invalidateRefresh();
+    setAction("confirming-advance");
+    setError(null);
+    try {
+      await confirmRestaurantPayment(delivery.id);
+      await refreshState();
+    } catch (cause) {
+      setError(friendlyError(cause, "Không thể xác nhận khoản ứng tại quán."));
+      await refreshState();
+    } finally {
+      if (mountedRef.current) setAction(null);
+    }
+  }, [action, activeDelivery, invalidateRefresh, refreshState]);
+
+  const collectCash = useCallback(async () => {
+    const delivery = activeDelivery;
+    if (!delivery || delivery.status !== "PICKED_UP" || delivery.paymentMethod !== "COD" || action) return;
+    invalidateRefresh();
+    setAction("collecting-cash");
+    setError(null);
+    try {
+      await collectCustomerCash(delivery.id);
+      await refreshState();
+    } catch (cause) {
+      setError(friendlyError(cause, "Không thể xác nhận đã thu tiền khách."));
+      await refreshState();
+    } finally {
+      if (mountedRef.current) setAction(null);
+    }
+  }, [action, activeDelivery, invalidateRefresh, refreshState]);
 
   const unregisterPushDevice = useCallback(async () => {
     const device = deviceRef.current;
@@ -278,6 +429,8 @@ export function DeliveryStateProvider({
       rejectOffer,
       pickup,
       delivered,
+      confirmAdvance,
+      collectCash,
       unregisterPushDevice,
     }),
     [
@@ -293,6 +446,8 @@ export function DeliveryStateProvider({
       pushState,
       refreshState,
       rejectOffer,
+      confirmAdvance,
+      collectCash,
       unregisterPushDevice,
     ],
   );

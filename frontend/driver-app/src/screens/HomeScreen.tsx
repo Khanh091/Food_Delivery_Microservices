@@ -13,11 +13,11 @@ import { getVehicleTypeLabel } from "../features/driver-profile/types/driverProf
 import { useDeliveryState } from "../features/delivery-state/store/DeliveryStateProvider";
 import { colors, radius, spacing, typography } from "../theme";
 
-const secondsAgo = (value: string | null): string | null => {
+const secondsAgo = (value: string | null, now: number): string | null => {
   if (!value) return null;
   const seconds = Math.max(
     0,
-    Math.floor((Date.now() - new Date(value).getTime()) / 1000),
+    Math.floor((now - new Date(value).getTime()) / 1000),
   );
   return `${seconds} giây trước`;
 };
@@ -52,44 +52,56 @@ export function HomeScreen() {
     locationStatus: location.status,
     locationHealth: location.health,
   });
-  const online = availabilityState.uiState === "ONLINE";
   const effectiveMatchable = availabilityState.effectiveMatchable;
   const firstName =
     user?.firstName ?? user?.displayName?.split(" ")[0] ?? "bạn";
   const locationLabel = effectiveMatchable
-    ? "Vị trí đang ổn định"
+    ? "Vị trí ổn định"
     : trackingState === "starting" ||
         location.status === "updating" ||
         location.status === "requesting"
       ? "Đang cập nhật vị trí"
-      : location.status === "denied"
+      : location.status === "denied" || location.status === "warning"
         ? "Cần quyền vị trí nền"
-        : location.status === "warning"
-          ? "Cần khôi phục quyền vị trí"
-      : backendOnline && availabilityState.locationHealth === "DEGRADED"
-        ? "Đang cần khôi phục vị trí"
-        : backendOnline
-          ? "Mất tín hiệu vị trí"
-          : "Chưa bật vị trí";
+        : availabilityState.locationHealth === "DEGRADED"
+          ? "Đang khôi phục vị trí"
+          : backendOnline
+            ? "Mất tín hiệu vị trí"
+            : "Chưa bật vị trí";
   const locationTone = effectiveMatchable
     ? "success"
-    : location.status === "denied" ||
-        location.status === "error" ||
-        availabilityState.locationHealth === "LOST"
+    : location.status === "warning"
+      ? "warning"
+      : location.status === "denied" ||
+          location.status === "error" ||
+          availabilityState.locationHealth === "LOST"
       ? "danger"
       : backendOnline
         ? "warning"
         : "neutral";
   const locationStatusTitle =
-    location.status === "denied"
+    location.status === "denied" || location.status === "warning"
       ? "Cần quyền vị trí nền"
-      : location.status === "warning"
-        ? "Cần khôi phục quyền vị trí"
+      : trackingState === "starting"
+        ? "Đang chuẩn bị nhận đơn"
         : availabilityState.locationHealth === "DEGRADED"
-          ? "Đang cần khôi phục vị trí"
+          ? "Đang khôi phục tín hiệu vị trí"
           : availabilityState.locationHealth === "LOST"
             ? "Mất tín hiệu vị trí"
             : "Đang kiểm tra vị trí";
+  const statusTitle = busy
+    ? "Bạn đang thực hiện chuyến giao"
+    : !backendOnline
+      ? "Bạn đang ngoại tuyến"
+      : effectiveMatchable
+        ? "Bạn đang sẵn sàng nhận đơn"
+        : locationStatusTitle;
+  const statusCardTone = effectiveMatchable ? "primary" : "default";
+  const statusIconName = effectiveMatchable
+    ? "radio-outline"
+    : backendOnline
+      ? "locate-outline"
+      : "moon-outline";
 
   return (
     <Screen
@@ -110,34 +122,46 @@ export function HomeScreen() {
           </Text>
         </View>
       </View>
-      <Card tone={online ? "primary" : "default"} style={styles.statusCard}>
+      <Card tone={statusCardTone} style={styles.statusCard}>
         <View style={styles.statusTop}>
           <View>
-            <Text style={[styles.statusEyebrow, online && styles.lightText]}>
+            <Text
+              style={[
+                styles.statusEyebrow,
+                effectiveMatchable && styles.lightText,
+              ]}
+            >
               TRẠNG THÁI NHẬN ĐƠN
             </Text>
-            <Text style={[styles.statusTitle, online && styles.lightText]}>
-              {busy
-                ? "Bạn đang thực hiện chuyến giao"
-                : online
-                ? "Bạn đang sẵn sàng nhận đơn"
-                  : trackingState === "starting"
-                    ? "Đang chuẩn bị nhận đơn"
-                    : backendOnline
-                    ? locationStatusTitle
-                    : "Bạn đang ngoại tuyến"}
+            <Text
+              style={[
+                styles.statusTitle,
+                effectiveMatchable && styles.lightText,
+              ]}
+            >
+              {statusTitle}
             </Text>
           </View>
           <View
             style={[
               styles.statusIcon,
-              online ? styles.onlineIcon : styles.offlineIcon,
+              effectiveMatchable
+                ? styles.onlineIcon
+                : backendOnline
+                  ? styles.warningIcon
+                  : styles.offlineIcon,
             ]}
           >
             <Ionicons
-              name={online ? "radio-outline" : "moon-outline"}
+              name={statusIconName}
               size={24}
-              color={online ? colors.primary : colors.textMuted}
+              color={
+                effectiveMatchable
+                  ? colors.primary
+                  : backendOnline
+                    ? colors.warning
+                    : colors.textMuted
+              }
             />
           </View>
         </View>
@@ -173,15 +197,27 @@ export function HomeScreen() {
           disabled={busy}
           variant={backendOnline ? "secondary" : "primary"}
         />
+        {backendOnline && !effectiveMatchable && !busy ? (
+          <Text style={styles.statusHint}>
+            Bạn vẫn đang Online. Hệ thống sẽ tự kiểm tra lại vị trí trước khi gửi chuyến.
+          </Text>
+        ) : null}
       </Card>
       {(error || location.message) && (
-        <View style={styles.errorRow}>
+        <View
+          style={[
+            styles.errorRow,
+            !error && styles.warningRow,
+          ]}
+        >
           <Ionicons
-            name="information-circle-outline"
+            name={error ? "information-circle-outline" : "alert-circle-outline"}
             size={18}
-            color={colors.danger}
+            color={error ? colors.danger : colors.warning}
           />
-          <Text style={styles.errorText}>{error ?? location.message}</Text>
+          <Text style={error ? styles.errorText : styles.warningText}>
+            {error ?? location.message}
+          </Text>
           {(location.status === "denied" || location.status === "warning") && (
             <Pressable
               accessibilityRole="button"
@@ -193,7 +229,7 @@ export function HomeScreen() {
           )}
         </View>
       )}
-      {online && (pushState === "denied" || pushState === "error") && (
+      {backendOnline && (pushState === "denied" || pushState === "error") && (
         <Card tone="muted" style={styles.pushWarning}>
           <Ionicons name="notifications-off-outline" size={21} color={colors.warning} />
           <View style={styles.pushCopy}>
@@ -261,7 +297,7 @@ export function HomeScreen() {
           </Text>
           {location.lastSuccessfulUploadAt && (
             <Text style={styles.vehicleMeta}>
-              Vị trí cuối: {secondsAgo(location.lastSuccessfulUploadAt)}
+              Vị trí cuối: {secondsAgo(location.lastSuccessfulUploadAt, now)}
               {location.accuracyMeters
                 ? ` · ±${Math.round(location.accuracyMeters)}m`
                 : ""}
@@ -322,7 +358,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   onlineIcon: { backgroundColor: colors.primarySoft },
+  warningIcon: { backgroundColor: colors.warningSoft },
   offlineIcon: { backgroundColor: colors.surfaceMuted },
+  statusHint: {
+    ...typography.caption,
+    color: colors.textMuted,
+    textAlign: "center",
+  },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   errorRow: {
     flexDirection: "row",
@@ -330,7 +372,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.sm,
   },
+  warningRow: {
+    padding: spacing.md,
+    borderRadius: radius.sm,
+    backgroundColor: colors.warningSoft,
+  },
   errorText: { ...typography.caption, color: colors.danger, flex: 1 },
+  warningText: { ...typography.caption, color: colors.warning, flex: 1 },
   settingsAction: { ...typography.caption, color: colors.primaryDark },
   sectionHeader: {
     flexDirection: "row",
